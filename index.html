@@ -2,11 +2,11 @@
 <meta charset="utf-8">
 <title>WILD THINGS POPUP｜T8 日報・在庫管理</title>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#0f100c">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%276%27 fill=%27%230f100c%27/%3E%3Cpath d=%27M3 22 11 9l6 8 4-5 8 10z%27 fill=%27%23ff6a1f%27/%3E%3C/svg%3E">
+<meta name="theme-color" content="#e3e3e4">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%276%27 fill=%27%231d1f17%27/%3E%3Cpath d=%27M3 22 11 9l6 8 4-5 8 10z%27 fill=%27%23d8ff1a%27/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Oswald:wght@500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,500;0,600;0,700;0,800;1,500&family=Barlow+Condensed:wght@500;600;700&family=Oswald:wght@500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap">
 <style>
 /* Layout: 黒地＋オレンジのアクセント。上にタブ（スマホは下部固定）、下に作業エリア。入力は大きなタップ領域、確認は色と文言で状態を示す。 */
 :root{
@@ -199,105 +199,127 @@ body{margin:0}
 img{max-width:100%}
 .gate{max-width:440px;margin:12vh auto 0}
 .seedinfo{font-size:13px;line-height:1.6;color:var(--muted)}.seedinfo.ok{color:#7fd48a}.seedinfo.bad{color:#ff8a70}
-/* ===== THEME: WT（WILD THINGS調。オリーブ×ブラック×セーフティオレンジ、フラットで角ばった装備品の雰囲気）===== */
+/* ===== THEME: MIST（霞んだグラデーション背景、すりガラスのカード、チャートリューズのライム、チャコールのパネル）===== */
 :root{
-  --bg:#0f100c; --surface:#171811; --surface2:#20211a; --ink:#ece8da; --muted:#a09d89;
-  --line:#2b2c22; --line2:#4b4d3a; --accent:#ff6a1f; --accent-ink:#140a03; --accent-soft:#3b1e0f;
-  --ok:#9bd37a; --ok-soft:#1d2d15; --warn:#f2bf4a; --warn-soft:#3a2f10; --bad:#ff7a66; --bad-soft:#3e1d17;
-  --olive:#5d6240; --olive2:#7c8159;
-  --font-brand:"Barlow Condensed","Oswald","Noto Sans JP",sans-serif;
+  --bg:#e3e5e8; --surface:#f3f3f1; --surface2:#e8e8e6; --ink:#1b1c15; --muted:#6f7068;
+  --line:rgba(27,28,21,.12); --line2:rgba(27,28,21,.22); --accent:#1d1f17; --accent-ink:#ffffff; --accent-soft:#e9f7a0;
+  --ok:#3d7a1d; --ok-soft:#dcf3b4; --warn:#97680a; --warn-soft:#ffeaaa; --bad:#c2372b; --bad-soft:#ffd9d1;
+  --lime:#d8ff1a; --char:#1d1f17;
+  --font-brand:"Plus Jakarta Sans","Noto Sans JP",sans-serif;
+  --glass:rgba(255,255,255,.55);
 }
-body{font-size:16px;line-height:1.65;background:var(--bg)}
-body::before{background:var(--bg)}
-/* ウェビング（ベルト）風の帯 */
-html::after{content:"";position:fixed;top:0;left:0;right:0;height:9px;z-index:60;
-  background:repeating-linear-gradient(90deg,#2a2c1e 0 6px,#3b3e2a 6px 8px),#2a2c1e;border-bottom:2px solid var(--accent)}
-body:has(.gate){background:var(--bg)}
-/* header */
-.top{padding:22px 0 8px;gap:14px}
-.brand{gap:2px}
-.brand small{font:600 12.5px var(--font-head);letter-spacing:.26em;color:var(--olive2);text-transform:uppercase}
-.brand b{font:700 40px/1 var(--font-brand);letter-spacing:.06em;text-transform:uppercase;display:flex;align-items:center;gap:12px;flex-wrap:wrap;color:var(--ink)}
-.brand b em{font-style:normal;font-size:.36em;font-weight:700;letter-spacing:.22em;color:var(--accent);border:2px solid var(--accent);padding:4px 10px 3px}
-.brand .jp{font-size:16px;font-weight:700;letter-spacing:.12em;margin-top:6px;color:var(--ink)}
-.brand i{font-size:13.5px;color:var(--muted);letter-spacing:.04em}
-.who{font-size:14px}
+html{color-scheme:light}
+body{font-family:"Plus Jakarta Sans","Noto Sans JP","Hiragino Sans",system-ui,sans-serif;font-weight:500;font-size:16px;line-height:1.65;color:var(--ink);
+  background:
+   radial-gradient(ellipse 520px 380px at -10% 8%,rgba(216,255,26,.20),transparent 70%),
+   linear-gradient(180deg,#d6dfe5 0%,#e3e3e4 48%,#ecdccf 100%);
+  background-attachment:fixed;background-color:var(--bg)}
+body::before{background:transparent}
+html::after{display:none}
+body:has(.gate){background:linear-gradient(180deg,#d6dfe5 0%,#e3e3e4 48%,#ecdccf 100%) fixed;min-height:100vh}
+html:has(.gate){background:#e3e3e4}
+input[type=password]{background:rgba(255,255,255,.85)!important;border:1px solid rgba(27,28,21,.14)!important}
+/* header：大きな文字に、斜体を混ぜる */
+.top{padding:24px 0 10px;gap:12px}
+.brand{gap:6px}
+.brand small{font:700 12px "Plus Jakarta Sans",sans-serif;letter-spacing:.14em;color:var(--muted);text-transform:uppercase}
+.brand small::before{content:"";display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--lime);box-shadow:0 0 0 2px var(--char);margin-right:9px;vertical-align:0}
+.brand b{font:800 36px/1.05 var(--font-brand);letter-spacing:-.035em;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;color:var(--ink);text-transform:uppercase}
+.brand b em{font:italic 500 .62em var(--font-brand);letter-spacing:-.01em;text-transform:lowercase;color:var(--ink)}
+.brand .jp{font-size:17px;font-weight:700;margin-top:4px;letter-spacing:.02em}
+.brand i{font-size:13.5px;color:var(--muted);font-style:normal}
+.who{font-size:14px;color:var(--muted)}
 .who input{min-height:46px;width:160px}
-/* nav：ベルトを留めたようなタブ */
-nav{left:0;right:0;bottom:0;border-top:2px solid var(--line2);border-radius:0;padding:0 0 env(safe-area-inset-bottom,0px);gap:0;
-  background:rgba(15,16,12,.97);box-shadow:none}
-nav button{min-height:62px;padding:9px 2px 7px;border-radius:0;border-left:1px solid var(--line)}
-nav button:first-child{border-left:0}
-nav button .t{font-size:15px;letter-spacing:.02em}
-nav button .s{font:600 10px var(--font-head);letter-spacing:.2em;opacity:.8}
-nav button[aria-current="page"]{background:var(--surface2);color:var(--accent);box-shadow:inset 0 4px 0 var(--accent)}
+/* nav：すりガラスの浮かぶピルバー */
+nav{left:50%;right:auto;transform:translateX(-50%);width:min(520px,calc(100% - 20px));bottom:calc(12px + env(safe-area-inset-bottom,0px));
+  border:1px solid rgba(255,255,255,.8);border-radius:36px;padding:7px;gap:2px;background:rgba(255,255,255,.62);backdrop-filter:blur(22px) saturate(1.3);
+  box-shadow:0 16px 44px rgba(40,44,60,.2)}
+nav button{min-height:56px;padding:8px 2px 6px;border-radius:28px;color:var(--muted);border:0;transition:background .15s}
+nav button .t{font-size:15px;font-weight:700}
+nav button .s{font:700 9px "Plus Jakarta Sans",sans-serif;letter-spacing:.14em;opacity:.8}
+nav button[aria-current="page"]{background:var(--char);color:#fff;box-shadow:0 8px 20px rgba(29,31,23,.3)}
+nav button[aria-current="page"] .s{color:var(--lime);opacity:1}
+nav .badge{right:calc(50% - 24px);background:var(--lime)!important;color:var(--char)!important}
 @media (min-width:900px){
-  nav{position:sticky;left:auto;right:auto;top:9px;bottom:auto;display:grid;width:auto;margin:6px 0 0;
-    grid-template-columns:repeat(6,minmax(96px,auto));justify-content:start;border-top:0;border-bottom:2px solid var(--line2);background:rgba(15,16,12,.97);padding:0;z-index:12}
-  nav button{min-height:0;padding:13px 22px;border-left:0}
-  nav button[aria-current="page"]{background:none;box-shadow:inset 0 -4px 0 var(--accent)}
-  .brand b{font-size:54px}
+  nav{position:sticky;left:auto;transform:none;top:10px;bottom:auto;width:max-content;max-width:100%;margin:10px 0 0;
+    display:inline-grid;grid-template-columns:repeat(6,minmax(96px,auto));padding:5px;border-radius:999px;box-shadow:0 10px 30px rgba(40,44,60,.14);z-index:12}
+  nav button{min-height:0;padding:11px 20px;border-radius:999px;flex-direction:row;gap:8px;align-items:baseline;justify-content:center}
+  .brand b{font-size:50px}
 }
-/* shapes: 直角・フラット。タグ／ワッペンのような枠 */
-.card,.kpi,.datebar,.tablewrap,.banner,.alert,.empty,.drop,.photo,.hinlist,.preview,.ok-all,
-.btn,.seg button,.chip,input[type=text],input[type=number],input[type=date],input[type=search],input[type=password],select,textarea,.stepper button,.datebar .pick{border-radius:0}
-.card{padding:18px;border:1px solid var(--line2);border-left:5px solid var(--olive);background:var(--surface);box-shadow:none}
-.card h2{font:700 21px/1.2 var(--font-brand);letter-spacing:.08em;text-transform:uppercase}
-.card h2::before{content:"";width:12px;height:12px;background:var(--accent);align-self:center;flex:none}
-.card h2 small{font:500 13.5px "Noto Sans JP",sans-serif;letter-spacing:0;text-transform:none}
-.kpi{padding:12px 14px;border:1px solid var(--line2);background:var(--surface);position:relative}
-.kpi::after{content:"";position:absolute;top:0;right:0;width:0;height:0;border-style:solid;border-width:0 18px 18px 0;border-color:transparent var(--olive) transparent transparent}
-.kpi:first-child{border-color:var(--accent)}
-.kpi:first-child::after{border-right-color:var(--accent)}
-.kpi .l{font-size:13.5px;letter-spacing:.04em}
-.kpi .v{font:700 42px/1.1 var(--font-brand);letter-spacing:.02em}
-.kpi .n{font-size:13px}
-.datebar{border:1px solid var(--line2);background:var(--surface);padding:10px 12px}
-.datebar .d b{font:700 34px/1.1 var(--font-brand);letter-spacing:.04em}
-.datebar .d span{font-size:13.5px}
+/* cards：すりガラス＋大きな角丸 */
+.card{padding:22px;border:1px solid rgba(255,255,255,.75);border-radius:32px;background:var(--glass);backdrop-filter:blur(20px) saturate(1.2);box-shadow:0 12px 40px rgba(60,64,80,.08);color:var(--ink)}
+.card h2{font:800 19px/1.35 var(--font-brand);letter-spacing:-.01em}
+.card h2::before{content:"";width:10px;height:10px;border-radius:50%;background:var(--lime);box-shadow:0 0 0 2px var(--char);align-self:center;flex:none}
+.card h2 small{font:500 13.5px "Noto Sans JP",sans-serif;color:var(--muted)}
+/* KPI：ライムとチャコールの大きなパネル（同心円のライン） */
+.kpi{position:relative;overflow:hidden;padding:18px 18px 16px;border:1px solid rgba(255,255,255,.75);border-radius:30px;background:var(--glass);backdrop-filter:blur(18px);box-shadow:0 10px 32px rgba(60,64,80,.07);color:var(--ink)}
+.kpi:nth-child(4n+1){background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200' fill='none' stroke='%23000' stroke-opacity='.28' stroke-width='1.2'%3E%3Ccircle cx='170' cy='30' r='24'/%3E%3Ccircle cx='170' cy='30' r='44'/%3E%3Ccircle cx='170' cy='30' r='64'/%3E%3Ccircle cx='170' cy='30' r='84'/%3E%3Ccircle cx='170' cy='30' r='104'/%3E%3Ccircle cx='170' cy='30' r='124'/%3E%3C/svg%3E") no-repeat right -34px top -34px/200px,var(--lime);border-color:transparent;box-shadow:0 14px 34px rgba(170,200,0,.28)}
+.kpi:nth-child(4n+2){background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200' fill='none' stroke='%23fff' stroke-opacity='.3' stroke-width='1.2'%3E%3Ccircle cx='170' cy='30' r='24'/%3E%3Ccircle cx='170' cy='30' r='44'/%3E%3Ccircle cx='170' cy='30' r='64'/%3E%3Ccircle cx='170' cy='30' r='84'/%3E%3Ccircle cx='170' cy='30' r='104'/%3E%3Ccircle cx='170' cy='30' r='124'/%3E%3C/svg%3E") no-repeat right -34px top -34px/200px,var(--char);border-color:transparent;color:#fff;box-shadow:0 14px 34px rgba(29,31,23,.3)}
+.kpi:nth-child(4n+2) .l,.kpi:nth-child(4n+2) .n,.kpi:nth-child(4n+2) .v small{color:rgba(255,255,255,.7)}
+.kpi:nth-child(4n+2) .v{color:#fff}
+.kpi .l{font-size:14px;font-weight:700;color:var(--ink)}
+.kpi .n{font-size:13px;color:rgba(27,28,21,.6)}
+.kpi .v{font:800 38px/1.15 var(--font-brand);letter-spacing:-.04em;color:var(--ink);margin:6px 0 2px}
+.kpi .v small{font:600 14px var(--font-brand);color:rgba(27,28,21,.6);letter-spacing:0;margin-left:3px}
+.kpi.ok .v{color:var(--ok)}.kpi.bad .v{color:var(--bad)}
+.datebar{border:1px solid rgba(255,255,255,.75);border-radius:999px;background:rgba(255,255,255,.6);backdrop-filter:blur(20px);padding:8px 10px;box-shadow:0 10px 30px rgba(60,64,80,.08)}
+.datebar .d b{font:800 28px/1.15 var(--font-brand);letter-spacing:-.03em}
+.datebar .d span{font-size:13px;color:var(--muted)}
+.tablewrap,.banner,.alert,.empty,.drop,.photo,.hinlist,.preview,.ok-all{border-radius:24px}
+.tablewrap{background:var(--glass);backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,.75)}
+.banner,.alert,.empty,.drop,.photo,.hinlist,.preview,.ok-all{border:1px solid rgba(255,255,255,.7);background:rgba(255,255,255,.5)}
 /* readability */
 label.f{font-size:14.5px;font-weight:700}
-label.f .h{font-size:13px}
+label.f .h{font-size:13px;color:var(--muted)}
 .entry .nm,.logrow .tx,.alert .tx,.rep p{font-size:15.5px}
-.entry .q{font-size:24px}
+.entry .q{font:800 26px var(--font-brand);letter-spacing:-.03em}
 .entry .tm,.logrow .tm{font-size:14px}
-.kind{font-size:13px;padding:2px 9px;border-radius:0}
+.kind{font-size:13px;padding:2px 11px;border:1px dashed var(--line2);background:transparent}
 table{font-size:15.5px}
-th{font:700 13px "Noto Sans JP",sans-serif;color:var(--olive2);letter-spacing:.06em}
-th,td{padding:10px 12px}
-.kv{font-size:15.5px}.kv dd{font-size:19px}.kv dd.big{font-size:26px}
-.pill{font-size:13.5px;padding:3px 10px;border-radius:0}
+th{font:700 13px "Noto Sans JP",sans-serif;color:var(--muted);background:transparent;border-bottom:1px solid var(--line2)}
+th,td{padding:11px 12px;border-color:var(--line)}
+.kv{font-size:15.5px}.kv dd{font:800 21px var(--font-brand);letter-spacing:-.02em}.kv dd.big{font-size:28px}
+.pill{font:700 13px "Noto Sans JP",sans-serif;padding:4px 13px;border:1px dashed var(--line2);background:transparent;color:var(--ink)}
+.pill.ok{background:var(--ok-soft);border:0;color:var(--ok)}
+.pill.warn{background:var(--warn-soft);border:0;color:var(--warn)}
+.pill.bad{background:var(--bad-soft);border:0;color:var(--bad)}
 .banner{font-size:15px}
 .hin .c{font-size:14px}.hin .st{font-size:15px}
 /* tap targets */
-.btn{min-height:52px;font-size:16px;letter-spacing:.04em;background:var(--surface2);border:1px solid var(--line2)}
-.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:800;text-transform:uppercase;letter-spacing:.08em}
-.btn.small{min-height:42px;font-size:14px}
-.seg button{min-height:52px;font-size:15.5px}
-.chip{min-height:50px;min-width:60px}
-.chip b{font-size:17px}
+.btn{min-height:52px;font:700 15.5px "Noto Sans JP","Plus Jakarta Sans",sans-serif;border-radius:999px;padding:0 24px;background:rgba(255,255,255,.7);border:1px solid rgba(27,28,21,.14);color:var(--ink);box-shadow:none}
+.btn:hover{background:#fff}
+.btn.primary{background:var(--char);border-color:var(--char);color:#fff;box-shadow:0 10px 24px rgba(29,31,23,.28);display:inline-flex;align-items:center;justify-content:center;gap:12px}
+.btn.primary::after{content:"\2197";display:inline-grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--lime);color:var(--char);font-size:15px;font-weight:800}
+.btn.primary:hover{background:#2b2e22;filter:none}
+.btn.danger{color:var(--bad);background:rgba(255,255,255,.7)}
+.btn.small{min-height:42px;font-size:14px;padding:0 18px}
+.btn.small.primary::after,.datebar .btn.primary::after{display:none}
+.seg button{min-height:52px;font-size:15.5px;border-radius:999px;background:rgba(255,255,255,.55);border:1px solid rgba(27,28,21,.14);color:var(--ink)}
+.chip{min-height:50px;min-width:60px;border-radius:999px;background:rgba(255,255,255,.55);border:1px dashed var(--line2);color:var(--ink)}
+.chip b{font:800 17px var(--font-brand)}
 .hin{min-height:56px}
-.filters button{min-height:44px;font-size:15px}
-input[type=text],input[type=number],input[type=date],input[type=search],input[type=password],select,textarea{min-height:52px;background:var(--surface2);border:1px solid var(--line2);color:var(--ink)}
-input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)!important;box-shadow:0 0 0 2px rgba(255,106,31,.25)}
-.stepper button{width:58px;height:58px}
-.stepper input{width:92px;min-height:58px;font-size:32px}
+.filters button{min-height:44px;font-size:15px;border-radius:999px;background:rgba(255,255,255,.55);border:1px solid rgba(27,28,21,.14);color:var(--ink)}
+input[type=text],input[type=number],input[type=date],input[type=search],input[type=password],select,textarea{min-height:52px;border-radius:20px!important;background:rgba(255,255,255,.7);border:1px solid rgba(27,28,21,.12);color:var(--ink);font-family:"Noto Sans JP","Plus Jakarta Sans",sans-serif}
+input::placeholder,textarea::placeholder{color:#9a9b92}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--char)!important;box-shadow:0 0 0 4px rgba(216,255,26,.55);background:#fff}
+.stepper button{width:58px;height:58px;border-radius:50%}
+.stepper input{width:92px;min-height:58px;font:800 32px var(--font-brand)}
 .datebar .pick,.datebar .btn{min-height:50px}
-.datebar .pick{width:50px;height:50px}
+.datebar .pick{width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.8);border:1px solid rgba(27,28,21,.14)}
 .datebar .btn{width:50px;padding:0}
-#toast{font-size:15.5px;border-radius:0;background:var(--accent);color:var(--accent-ink);font-weight:800;bottom:calc(86px + env(safe-area-inset-bottom,0px))}
+#toast{font:700 15px "Noto Sans JP",sans-serif;border-radius:999px;background:var(--char);color:var(--lime);bottom:calc(96px + env(safe-area-inset-bottom,0px))}
+.seedinfo.ok{color:var(--ok)!important}.seedinfo.bad{color:var(--bad)!important}
 .gate{margin-top:9vh}
-body{padding-bottom:calc(72px + env(safe-area-inset-bottom,0px))}
-@media (min-width:900px){body{padding-bottom:24px}}
+body{padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
+@media (min-width:900px){body{padding-bottom:28px}}
 @media (max-width:480px){
-  .brand b{font-size:38px}
-  .brand .jp{font-size:15.5px}
+  .brand b{font-size:33px}
+  .brand .jp{font-size:16px}
   .top{align-items:flex-start}
   .who{width:100%;justify-content:flex-start}
   .who input{flex:1;width:auto}
 }
 nav:empty{display:none}
-.filters button,.chip,.seg button,.btn{border-radius:0!important}
 input[type=password]{min-height:52px;border-radius:16px;background:var(--surface2);border:1px solid var(--line2);color:var(--ink)}
 /* ---- 微調整（スマホで画面を広く使う／折り返し対策） ---- */
 .datebar .d b{white-space:nowrap}
