@@ -391,7 +391,7 @@ function md(s){var a=s.split("-");return(+a[1])+"/"+(+a[2])}
 function wd(s){return WD[new Date(pd(s)).getUTCDay()]}
 function mdw(s){return md(s)+"（"+wd(s)+"）"}
 function todayStr(){if(S.demo)return"2026-11-03";var d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
-function rangeDays(){var out=[],a=S.cfg.start,b=S.cfg.end;if(!a||!b)return out;for(var d=a,i=0;pd(d)<=pd(b)&&i<120;d=addDays(d,1),i++)out.push(d);return out}
+function rangeDays(){var out=[],a=S.cfg.start,b=S.cfg.end;if(!a||!b)return out;for(var d=a,i=0;pd(d)<=pd(b)&&i<366;d=addDays(d,1),i++)out.push(d);return out}
 function toast(msg,err){var t=$("toast");t.textContent=msg;t.className=err?"err":"";t.hidden=false;clearTimeout(toast.h);toast.h=setTimeout(function(){t.hidden=true},err?4200:2200)}
 function getSkus(){return S.demo&&S.dSkus?S.dSkus:S.skus}
 function getTx(){return S.demo?S.dTx:S.tx}
@@ -1186,7 +1186,7 @@ async function doEvent(isNew){
   if(!name){say("イベント名を入力してください",true);return}
   if(!/^\d{4}-\d{2}-\d{2}$/.test(st)||!/^\d{4}-\d{2}-\d{2}$/.test(en)){say("開始日と終了日を入れてください",true);return}
   if(pd(en)<pd(st)){say("終了日が開始日より前になっています",true);return}
-  if(pd(en)-pd(st)>119*86400000){say("会期が長すぎます（120日以内）",true);return}
+  if(pd(en)-pd(st)>365*86400000){say("会期が長すぎます（366日以内）",true);return}
   var budget=bd===""?0:Number(bd),tax=tx===""?10:Number(tx);
   if(!isFinite(budget)||budget<0){say("売上予算は数字で入れてください",true);return}
   if(!isFinite(tax)||tax<0||tax>100){say("消費税率は0〜100の数字で入れてください",true);return}
