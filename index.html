@@ -1,4 +1,9 @@
-<title>T8 日報・在庫管理</title>
+<!doctype html>
+<meta charset="utf-8">
+<title>WILD THINGS POPUP｜T8 日報・在庫管理</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f100c">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%276%27 fill=%27%230f100c%27/%3E%3Cpath d=%27M3 22 11 9l6 8 4-5 8 10z%27 fill=%27%23ff6a1f%27/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Oswald:wght@500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap">
@@ -193,7 +198,125 @@ html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset
 body{margin:0}
 img{max-width:100%}
 .gate{max-width:440px;margin:12vh auto 0}
-.seedinfo{font-size:13px;line-height:1.6;color:var(--muted)}.seedinfo.ok{color:#7fd48a}.seedinfo.bad{color:#ff8a70}</style>
+.seedinfo{font-size:13px;line-height:1.6;color:var(--muted)}.seedinfo.ok{color:#7fd48a}.seedinfo.bad{color:#ff8a70}
+/* ===== THEME: WT（WILD THINGS調。オリーブ×ブラック×セーフティオレンジ、フラットで角ばった装備品の雰囲気）===== */
+:root{
+  --bg:#0f100c; --surface:#171811; --surface2:#20211a; --ink:#ece8da; --muted:#a09d89;
+  --line:#2b2c22; --line2:#4b4d3a; --accent:#ff6a1f; --accent-ink:#140a03; --accent-soft:#3b1e0f;
+  --ok:#9bd37a; --ok-soft:#1d2d15; --warn:#f2bf4a; --warn-soft:#3a2f10; --bad:#ff7a66; --bad-soft:#3e1d17;
+  --olive:#5d6240; --olive2:#7c8159;
+  --font-brand:"Barlow Condensed","Oswald","Noto Sans JP",sans-serif;
+}
+body{font-size:16px;line-height:1.65;background:var(--bg)}
+body::before{background:var(--bg)}
+/* ウェビング（ベルト）風の帯 */
+html::after{content:"";position:fixed;top:0;left:0;right:0;height:9px;z-index:60;
+  background:repeating-linear-gradient(90deg,#2a2c1e 0 6px,#3b3e2a 6px 8px),#2a2c1e;border-bottom:2px solid var(--accent)}
+body:has(.gate){background:var(--bg)}
+/* header */
+.top{padding:22px 0 8px;gap:14px}
+.brand{gap:2px}
+.brand small{font:600 12.5px var(--font-head);letter-spacing:.26em;color:var(--olive2);text-transform:uppercase}
+.brand b{font:700 40px/1 var(--font-brand);letter-spacing:.06em;text-transform:uppercase;display:flex;align-items:center;gap:12px;flex-wrap:wrap;color:var(--ink)}
+.brand b em{font-style:normal;font-size:.36em;font-weight:700;letter-spacing:.22em;color:var(--accent);border:2px solid var(--accent);padding:4px 10px 3px}
+.brand .jp{font-size:16px;font-weight:700;letter-spacing:.12em;margin-top:6px;color:var(--ink)}
+.brand i{font-size:13.5px;color:var(--muted);letter-spacing:.04em}
+.who{font-size:14px}
+.who input{min-height:46px;width:160px}
+/* nav：ベルトを留めたようなタブ */
+nav{left:0;right:0;bottom:0;border-top:2px solid var(--line2);border-radius:0;padding:0 0 env(safe-area-inset-bottom,0px);gap:0;
+  background:rgba(15,16,12,.97);box-shadow:none}
+nav button{min-height:62px;padding:9px 2px 7px;border-radius:0;border-left:1px solid var(--line)}
+nav button:first-child{border-left:0}
+nav button .t{font-size:15px;letter-spacing:.02em}
+nav button .s{font:600 10px var(--font-head);letter-spacing:.2em;opacity:.8}
+nav button[aria-current="page"]{background:var(--surface2);color:var(--accent);box-shadow:inset 0 4px 0 var(--accent)}
+@media (min-width:900px){
+  nav{position:sticky;left:auto;right:auto;top:9px;bottom:auto;display:grid;width:auto;margin:6px 0 0;
+    grid-template-columns:repeat(6,minmax(96px,auto));justify-content:start;border-top:0;border-bottom:2px solid var(--line2);background:rgba(15,16,12,.97);padding:0;z-index:12}
+  nav button{min-height:0;padding:13px 22px;border-left:0}
+  nav button[aria-current="page"]{background:none;box-shadow:inset 0 -4px 0 var(--accent)}
+  .brand b{font-size:54px}
+}
+/* shapes: 直角・フラット。タグ／ワッペンのような枠 */
+.card,.kpi,.datebar,.tablewrap,.banner,.alert,.empty,.drop,.photo,.hinlist,.preview,.ok-all,
+.btn,.seg button,.chip,input[type=text],input[type=number],input[type=date],input[type=search],input[type=password],select,textarea,.stepper button,.datebar .pick{border-radius:0}
+.card{padding:18px;border:1px solid var(--line2);border-left:5px solid var(--olive);background:var(--surface);box-shadow:none}
+.card h2{font:700 21px/1.2 var(--font-brand);letter-spacing:.08em;text-transform:uppercase}
+.card h2::before{content:"";width:12px;height:12px;background:var(--accent);align-self:center;flex:none}
+.card h2 small{font:500 13.5px "Noto Sans JP",sans-serif;letter-spacing:0;text-transform:none}
+.kpi{padding:12px 14px;border:1px solid var(--line2);background:var(--surface);position:relative}
+.kpi::after{content:"";position:absolute;top:0;right:0;width:0;height:0;border-style:solid;border-width:0 18px 18px 0;border-color:transparent var(--olive) transparent transparent}
+.kpi:first-child{border-color:var(--accent)}
+.kpi:first-child::after{border-right-color:var(--accent)}
+.kpi .l{font-size:13.5px;letter-spacing:.04em}
+.kpi .v{font:700 42px/1.1 var(--font-brand);letter-spacing:.02em}
+.kpi .n{font-size:13px}
+.datebar{border:1px solid var(--line2);background:var(--surface);padding:10px 12px}
+.datebar .d b{font:700 34px/1.1 var(--font-brand);letter-spacing:.04em}
+.datebar .d span{font-size:13.5px}
+/* readability */
+label.f{font-size:14.5px;font-weight:700}
+label.f .h{font-size:13px}
+.entry .nm,.logrow .tx,.alert .tx,.rep p{font-size:15.5px}
+.entry .q{font-size:24px}
+.entry .tm,.logrow .tm{font-size:14px}
+.kind{font-size:13px;padding:2px 9px;border-radius:0}
+table{font-size:15.5px}
+th{font:700 13px "Noto Sans JP",sans-serif;color:var(--olive2);letter-spacing:.06em}
+th,td{padding:10px 12px}
+.kv{font-size:15.5px}.kv dd{font-size:19px}.kv dd.big{font-size:26px}
+.pill{font-size:13.5px;padding:3px 10px;border-radius:0}
+.banner{font-size:15px}
+.hin .c{font-size:14px}.hin .st{font-size:15px}
+/* tap targets */
+.btn{min-height:52px;font-size:16px;letter-spacing:.04em;background:var(--surface2);border:1px solid var(--line2)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:800;text-transform:uppercase;letter-spacing:.08em}
+.btn.small{min-height:42px;font-size:14px}
+.seg button{min-height:52px;font-size:15.5px}
+.chip{min-height:50px;min-width:60px}
+.chip b{font-size:17px}
+.hin{min-height:56px}
+.filters button{min-height:44px;font-size:15px}
+input[type=text],input[type=number],input[type=date],input[type=search],input[type=password],select,textarea{min-height:52px;background:var(--surface2);border:1px solid var(--line2);color:var(--ink)}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)!important;box-shadow:0 0 0 2px rgba(255,106,31,.25)}
+.stepper button{width:58px;height:58px}
+.stepper input{width:92px;min-height:58px;font-size:32px}
+.datebar .pick,.datebar .btn{min-height:50px}
+.datebar .pick{width:50px;height:50px}
+.datebar .btn{width:50px;padding:0}
+#toast{font-size:15.5px;border-radius:0;background:var(--accent);color:var(--accent-ink);font-weight:800;bottom:calc(86px + env(safe-area-inset-bottom,0px))}
+.gate{margin-top:9vh}
+body{padding-bottom:calc(72px + env(safe-area-inset-bottom,0px))}
+@media (min-width:900px){body{padding-bottom:24px}}
+@media (max-width:480px){
+  .brand b{font-size:38px}
+  .brand .jp{font-size:15.5px}
+  .top{align-items:flex-start}
+  .who{width:100%;justify-content:flex-start}
+  .who input{flex:1;width:auto}
+}
+nav:empty{display:none}
+.filters button,.chip,.seg button,.btn{border-radius:0!important}
+input[type=password]{min-height:52px;border-radius:16px;background:var(--surface2);border:1px solid var(--line2);color:var(--ink)}
+/* ---- 微調整（スマホで画面を広く使う／折り返し対策） ---- */
+.datebar .d b{white-space:nowrap}
+.datebar .pick input[type=date]{opacity:0;color:transparent}
+.note-sync{font-size:13px!important}
+@media (max-width:899px){
+  th{white-space:nowrap;padding:10px 12px}
+}
+@media (max-width:480px){
+  .top{gap:8px;padding:10px 0 2px}
+  .brand b{font-size:27px}
+  .brand small{font-size:11.5px;letter-spacing:.2em}
+  .brand .jp{font-size:15.5px;margin-top:0}
+  .brand i{font-size:13px}
+  .note-sync{display:none}
+  .datebar .d b{font-size:26px}
+  .kpi .v{font-size:32px}
+}
+</style>
 
 <div id="shell">
   <nav id="nav" aria-label="画面の切り替え"></nav>
@@ -376,11 +499,11 @@ function renderNav(){
     return'<button data-act="tab" data-v="'+t[0]+'"'+(S.tab===t[0]?' aria-current="page"':'')+'><span class="t">'+t[1]+'</span><span class="s">'+t[2]+'</span>'+(t[0]==="check"&&n.length?'<span class="badge'+(red?' red':'')+'">'+n.length+'</span>':'')+'</button>'}).join("");
 }
 function header(){
-  var h='<div class="top"><div class="brand"><small>WILD THINGS ・ 2026 FALL / WINTER POPUP</small><b>Daily Sales &amp; Stock<span>日報・売上・在庫管理</span></b><i>京都高島屋S.C. T8 ｜ '+md(S.cfg.start)+'〜'+md(S.cfg.end)+'</i></div><div class="grow"></div>';
+  var h='<div class="top"><div class="brand"><small>26FW POPUP ｜ DAILY REPORT</small><b>WILD THINGS<em>POPUP</em></b><span class="jp">日報・売上・在庫管理</span><i>京都高島屋S.C. T8 ｜ '+md(S.cfg.start)+'〜'+md(S.cfg.end)+'</i></div><div class="grow"></div>';
   h+=S.demo?'<span class="pill warn">見本データ表示中</span>':'<span class="pill ok">保存済みデータ</span>';
   if(!S.demo&&S.skus.length)h+='<button class="btn small" data-act="demo" data-v="on">見本データで試す</button>';
   h+='<label class="who"><span>入力者</span><input type="text" id="who" value="'+esc(S.who||"")+'" placeholder="あなたの名前" autocomplete="off"'+(S.who&&S.who.trim()?'':' class="need"')+'></label>';
-  h+='</div><div class="muted" style="font-size:12.5px">変更はすぐに全員の画面へ反映され、「履歴」に名前つきで残ります。</div>';
+  h+='</div><div class="muted note-sync" style="font-size:12.5px">変更はすぐに全員の画面へ反映され、「履歴」に名前つきで残ります。</div>';
   if(S.demo)h+='<div class="banner demo"><span>これは操作を試すための見本です。ここで入力した内容は保存されず、本番のデータには入りません。</span><button class="btn small" data-act="demo" data-v="off">本番データに戻る</button></div>';
   else if(S.canWrite===false)h+='<div class="banner ro">閲覧のみのアカウントです。入力・変更はできません。</div>';
   if(S.tab!=="check"&&S.tab!=="stock"&&S.tab!=="log"&&getSkus().length)h+=datebar();
@@ -797,7 +920,7 @@ async function doLogin(){
   catch(e){console.error(e);S.gate=e&&e.code==="unauthorized"?"login":"net";S.gateErr=e&&e.code==="unauthorized"?"合言葉が違います。":"データを読み込めませんでした。通信を確認してください。";render.force=true;render()}
 }
 function gateHtml(){
-  var g=S.gate,h='<div class="gate"><div class="brand" style="margin-bottom:16px"><small>WILD THINGS ・ 2026 FALL / WINTER POPUP</small><b>Daily Sales &amp; Stock<span>日報・売上・在庫管理</span></b><i>京都高島屋S.C. T8</i></div><div class="card">';
+  var g=S.gate,h='<div class="gate"><div class="brand" style="margin-bottom:18px"><small>26FW POPUP ｜ DAILY REPORT</small><b>WILD THINGS<em>POPUP</em></b><span class="jp">日報・売上・在庫管理</span><i>京都高島屋S.C. T8</i></div><div class="card">';
   if(g==="setup")h+='<h2>初期設定がまだです</h2><p class="muted" style="font-size:14px">config.js に、Google Apps Script のウェブアプリURLを設定してください。手順は README.md に書いてあります。</p>';
   else if(g==="loading")h+='<h2>読み込み中です</h2><p class="muted" style="font-size:14px">データを取得しています。数秒かかることがあります。</p>';
   else h+='<h2>合言葉を入力してください</h2>'+(S.gateErr?'<p class="warnline">'+esc(S.gateErr)+'</p>':'')+'<label class="f"><span>合言葉</span><input type="password" id="code" autocomplete="current-password"></label><div style="margin-top:12px"><button class="btn primary" style="width:100%;min-height:52px" data-act="login">入る</button></div>';
