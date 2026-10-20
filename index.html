@@ -501,6 +501,8 @@ function bump(){S._ver=(S._ver||0)+1;render()}
 function render(){
   var a=document.activeElement;
   if(a&&a!==document.body&&(a.tagName==="TEXTAREA"||(a.tagName==="INPUT"&&/^(text|number|search)$/.test(a.type)))&&$("main").contains(a)&&!render.force){S.pending=true;return}
+  var sf=$("seedfile"),ab=$("adminbox");
+  if(!render.force&&sf&&((sf.files&&sf.files.length)||($("admin")&&$("admin").value)||(ab&&ab.open))){S.pending=true;return}
   render.force=false;S.pending=false;
   if(S.gate){$("nav").innerHTML="";$("main").innerHTML=gateHtml();return}
   var fid=a&&a.id,ss=a&&a.selectionStart,se=a&&a.selectionEnd,sy=window.scrollY;
@@ -536,13 +538,13 @@ function datebar(){
   return'<div class="datebar"><button class="btn" data-act="dshift" data-v="-1" aria-label="前の日">◀</button><div class="d"><b>'+mdw(S.date)+'</b><span>'+lab+(S.date===todayStr()?' ｜ 今日':'')+'</span></div><label class="pick" aria-label="日付を選ぶ">日付<input type="date" id="datepick" value="'+S.date+'" data-act="dpick"></label><button class="btn" data-act="dshift" data-v="1" aria-label="次の日">▶</button></div>';
 }
 function seedForm(){
-  return'<div class="grid" style="gap:12px"><label class="f"><span>管理者コード</span><input type="password" id="admin" autocomplete="off"></label><label class="f"><span>商品マスタのファイル（Excel / CSV / JSON）</span><input type="file" id="seedfile" accept=".xlsx,.xls,.xlsm,.csv,.tsv,.json,application/json,text/csv" style="min-height:44px"></label><div id="seedinfo" class="seedinfo" aria-live="polite"></div><div class="muted" style="font-size:12px;line-height:1.7">1行目に見出し（品番・商品名・カラー・サイズ・JAN・上代・投入数・販売価格）がある表を、そのまま使えます。列の順番は自由です。SKUの列がなければ「品番｜カラー｜サイズ」で自動作成します。</div><button class="btn primary" data-act="seed">登録する</button></div>';
+  return'<div class="grid" style="gap:12px"><label class="f"><span>管理者コード</span><input type="password" id="admin" autocomplete="off"></label><label class="f"><span>商品マスタのファイル（Excel / CSV / JSON）</span><input type="file" id="seedfile" accept=".xlsx,.xls,.xlsm,.csv,.tsv,.json,application/json,text/csv" style="min-height:44px"></label><label class="f"><span>オフ率（％）<small>任意</small></span><input type="number" inputmode="decimal" id="seedoff" min="0" max="100" placeholder="例：30（備考にオフ率がない受注明細のとき）"></label><div id="seedinfo" class="seedinfo" aria-live="polite"></div><div class="muted" style="font-size:12px;line-height:1.7">基幹システム（アラジン）の「受注明細問合せ」のExcelを、そのまま選べます。販売価格は、明細備考の「30％OFF」から計算します。備考にない場合は、上の「オフ率」に入れると全商品に使います。<br>それ以外の表は、1行目に見出し（品番・商品名・カラー・サイズ・JAN・上代・投入数・販売価格）があればそのまま使えます。列の順番は自由です。</div><button class="btn primary" data-act="seed">登録する</button></div>';
 }
 function emptySku(){
   return'<div class="card"><h2>商品マスタが未登録です <small>管理者の方が最初に1回だけ登録します</small></h2>'+seedForm()+'</div>';
 }
 function adminPanel(){
-  return'<details class="card" style="margin-top:14px"><summary style="cursor:pointer;font-weight:700;min-height:44px;display:flex;align-items:center">管理者用：商品マスタを更新する</summary><div class="muted" style="font-size:13px;margin:6px 0 12px;line-height:1.7">同じ商品（品番・カラー・サイズ）は上書きされ、新しい商品は追加されます。売上の入力履歴は消えません。</div>'+seedForm()+'</details>';
+  return'<details class="card" id="adminbox" style="margin-top:14px"><summary style="cursor:pointer;font-weight:700;min-height:44px;display:flex;align-items:center">管理者用：商品マスタを更新する</summary><div class="muted" style="font-size:13px;margin:6px 0 12px;line-height:1.7">同じ商品（品番・カラー・サイズ）は上書きされ、新しい商品は追加されます。売上の入力履歴は消えません。<span style="opacity:.6">（読み取り機能 '+SEED_VER+'）</span></div>'+seedForm()+'</details>';
 }
 
 /* ---- 入力 ---- */
@@ -824,7 +826,7 @@ document.addEventListener("compositionstart",function(){S.comp=true});
 document.addEventListener("compositionend",function(e){S.comp=false;var t=e.target;if(t&&t.id==="q"){S.q=t.value;if(S.tab==="entry"){var l=$("hinList");if(l)l.innerHTML=hinListHtml()}else{render.force=true;render()}}});
 document.addEventListener("change",function(e){
   var t=e.target;
-  if(t.id==="seedfile"){seedPreview()}
+  if(t.id==="seedfile"||t.id==="seedoff"){seedPreview()}
   else if(t.id==="other"){S.form.other=t.value;render.force=true;render()}
   else if(t.id==="datepick"){if(t.value){S.date=t.value;render.force=true;render()}}
   else if(t.dataset&&t.dataset.day){
@@ -967,6 +969,7 @@ function startSubs(){
   db.doc("config/main").onSnapshot(function(s){var d=s.exists?s.data():null;S.cfg=Object.assign({},DEFAULT_CFG,d||{});if(!rangeDays().length)S.cfg=DEFAULT_CFG;done("cfg")},onErr("cfg"));
 }
 /* ---- 商品マスタの読み込み（Excel / CSV / JSON） ---- */
+var SEED_VER="v3 受注明細対応",SEED_OFF=null;
 var SEED_FIELDS=[
  {k:"sku",n:"SKU",syn:["sku","skuコード","skuid","商品sku","品番カラーサイズ"]},
  {k:"hin",n:"品番",syn:["品番","品番コード","商品コード","スタイル","スタイルno","スタイルコード","style","styleno","型番","品番no"]},
@@ -1029,13 +1032,13 @@ function seedText(v){
 }
 function seedRowsToPayload(rows){
   var h=seedFindHeader(rows);
-  if(!h)return{error:"見出しの行が見つかりません。1行目に「品番」「商品名」「カラー」「サイズ」「JAN」「上代」「投入数」「販売価格」などの見出しを入れてください。"};
+  if(!h){var cand=rows.slice(0,30).map(function(r){return(r||[]).map(function(x){return String(x==null?"":x).trim()}).filter(Boolean)}).sort(function(a,b){return b.length-a.length})[0]||[];return{error:"見出しの行が見つかりません。1行目に「品番」「商品名」「カラー」「サイズ」「JAN」「上代」「投入数」「販売価格」などの見出しを入れてください。"+(cand.length?"（読み取れた見出し："+cand.slice(0,14).join("、")+(cand.length>14?"…":"")+"）":"（ファイルの中身が空のようです）")}};
   var m=h.m,miss=[];
   if(m.hin==null&&m.sku==null)miss.push("品番");
   if(m.qty==null)miss.push("投入数");
   if(m.sale==null&&m.retail==null)miss.push("販売価格（または上代）");
   if(miss.length)return{error:"次の見出しが見つかりません：" + miss.join("、")};
-  var out=[],seen={},warn=[],dup=0,sci=0,noPrice=0,row=[],offN=0,noOff=0;
+  var out=[],seen={},warn=[],dup=0,sci=0,noPrice=0,row=[],offN=0,noOff=0,merged=0;
   function g(k){return m[k]==null?"":row[m[k]]}
   for(var r=h.r+1;r<rows.length;r++){
     row=rows[r]||[];
@@ -1043,12 +1046,12 @@ function seedRowsToPayload(rows){
     if(!sku&&!hin)continue;
     if(sku&&!hin||sku&&(!color&&!size)){var pr=sku.split(/[｜|]/);if(pr.length>=3){if(!hin)hin=pr[0].trim();if(!color)color=pr[1].trim();if(!size)size=pr.slice(2).join("｜").trim()}else if(!hin)hin=sku}
     if(!sku)sku=hin+"｜"+color+"｜"+size;
-    if(seen[sku]){dup++;continue}seen[sku]=1;
+    if(seen[sku]){if(m.juchu){var q2=seedNum(g("qty"));if(q2!=null)out[seen[sku]-1].qty+=q2;merged++;continue}dup++;continue}seen[sku]=out.length+1;
     if(/e\+/i.test(jan)){sci++;jan=""}
     var retail=seedNum(g("retail")),sale=seedNum(g("sale")),qty=seedNum(g("qty"));
     if(m.juchu&&sale==null){
       var om=String(m.note!=null?row[m.note]||"":"").replace(/[０-９．]/g,function(c){return c==="．"?".":String.fromCharCode(c.charCodeAt(0)-65248)}).match(/(\d+(?:\.\d+)?)\s*[％%]\s*OFF/i);
-      if(om&&retail!=null){sale=Math.round(retail*(100-parseFloat(om[1]))/100);offN++}else if(retail!=null){sale=retail;noOff++}
+      if(om&&retail!=null){sale=Math.round(retail*(100-parseFloat(om[1]))/100);offN++}else if(retail!=null&&SEED_OFF!=null){sale=Math.round(retail*(100-SEED_OFF)/100);offN++}else if(retail!=null){sale=retail;noOff++}
     }
     if(retail==null&&sale==null)noPrice++;
     if(retail==null)retail=sale||0;if(sale==null)sale=retail||0;
@@ -1056,7 +1059,7 @@ function seedRowsToPayload(rows){
   }
   if(!out.length)return{error:"商品の行が見つかりませんでした。"};
   out.forEach(function(s,i){s.id="s"+String(i+1).padStart(3,"0")});
-  if(m.juchu)warn.push("受注明細として読み込みました。販売価格は備考の「○○％OFF」から計算しています（"+offN+" 行）"+(noOff?"。オフ率の記載がない "+noOff+" 行は上代と同じ価格にしています":""));
+  if(m.juchu)warn.push("受注明細として読み込みました。販売価格は備考の「○○％OFF」から計算しています（"+offN+" 行）"+(noOff?"。オフ率が分からない "+noOff+" 行は上代と同じ価格にしています（上の「オフ率」欄に入れると全商品に使います）":"")+(merged?"。同じ商品の行 "+merged+" 件は数量を合算しました":""));
   if(dup)warn.push("同じSKUの行 "+dup+" 件は、1件目だけを使いました");
   if(sci)warn.push("JANが「4.58E+12」のような表示になっている行が "+sci+" 件あります（JANは空欄にしました。Excelの列を『文字列』にして入力し直してください）");
   if(noPrice)warn.push("価格が空の行が "+noPrice+" 件あります（0円になります）");
@@ -1096,7 +1099,8 @@ async function seedReadFile(f){
     var p=JSON.parse(await f.text());
     return{payload:p,count:(p.skus||[]).length,warn:[]};
   }
-  var rows;
+  var rows,offv=$("seedoff")&&$("seedoff").value!==""?parseFloat($("seedoff").value):NaN;
+  SEED_OFF=isFinite(offv)&&offv>=0&&offv<=100?offv:null;
   if(/\.(xlsx|xlsm|xls)$/.test(nm)){
     try{await seedLoadXlsx()}catch(e){return{error:"Excelを読み込む部品を取得できませんでした。通信を確認するか、Excelを「CSV UTF-8」で保存して、もう一度お試しください。"}}
     var wb=XLSX.read(await f.arrayBuffer(),{type:"array"}),best=null;
@@ -1143,7 +1147,7 @@ async function doSeed(){
   if(r.error){say(r.error,true);return}
   var b0=$("seedinfo");if(b0){b0.className="seedinfo";b0.textContent="登録しています…"}
   seedKeepIds(r.payload);
-  try{await window.T8Data.seed(ad,r.payload);say("商品マスタを登録しました（"+r.count+" 件）")}
+  try{await window.T8Data.seed(ad,r.payload);say("商品マスタを登録しました（"+r.count+" 件）");setTimeout(function(){var d=$("adminbox");if(d)d.open=false;var sa=$("admin");if(sa)sa.value="";var sf=$("seedfile");if(sf)try{sf.value=""}catch(e){}render.force=true;render()},2500)}
   catch(e){console.error(e);say(e&&e.code==="server"&&/admin/.test(String(e.message))?"管理者コードが違います。ADMIN_CODE の値を入力してください（合言葉ではありません）":"登録できませんでした（"+(e&&e.message?e.message:"通信エラー")+"）",true)}
 }
 
