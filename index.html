@@ -535,8 +535,14 @@ function datebar(){
   var C=calc(),i=rangeDays().indexOf(S.date),lab=i>=0?'会期 '+(i+1)+' 日目 / '+C.n+' 日':(S.date<S.cfg.start?'会期前':'会期後');
   return'<div class="datebar"><button class="btn" data-act="dshift" data-v="-1" aria-label="前の日">◀</button><div class="d"><b>'+mdw(S.date)+'</b><span>'+lab+(S.date===todayStr()?' ｜ 今日':'')+'</span></div><label class="pick" aria-label="日付を選ぶ">日付<input type="date" id="datepick" value="'+S.date+'" data-act="dpick"></label><button class="btn" data-act="dshift" data-v="1" aria-label="次の日">▶</button></div>';
 }
+function seedForm(){
+  return'<div class="grid" style="gap:12px"><label class="f"><span>管理者コード</span><input type="password" id="admin" autocomplete="off"></label><label class="f"><span>商品マスタのファイル（Excel / CSV / JSON）</span><input type="file" id="seedfile" accept=".xlsx,.xls,.xlsm,.csv,.tsv,.json,application/json,text/csv" style="min-height:44px"></label><div id="seedinfo" class="seedinfo" aria-live="polite"></div><div class="muted" style="font-size:12px;line-height:1.7">1行目に見出し（品番・商品名・カラー・サイズ・JAN・上代・投入数・販売価格）がある表を、そのまま使えます。列の順番は自由です。SKUの列がなければ「品番｜カラー｜サイズ」で自動作成します。</div><button class="btn primary" data-act="seed">登録する</button></div>';
+}
 function emptySku(){
-  return'<div class="card"><h2>商品マスタが未登録です <small>管理者の方が最初に1回だけ登録します</small></h2><div class="grid" style="gap:12px"><label class="f"><span>管理者コード</span><input type="password" id="admin" autocomplete="off"></label><label class="f"><span>商品マスタのファイル（Excel / CSV / JSON）</span><input type="file" id="seedfile" accept=".xlsx,.xls,.xlsm,.csv,.tsv,.json,application/json,text/csv" style="min-height:44px"></label><div id="seedinfo" class="seedinfo" aria-live="polite"></div><div class="muted" style="font-size:12px;line-height:1.7">1行目に見出し（品番・商品名・カラー・サイズ・JAN・上代・投入数・販売価格）がある表を、そのまま使えます。列の順番は自由です。SKUの列がなければ「品番｜カラー｜サイズ」で自動作成します。</div><button class="btn primary" data-act="seed">登録する</button></div></div>';
+  return'<div class="card"><h2>商品マスタが未登録です <small>管理者の方が最初に1回だけ登録します</small></h2>'+seedForm()+'</div>';
+}
+function adminPanel(){
+  return'<details class="card" style="margin-top:14px"><summary style="cursor:pointer;font-weight:700;min-height:44px;display:flex;align-items:center">管理者用：商品マスタを更新する</summary><div class="muted" style="font-size:13px;margin:6px 0 12px;line-height:1.7">同じ商品（品番・カラー・サイズ）は上書きされ、新しい商品は追加されます。売上の入力履歴は消えません。</div>'+seedForm()+'</details>';
 }
 
 /* ---- 入力 ---- */
@@ -741,7 +747,7 @@ function vStock(){
     if(S.stockFilter==="still")return x.sold===0&&x.stock>0;
     if(S.stockFilter==="gap")return c&&c.n!=null&&c.n!==stockAsOf(s.id,c.date);
     return true});
-  if(!rows.length)return h+'<div class="empty"><b>該当する商品がありません</b>絞り込みを変えてください。</div>';
+  if(!rows.length)return h+'<div class="empty"><b>該当する商品がありません</b>絞り込みを変えてください。</div>'+adminPanel();
   h+='<div class="tablewrap" style="max-height:70vh"><table><thead><tr><th>商品（品番｜カラー｜サイズ）</th><th>投入</th><th>販売</th><th>返品<br>再販可</th><th>返品<br>再販不可</th><th>補充等<br>増減</th><th>理論<br>在庫</th><th>消化率</th><th>実数<br>（任意）</th><th>ズレ</th></tr></thead><tbody>';
   var last="";
   rows.forEach(function(s){
@@ -753,7 +759,7 @@ function vStock(){
      '<td style="width:96px"><input type="number" inputmode="numeric" id="c_'+s.id+'" data-count="'+s.id+'" value="'+esc(cv)+'" style="min-height:38px;width:84px;padding:4px 8px"'+(can?'':' readonly')+'></td>'+
      '<td class="num">'+(df==null?'<span class="muted">—</span>':(df===0?'<span class="pill ok">0</span>':'<span class="pill bad">'+(df>0?'+':'')+df+'</span>'))+'</td></tr>';
   });
-  return h+'</tbody></table></div>';
+  return h+'</tbody></table></div>'+adminPanel();
 }
 
 /* ---- 確認 ---- */
