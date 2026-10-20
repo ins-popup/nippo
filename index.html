@@ -998,8 +998,23 @@ function seedFindHeader(rows){
   for(var r=0;r<Math.min(rows.length,30);r++){
     var m=seedMapHeader(rows[r]||[]),c=Object.keys(m).length;
     if((m.hin!=null||m.sku!=null)&&c>=3&&(!best||c>best.c))best={r:r,m:m,c:c};
+    if(seedJuchu(rows[r]||[],m)){best={r:r,m:m,c:99};break}
   }
   return best;
+}
+/* 基幹システムの「受注明細問合せ」をそのまま読み込む（商品＝品番、カラー略称・サイズ略称、備考の「30％OFF」から販売価格を計算） */
+function seedJuchu(row,m){
+  var H=row.map(function(x){return String(x==null?"":x).replace(/[\s　]/g,"")});
+  function ix(n){return H.indexOf(n)}
+  if(ix("商品")<0||ix("商品名1")<0||ix("カラー略称")<0||ix("サイズ略称")<0)return false;
+  Object.keys(m).forEach(function(k){delete m[k]});
+  m.hin=ix("商品");m.name=ix("商品名1");m.color=ix("カラー略称");m.size=ix("サイズ略称");
+  if(ix("JAN1コード")>=0)m.jan=ix("JAN1コード");
+  m.retail=ix("上代単価")>=0?ix("上代単価"):ix("受注単価");
+  m.qty=ix("受注数")>=0?ix("受注数"):ix("受注残数量");
+  if(ix("明細備考1")>=0)m.note=ix("明細備考1");
+  m.juchu=1;
+  return true;
 }
 function seedNum(v){
   if(v==null||v==="")return null;
@@ -1020,7 +1035,7 @@ function seedRowsToPayload(rows){
   if(m.qty==null)miss.push("投入数");
   if(m.sale==null&&m.retail==null)miss.push("販売価格（または上代）");
   if(miss.length)return{error:"次の見出しが見つかりません：" + miss.join("、")};
-  var out=[],seen={},warn=[],dup=0,sci=0,noPrice=0,row=[];
+  var out=[],seen={},warn=[],dup=0,sci=0,noPrice=0,row=[],offN=0,noOff=0;
   function g(k){return m[k]==null?"":row[m[k]]}
   for(var r=h.r+1;r<rows.length;r++){
     row=rows[r]||[];
@@ -1031,12 +1046,17 @@ function seedRowsToPayload(rows){
     if(seen[sku]){dup++;continue}seen[sku]=1;
     if(/e\+/i.test(jan)){sci++;jan=""}
     var retail=seedNum(g("retail")),sale=seedNum(g("sale")),qty=seedNum(g("qty"));
+    if(m.juchu&&sale==null){
+      var om=String(m.note!=null?row[m.note]||"":"").replace(/[０-９．]/g,function(c){return c==="．"?".":String.fromCharCode(c.charCodeAt(0)-65248)}).match(/(\d+(?:\.\d+)?)\s*[％%]\s*OFF/i);
+      if(om&&retail!=null){sale=Math.round(retail*(100-parseFloat(om[1]))/100);offN++}else if(retail!=null){sale=retail;noOff++}
+    }
     if(retail==null&&sale==null)noPrice++;
     if(retail==null)retail=sale||0;if(sale==null)sale=retail||0;
     out.push({sku:sku,hin:hin,name:name,color:color,size:size,jan:jan,retail:retail,qty:qty==null?0:qty,sale:sale});
   }
   if(!out.length)return{error:"商品の行が見つかりませんでした。"};
   out.forEach(function(s,i){s.id="s"+String(i+1).padStart(3,"0")});
+  if(m.juchu)warn.push("受注明細として読み込みました。販売価格は備考の「○○％OFF」から計算しています（"+offN+" 行）"+(noOff?"。オフ率の記載がない "+noOff+" 行は上代と同じ価格にしています":""));
   if(dup)warn.push("同じSKUの行 "+dup+" 件は、1件目だけを使いました");
   if(sci)warn.push("JANが「4.58E+12」のような表示になっている行が "+sci+" 件あります（JANは空欄にしました。Excelの列を『文字列』にして入力し直してください）");
   if(noPrice)warn.push("価格が空の行が "+noPrice+" 件あります（0円になります）");
@@ -1105,6 +1125,14 @@ async function seedPreview(){
     box.textContent="✓ "+r.count+" 件の商品を読み込めました"+(s?"（例：" + [s.hin,s.name,s.color,s.size].filter(Boolean).join(" / ")+"、投入 "+s.qty+"）":"")+(r.warn&&r.warn.length?" ／ 注意：" + r.warn.join(" ／ "):"");
   }catch(e){console.error(e);box.className="seedinfo bad";box.textContent="ファイルを読み込めませんでした。形式を確認してください。"}
 }
+/* 登録済みの商品（品番・カラー・サイズが同じ）は管理番号を変えない。新しい商品は末尾の番号を使う（行の並びが違っても入力済みの売上がずれない） */
+function seedKeyOf(s){return s.sku||(s.hin+"｜"+s.color+"｜"+s.size)}
+function seedKeepIds(p){
+  var ex={},mx=0,used={},list=(p&&p.skus)||[];
+  (S.skus||[]).forEach(function(s){ex[seedKeyOf(s)]=s.id;var n=parseInt(String(s.id).replace(/\D/g,""),10);if(n>mx)mx=n});
+  list.forEach(function(s){var id=ex[seedKeyOf(s)];if(id&&!used[id]){s.id=id;used[id]=1;s._ok=1}});
+  list.forEach(function(s){if(s._ok){delete s._ok;return}do{mx++;s.id="s"+String(mx).padStart(3,"0")}while(used[s.id]);used[s.id]=1});
+}
 async function doSeed(){
   var f=$("seedfile")&&$("seedfile").files[0],ad=($("admin")&&$("admin").value||"").trim();
   function say(m,bad){toast(m,bad);var b=$("seedinfo");if(b){b.className="seedinfo "+(bad?"bad":"ok");b.textContent=(bad?"× ":"✓ ")+m}}
@@ -1114,6 +1142,7 @@ async function doSeed(){
   try{r=await seedReadFile(f)}catch(e){console.error(e);say("ファイルを読み込めませんでした。形式を確認してください",true);return}
   if(r.error){say(r.error,true);return}
   var b0=$("seedinfo");if(b0){b0.className="seedinfo";b0.textContent="登録しています…"}
+  seedKeepIds(r.payload);
   try{await window.T8Data.seed(ad,r.payload);say("商品マスタを登録しました（"+r.count+" 件）")}
   catch(e){console.error(e);say(e&&e.code==="server"&&/admin/.test(String(e.message))?"管理者コードが違います。ADMIN_CODE の値を入力してください（合言葉ではありません）":"登録できませんでした（"+(e&&e.message?e.message:"通信エラー")+"）",true)}
 }
