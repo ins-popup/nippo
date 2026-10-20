@@ -5,6 +5,11 @@
   var cfg = window.T8_CONFIG || {};
   var COLS = ["skus", "tx", "days", "counts", "photos", "log", "config"];
   var store = {}, subs = [], code = "", inflight = 0, timer = null;
+  /* イベント切替：イベントごとに、ドキュメントIDの先頭に「ev~イベントID~」を付けて同じ保存先に分けて入れる。
+     最初のイベント（京都T8＝t8）は付けない（これまでのデータをそのまま使うため） */
+  var LEGACY = "t8", evId = LEGACY, pfx = "";
+  function mine(id) { return pfx === "" ? String(id).indexOf("~") < 0 : String(id).indexOf(pfx) === 0; }
+  function strip(id) { return pfx === "" ? id : String(id).slice(pfx.length); }
   COLS.forEach(function (c) { store[c] = {}; });
 
   function configured() { return !!cfg.url && /^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec/.test(cfg.url); }
@@ -47,7 +52,7 @@
       limit: function (n) { return Query(name, ord, n); },
       onSnapshot: function (cb) {
         var s = { name: name, fire: function () {
-          var o = store[name] || {}, docs = Object.keys(o).map(function (id) { return { id: id, exists: true, data: function () { return o[id]; } }; });
+          var o = store[name] || {}, docs = Object.keys(o).filter(mine).map(function (raw) { return { id: strip(raw), exists: true, data: function () { return o[raw]; } }; });
           if (ord) docs.sort(function (a, b) { var x = a.data()[ord.f], y = b.data()[ord.f]; return (x < y ? -1 : x > y ? 1 : 0) * (ord.d === "desc" ? -1 : 1); });
           if (lim) docs = docs.slice(0, lim);
           cb({ docs: docs, size: docs.length });
@@ -57,9 +62,10 @@
       }
     };
   }
-  function docRef(name, id) {
+  function docRef(name, id0) {
+    var id = pfx + id0;
     return {
-      id: id,
+      id: id0,
       set: function (d) { store[name][id] = clone(d); notify(name); return send([{ op: "set", collection: name, id: id, data: d }]); },
       update: function (d) { store[name][id] = Object.assign({}, store[name][id] || {}, clone(d)); notify(name); return send([{ op: "update", collection: name, id: id, data: d }]); },
       delete: function () { delete store[name][id]; notify(name); return send([{ op: "delete", collection: name, id: id }]); },
@@ -106,11 +112,36 @@
     }
   };
 
+  /* 管理者コード付きの書き込み（商品マスタ・イベント設定。多いときは分けて送る） */
+  function adminWrite(admin, ops) {
+    var chunks = [], i;
+    for (i = 0; i < ops.length; i += 40) chunks.push(ops.slice(i, i + 40));
+    inflight++;
+    var p = Promise.resolve();
+    chunks.forEach(function (c) { p = p.then(function () { return post({ action: "write", admin: admin, ops: c }); }); });
+    return p.then(function () { inflight--; return refresh(); }, function (e) { inflight--; refresh().catch(function () {}); throw e; });
+  }
   window.T8Data = {
     configured: configured,
     setCode: function (c) { code = c; },
     connect: connect, refresh: refresh, db: db, assets: assets, downloads: downloads,
     photoUrl: function (id) { return "https://drive.google.com/thumbnail?id=" + encodeURIComponent(id) + "&sz=w1600"; },
-    seed: function (admin, payload) { return post({ action: "seed", admin: admin, payload: payload }).then(function () { return refresh(); }); }
+    seed: function (admin, payload) {
+      if (pfx === "") return post({ action: "seed", admin: admin, payload: payload }).then(function () { return refresh(); });
+      var ops = (payload.skus || []).map(function (s) { var d = {}; Object.keys(s).forEach(function (k) { if (k !== "id") d[k] = s[k]; }); return { op: "set", collection: "skus", id: pfx + s.id, data: d }; });
+      return adminWrite(admin, ops);
+    },
+    /* イベントの一覧と切替 */
+    LEGACY: LEGACY,
+    setEvent: function (id) { evId = id || LEGACY; pfx = evId === LEGACY ? "" : "ev~" + evId + "~"; },
+    eventId: function () { return evId; },
+    events: function () { var d = (store.config || {}).events; return d && d.list ? d.list : null; },
+    saveEvent: function (admin, ev, cfgData, makeIndex) {
+      var list = (window.T8Data.events() || makeIndex || []).slice(), i = -1;
+      list.forEach(function (x, k) { if (x.id === ev.id) i = k; });
+      if (i >= 0) list[i] = ev; else list.push(ev);
+      var p = ev.id === LEGACY ? "" : "ev~" + ev.id + "~";
+      return adminWrite(admin, [{ op: "set", collection: "config", id: "events", data: { list: list } }, { op: "update", collection: "config", id: p + "main", data: cfgData }]);
+    }
   };
 })();

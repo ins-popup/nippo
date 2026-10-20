@@ -501,8 +501,8 @@ function bump(){S._ver=(S._ver||0)+1;render()}
 function render(){
   var a=document.activeElement;
   if(a&&a!==document.body&&(a.tagName==="TEXTAREA"||(a.tagName==="INPUT"&&/^(text|number|search)$/.test(a.type)))&&$("main").contains(a)&&!render.force){S.pending=true;return}
-  var sf=$("seedfile"),ab=$("adminbox");
-  if(!render.force&&sf&&((sf.files&&sf.files.length)||($("admin")&&$("admin").value)||(ab&&ab.open))){S.pending=true;return}
+  var sf=$("seedfile"),ab=$("adminbox"),eb=$("eventbox");
+  if(!render.force&&((sf&&((sf.files&&sf.files.length)||($("admin")&&$("admin").value)||(ab&&ab.open)))||(eb&&eb.open))){S.pending=true;return}
   render.force=false;S.pending=false;
   if(S.gate){$("nav").innerHTML="";$("main").innerHTML=gateHtml();return}
   var fid=a&&a.id,ss=a&&a.selectionStart,se=a&&a.selectionEnd,sy=window.scrollY;
@@ -522,8 +522,14 @@ function renderNav(){
   $("nav").innerHTML=tabs.map(function(t){
     return'<button data-act="tab" data-v="'+t[0]+'"'+(S.tab===t[0]?' aria-current="page"':'')+'><span class="t">'+t[1]+'</span><span class="s">'+t[2]+'</span>'+(t[0]==="check"&&n.length?'<span class="badge'+(red?' red':'')+'">'+n.length+'</span>':'')+'</button>'}).join("");
 }
+/* ---- イベント（会期が重なってもデータは別々に保存される） ---- */
+function evList(){var A=window.T8Data,l=A&&A.events&&A.events();if(l&&l.length)return l;return[{id:"t8",name:"京都高島屋S.C. T8",start:DEFAULT_CFG.start,end:DEFAULT_CFG.end}]}
+function evCur(){var id=window.T8Data.eventId(),f=evList().filter(function(e){return e.id===id})[0];return f||{id:id,name:id}}
+function evName(){return S.cfg.name||evCur().name||"イベント"}
+function fnSafe(t){return String(t||"").replace(/[\\\/:*?"<>|\s　]/g,"")}
 function header(){
-  var h='<div class="top"><div class="brand"><small>26FW POPUP ｜ DAILY REPORT</small><b>WILD THINGS<em>POPUP</em></b><span class="jp">日報・売上・在庫管理</span><i>京都高島屋S.C. T8 ｜ '+md(S.cfg.start)+'〜'+md(S.cfg.end)+'</i></div><div class="grow"></div>';
+  var h='<div class="top"><div class="brand"><small>'+esc(S.cfg.tag||"26FW POPUP ｜ DAILY REPORT")+'</small><b>WILD THINGS<em>POPUP</em></b><span class="jp">日報・売上・在庫管理</span><i>'+esc(evName())+(S.cfg.place?' ｜ '+esc(S.cfg.place):'')+' ｜ '+md(S.cfg.start)+'〜'+md(S.cfg.end)+'</i></div><div class="grow"></div>';
+  if(!S.demo&&evList().length>1)h+='<button class="btn small" data-act="evsw">イベント切替</button>';
   h+=S.demo?'<span class="pill warn">見本データ表示中</span>':'<span class="pill ok">保存済みデータ</span>';
   if(!S.demo&&S.skus.length)h+='<button class="btn small" data-act="demo" data-v="on">見本データで試す</button>';
   h+='<label class="who"><span>入力者</span><input type="text" id="who" value="'+esc(S.who||"")+'" placeholder="あなたの名前" autocomplete="off"'+(S.who&&S.who.trim()?'':' class="need"')+'></label>';
@@ -543,8 +549,25 @@ function seedForm(){
 function emptySku(){
   return'<div class="card"><h2>商品マスタが未登録です <small>管理者の方が最初に1回だけ登録します</small></h2>'+seedForm()+'</div>';
 }
+function eventForm(px,c,btn,label){
+  var tax=c.tax!=null?Math.round(c.tax*1000)/10:10;
+  function f(id,lab,val,type,ph){return'<label class="f"><span>'+lab+'</span><input type="'+(type||"text")+'" id="'+px+id+'" value="'+esc(val==null?"":val)+'"'+(ph?' placeholder="'+esc(ph)+'"':'')+(type==="number"?' inputmode="decimal"':'')+' autocomplete="off"></label>'}
+  return'<div class="grid" style="gap:10px"><label class="f"><span>管理者コード</span><input type="password" id="'+px+'admin" autocomplete="off"></label>'+
+   f("name","イベント名",c.name||"","text","例：渋谷PARCO POPUP")+f("place","場所・店舗名のメモ",c.place||"","text","例：渋谷PARCO 2F")+f("tag","サブタイトル（任意）",c.tag||"","text","例：27SS POPUP ｜ DAILY REPORT")+
+   '<div class="row">'+f("start","開始日",c.start||"","date")+f("end","終了日",c.end||"","date")+'</div>'+
+   '<div class="row">'+f("budget","売上予算（税抜・円）",c.budget==null?"":c.budget,"number","例：2100000")+f("tax","消費税率（％）",tax,"number")+'</div>'+
+   '<button class="btn primary" data-act="'+btn+'">'+label+'</button></div>';
+}
+function eventPanel(){
+  var id=window.T8Data.eventId(),url=location.origin+location.pathname+"?e="+encodeURIComponent(id);
+  return'<details class="card" id="eventbox" style="margin-top:14px"><summary style="cursor:pointer;font-weight:700;min-height:44px;display:flex;align-items:center">管理者用：イベントの設定・追加</summary>'+
+   '<div class="muted" style="font-size:13px;margin:6px 0 12px;line-height:1.7">イベントごとに、商品・売上・在庫・日報は別々に保存されます。会期が重なっていても混ざりません。合言葉は共通で、入室後にイベントを選びます。</div>'+
+   '<h3 style="margin:8px 0">このイベントの設定（'+esc(evName())+'）</h3>'+eventForm("evE_",Object.assign({},S.cfg,{name:evName()}),"evsave","設定を保存する")+
+   '<div class="muted" style="font-size:12.5px;margin-top:10px;word-break:break-all">このイベントに直接入るURL：<br>'+esc(url)+'</div>'+
+   '<h3 style="margin:18px 0 8px">新しいイベントを追加する</h3><div class="muted" style="font-size:12.5px;margin-bottom:8px">追加すると、そのイベントに切り替わります。続けて「在庫」タブの下で商品マスタを登録してください。</div>'+eventForm("evN_",{tax:0.1},"evnew","イベントを追加する")+'</details>';
+}
 function adminPanel(){
-  return'<details class="card" id="adminbox" style="margin-top:14px"><summary style="cursor:pointer;font-weight:700;min-height:44px;display:flex;align-items:center">管理者用：商品マスタを更新する</summary><div class="muted" style="font-size:13px;margin:6px 0 12px;line-height:1.7">同じ商品（品番・カラー・サイズ）は上書きされ、新しい商品は追加されます。売上の入力履歴は消えません。<span style="opacity:.6">（読み取り機能 '+SEED_VER+'）</span></div>'+seedForm()+'</details>';
+  return'<details class="card" id="adminbox" style="margin-top:14px"><summary style="cursor:pointer;font-weight:700;min-height:44px;display:flex;align-items:center">管理者用：商品マスタを更新する <span style="font-weight:500;font-size:13px">（登録先：'+esc(evName())+'）</span></summary><div class="muted" style="font-size:13px;margin:6px 0 12px;line-height:1.7">同じ商品（品番・カラー・サイズ）は上書きされ、新しい商品は追加されます。売上の入力履歴は消えません。<span style="opacity:.6">（読み取り機能 '+SEED_VER+'）</span></div>'+seedForm()+'</details>';
 }
 
 /* ---- 入力 ---- */
@@ -749,7 +772,7 @@ function vStock(){
     if(S.stockFilter==="still")return x.sold===0&&x.stock>0;
     if(S.stockFilter==="gap")return c&&c.n!=null&&c.n!==stockAsOf(s.id,c.date);
     return true});
-  if(!rows.length)return h+'<div class="empty"><b>該当する商品がありません</b>絞り込みを変えてください。</div>'+adminPanel();
+  if(!rows.length)return h+'<div class="empty"><b>該当する商品がありません</b>絞り込みを変えてください。</div>'+adminPanel()+eventPanel();
   h+='<div class="tablewrap" style="max-height:70vh"><table><thead><tr><th>商品（品番｜カラー｜サイズ）</th><th>投入</th><th>販売</th><th>返品<br>再販可</th><th>返品<br>再販不可</th><th>補充等<br>増減</th><th>理論<br>在庫</th><th>消化率</th><th>実数<br>（任意）</th><th>ズレ</th></tr></thead><tbody>';
   var last="";
   rows.forEach(function(s){
@@ -761,7 +784,7 @@ function vStock(){
      '<td style="width:96px"><input type="number" inputmode="numeric" id="c_'+s.id+'" data-count="'+s.id+'" value="'+esc(cv)+'" style="min-height:38px;width:84px;padding:4px 8px"'+(can?'':' readonly')+'></td>'+
      '<td class="num">'+(df==null?'<span class="muted">—</span>':(df===0?'<span class="pill ok">0</span>':'<span class="pill bad">'+(df>0?'+':'')+df+'</span>'))+'</td></tr>';
   });
-  return h+'</tbody></table></div>'+adminPanel();
+  return h+'</tbody></table></div>'+adminPanel()+eventPanel();
 }
 
 /* ---- 確認 ---- */
@@ -803,6 +826,11 @@ document.addEventListener("click",function(e){
     case"fix":var c=checks()[+v];if(c)goTab(c.go.tab,c.go);break;
     case"demo":startDemo(v==="on");break;
     case"login":doLogin();break;
+    case"evsw":S.evBack=true;S.gate="events";render.force=true;render();window.scrollTo(0,0);break;
+    case"evback":S.gate=null;render.force=true;render();break;
+    case"pickev":try{localStorage.setItem("t8event",v)}catch(x){}location.href=location.pathname+"?e="+encodeURIComponent(v);break;
+    case"evsave":doEvent(false);break;
+    case"evnew":doEvent(true);break;
     case"seed":doSeed();break;
     case"reload":location.reload();break;
     case"csv":doCsv(v);break;
@@ -862,11 +890,11 @@ function doCsv(w){
   if(w==="sales"){
     var r=[["日付","曜日","総売上高(税抜)","返品(税抜)","ディスカウント","純売上高(税抜)","税金","合計(税込)","予算比","累計純売上","累計予算比","客数","客単価(税込)","販売点数","返品点数","純販売点数","売れたSKU数","レポート合計(税込)","差"]];
     C.rows.filter(function(d){return d.inRange}).forEach(function(d){r.push([d.date,wd(d.date),d.total,d.ret,d.dis,d.net,d.tax,d.sum,d.ratio==null?"":Math.round(d.ratio*1000)/10+"%",d.cum||"",d.cumRatio==null?"":Math.round(d.cumRatio*1000)/10+"%",d.cust==null?"":d.cust,d.unit?Math.round(d.unit):"",d.pcsSale,d.pcsRet,d.pcsNet,d.skuCnt,d.rep==null?"":d.rep,d.diff==null?"":d.diff])});
-    csvDl("売上明細_京都T8_"+todayStr()+".csv",r);
+    csvDl("売上明細_"+fnSafe(evName())+"_"+todayStr()+".csv",r);
   }else{
     var r2=[["日付","区分","品番","カラー","サイズ","数量","実際の金額(税込)","メモ","入力者"]];
     getTx().slice().sort(function(a,b){return a.date<b.date?-1:a.date>b.date?1:(a.at||0)-(b.at||0)}).forEach(function(t){var s=C.sm[t.skuId];r2.push([t.date,(KMAP[t.kind]||{}).n||t.kind,s?s.hin:"",s?s.color:"",s?s.size:"",t.qty,t.amount==null?"":t.amount,t.memo||"",t.by||""])});
-    csvDl("入力履歴_京都T8_"+todayStr()+".csv",r2);
+    csvDl("入力履歴_"+fnSafe(evName())+"_"+todayStr()+".csv",r2);
   }
 }
 /* 写真 */
@@ -940,18 +968,30 @@ async function boot(){
   if(!code){S.gate="login";render();return}
   A.setCode(code);
   S.gate="loading";render();
-  try{await A.connect();S.gate=null;startSubs()}
+  try{await A.connect();if(chooseEvent()){render();return}S.gate=null;startSubs()}
   catch(e){console.error(e);if(e&&e.code==="unauthorized"){try{localStorage.removeItem("t8code")}catch(x){}S.gate="login";S.gateErr="合言葉が違います。もう一度入力してください。"}else{S.gate="net";S.gateErr="データを読み込めませんでした。通信を確認して、もう一度お試しください。"}render()}
+}
+/* 入室後に、どのイベントを開くか決める（?e=イベントID → 前回のイベント → 1つだけならそれ → 複数なら選んでもらう） */
+function chooseEvent(){
+  var A=window.T8Data,q="",sv="";
+  try{q=new URLSearchParams(location.search).get("e")||""}catch(e){}
+  try{sv=localStorage.getItem("t8event")||""}catch(e){}
+  var list=evList(),ids=list.map(function(e){return e.id});
+  var pick=q&&ids.indexOf(q)>=0?q:(sv&&ids.indexOf(sv)>=0?sv:"");
+  if(!pick){if(list.length>1){S.gate="events";return true}pick=list[0].id}
+  try{localStorage.setItem("t8event",pick)}catch(e){}
+  A.setEvent(pick);return false;
 }
 async function doLogin(){
   var c=($("code")&&$("code").value||"").trim();if(!c)return;
   var A=window.T8Data;A.setCode(c);S.gateErr="";S.gate="loading";render.force=true;render();
-  try{await A.connect();try{localStorage.setItem("t8code",c)}catch(x){}S.gate=null;startSubs();toast("ログインしました")}
+  try{await A.connect();try{localStorage.setItem("t8code",c)}catch(x){}if(chooseEvent()){render.force=true;render();return}S.gate=null;startSubs();toast("ログインしました")}
   catch(e){console.error(e);S.gate=e&&e.code==="unauthorized"?"login":"net";S.gateErr=e&&e.code==="unauthorized"?"合言葉が違います。":"データを読み込めませんでした。通信を確認してください。";render.force=true;render()}
 }
 function gateHtml(){
-  var g=S.gate,h='<div class="gate"><div class="brand" style="margin-bottom:18px"><small>26FW POPUP ｜ DAILY REPORT</small><b>WILD THINGS<em>POPUP</em></b><span class="jp">日報・売上・在庫管理</span><i>京都高島屋S.C. T8</i></div><div class="card">';
+  var g=S.gate,h='<div class="gate"><div class="brand" style="margin-bottom:18px"><small>26FW POPUP ｜ DAILY REPORT</small><b>WILD THINGS<em>POPUP</em></b><span class="jp">日報・売上・在庫管理</span></div><div class="card">';
   if(g==="setup")h+='<h2>初期設定がまだです</h2><p class="muted" style="font-size:14px">config.js に、Google Apps Script のウェブアプリURLを設定してください。手順は README.md に書いてあります。</p>';
+  else if(g==="events"){var A0=window.T8Data;h+='<h2>イベントを選んでください</h2><div style="display:grid;gap:10px;margin-top:10px">'+evList().map(function(e){return'<button class="btn" style="min-height:64px;text-align:left;display:block;width:100%" data-act="pickev" data-v="'+esc(e.id)+'"><b>'+esc(e.name||e.id)+'</b><br><span class="muted" style="font-size:12.5px">'+(e.place?esc(e.place)+' ｜ ':'')+(e.start&&e.end?md(e.start)+'〜'+md(e.end):'')+'</span></button>'}).join("")+'</div>'+(S.evBack?'<div style="margin-top:12px"><button class="btn small" data-act="evback">戻る</button></div>':'')}
   else if(g==="loading")h+='<h2>読み込み中です</h2><p class="muted" style="font-size:14px">データを取得しています。数秒かかることがあります。</p>';
   else h+='<h2>合言葉を入力してください</h2>'+(S.gateErr?'<p class="warnline">'+esc(S.gateErr)+'</p>':'')+'<label class="f"><span>合言葉</span><input type="password" id="code" autocomplete="current-password"></label><div style="margin-top:12px"><button class="btn primary" style="width:100%;min-height:52px" data-act="login">入る</button></div>';
   return h+'</div></div>';
@@ -966,7 +1006,7 @@ function startSubs(){
   db.collection("log").orderBy("at","desc").limit(300).onSnapshot(function(s){S.log=s.docs.map(function(d){return Object.assign({id:d.id},d.data())});done("log")},onErr("log"));
   db.collection("counts").onSnapshot(function(s){var m={};s.docs.forEach(function(d){m[d.id]=Object.assign({id:d.id},d.data())});S.counts=m;done("counts")},onErr("counts"));
   db.collection("photos").onSnapshot(function(s){S.photos=s.docs.map(function(d){return Object.assign({id:d.id},d.data())});done("photos")},onErr("photos"));
-  db.doc("config/main").onSnapshot(function(s){var d=s.exists?s.data():null;S.cfg=Object.assign({},DEFAULT_CFG,d||{});if(!rangeDays().length)S.cfg=DEFAULT_CFG;done("cfg")},onErr("cfg"));
+  db.doc("config/main").onSnapshot(function(s){var d=s.exists?s.data():null;S.cfg=Object.assign({},DEFAULT_CFG,d||{});if(!rangeDays().length)S.cfg=DEFAULT_CFG;if(!S.loaded.cfg)S.date=defaultDate();done("cfg")},onErr("cfg"));
 }
 /* ---- 商品マスタの読み込み（Excel / CSV / JSON） ---- */
 var SEED_VER="v3 受注明細対応",SEED_OFF=null;
@@ -1126,7 +1166,7 @@ async function seedPreview(){
     if(r.error){box.className="seedinfo bad";box.textContent=r.error;return}
     var s=r.sample;
     box.className="seedinfo ok";
-    box.textContent="✓ "+r.count+" 件の商品を読み込めました"+(s?"（例：" + [s.hin,s.name,s.color,s.size].filter(Boolean).join(" / ")+"、投入 "+s.qty+"）":"")+(r.warn&&r.warn.length?" ／ 注意：" + r.warn.join(" ／ "):"");
+    box.textContent="✓ "+r.count+" 件の商品を読み込めました（登録先：" + evName() + "）"+(s?"（例：" + [s.hin,s.name,s.color,s.size].filter(Boolean).join(" / ")+"、投入 "+s.qty+"）":"")+(r.warn&&r.warn.length?" ／ 注意：" + r.warn.join(" ／ "):"");
   }catch(e){console.error(e);box.className="seedinfo bad";box.textContent="ファイルを読み込めませんでした。形式を確認してください。"}
 }
 /* 登録済みの商品（品番・カラー・サイズが同じ）は管理番号を変えない。新しい商品は末尾の番号を使う（行の並びが違っても入力済みの売上がずれない） */
@@ -1136,6 +1176,29 @@ function seedKeepIds(p){
   (S.skus||[]).forEach(function(s){ex[seedKeyOf(s)]=s.id;var n=parseInt(String(s.id).replace(/\D/g,""),10);if(n>mx)mx=n});
   list.forEach(function(s){var id=ex[seedKeyOf(s)];if(id&&!used[id]){s.id=id;used[id]=1;s._ok=1}});
   list.forEach(function(s){if(s._ok){delete s._ok;return}do{mx++;s.id="s"+String(mx).padStart(3,"0")}while(used[s.id]);used[s.id]=1});
+}
+async function doEvent(isNew){
+  var px=isNew?"evN_":"evE_",A=window.T8Data;
+  function v(k){var e=$(px+k);return e?String(e.value||"").trim():""}
+  function say(m,bad){toast(m,bad)}
+  var ad=v("admin"),name=v("name"),st=v("start"),en=v("end"),bd=v("budget"),tx=v("tax");
+  if(!ad){say("管理者コードを入力してください",true);return}
+  if(!name){say("イベント名を入力してください",true);return}
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(st)||!/^\d{4}-\d{2}-\d{2}$/.test(en)){say("開始日と終了日を入れてください",true);return}
+  if(pd(en)<pd(st)){say("終了日が開始日より前になっています",true);return}
+  if(pd(en)-pd(st)>119*86400000){say("会期が長すぎます（120日以内）",true);return}
+  var budget=bd===""?0:Number(bd),tax=tx===""?10:Number(tx);
+  if(!isFinite(budget)||budget<0){say("売上予算は数字で入れてください",true);return}
+  if(!isFinite(tax)||tax<0||tax>100){say("消費税率は0〜100の数字で入れてください",true);return}
+  var id=isNew?"e"+Math.random().toString(36).slice(2,7):A.eventId();
+  if(isNew&&evList().some(function(e){return e.id===id}))id+="x";
+  var place=v("place"),tag=v("tag"),cfgData={name:name,place:place,tag:tag,start:st,end:en,budget:budget,tax:Math.round(tax*10)/1000};
+  var ev={id:id,name:name,place:place,start:st,end:en};
+  try{
+    await A.saveEvent(ad,ev,cfgData,evList());
+    if(isNew){try{localStorage.setItem("t8event",id)}catch(x){}say("イベントを追加しました。切り替えます");setTimeout(function(){location.href=location.pathname+"?e="+encodeURIComponent(id)},900)}
+    else{say("イベントの設定を保存しました");var a2=$(px+"admin");if(a2)a2.value="";var d=$("eventbox");if(d)d.open=false;render.force=true;render()}
+  }catch(e){console.error(e);say(e&&e.code==="server"&&/admin/.test(String(e.message))?"管理者コードが違います。ADMIN_CODE の値を入力してください（合言葉ではありません）":"保存できませんでした（"+(e&&e.message?e.message:"通信エラー")+"）",true)}
 }
 async function doSeed(){
   var f=$("seedfile")&&$("seedfile").files[0],ad=($("admin")&&$("admin").value||"").trim();
@@ -1147,7 +1210,7 @@ async function doSeed(){
   if(r.error){say(r.error,true);return}
   var b0=$("seedinfo");if(b0){b0.className="seedinfo";b0.textContent="登録しています…"}
   seedKeepIds(r.payload);
-  try{await window.T8Data.seed(ad,r.payload);say("商品マスタを登録しました（"+r.count+" 件）");setTimeout(function(){var d=$("adminbox");if(d)d.open=false;var sa=$("admin");if(sa)sa.value="";var sf=$("seedfile");if(sf)try{sf.value=""}catch(e){}render.force=true;render()},2500)}
+  try{await window.T8Data.seed(ad,r.payload);say("商品マスタを登録しました（"+evName()+"／"+r.count+" 件）");setTimeout(function(){var d=$("adminbox");if(d)d.open=false;var sa=$("admin");if(sa)sa.value="";var sf=$("seedfile");if(sf)try{sf.value=""}catch(e){}render.force=true;render()},2500)}
   catch(e){console.error(e);say(e&&e.code==="server"&&/admin/.test(String(e.message))?"管理者コードが違います。ADMIN_CODE の値を入力してください（合言葉ではありません）":"登録できませんでした（"+(e&&e.message?e.message:"通信エラー")+"）",true)}
 }
 
