@@ -193,7 +193,7 @@ html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset
 body{margin:0}
 img{max-width:100%}
 .gate{max-width:440px;margin:12vh auto 0}
-</style>
+.seedinfo{font-size:13px;line-height:1.6;color:var(--muted)}.seedinfo.ok{color:#7fd48a}.seedinfo.bad{color:#ff8a70}</style>
 
 <div id="shell">
   <nav id="nav" aria-label="画面の切り替え"></nav>
@@ -391,7 +391,7 @@ function datebar(){
   return'<div class="datebar"><button class="btn" data-act="dshift" data-v="-1" aria-label="前の日">◀</button><div class="d"><b>'+mdw(S.date)+'</b><span>'+lab+(S.date===todayStr()?' ｜ 今日':'')+'</span></div><label class="pick" aria-label="日付を選ぶ">日付<input type="date" id="datepick" value="'+S.date+'" data-act="dpick"></label><button class="btn" data-act="dshift" data-v="1" aria-label="次の日">▶</button></div>';
 }
 function emptySku(){
-  return'<div class="card"><h2>商品マスタが未登録です <small>管理者の方が最初に1回だけ登録します</small></h2><div class="grid" style="gap:12px"><label class="f"><span>管理者コード</span><input type="password" id="admin" autocomplete="off"></label><label class="f"><span>商品マスタの登録用ファイル（.json）</span><input type="file" id="seedfile" accept=".json,application/json" style="min-height:44px"></label><button class="btn primary" data-act="seed">登録する</button></div></div>';
+  return'<div class="card"><h2>商品マスタが未登録です <small>管理者の方が最初に1回だけ登録します</small></h2><div class="grid" style="gap:12px"><label class="f"><span>管理者コード</span><input type="password" id="admin" autocomplete="off"></label><label class="f"><span>商品マスタのファイル（Excel / CSV / JSON）</span><input type="file" id="seedfile" accept=".xlsx,.xls,.xlsm,.csv,.tsv,.json,application/json,text/csv" style="min-height:44px"></label><div id="seedinfo" class="seedinfo" aria-live="polite"></div><div class="muted" style="font-size:12px;line-height:1.7">1行目に見出し（品番・商品名・カラー・サイズ・JAN・上代・投入数・販売価格）がある表を、そのまま使えます。列の順番は自由です。SKUの列がなければ「品番｜カラー｜サイズ」で自動作成します。</div><button class="btn primary" data-act="seed">登録する</button></div></div>';
 }
 
 /* ---- 入力 ---- */
@@ -673,7 +673,8 @@ document.addEventListener("compositionstart",function(){S.comp=true});
 document.addEventListener("compositionend",function(e){S.comp=false;var t=e.target;if(t&&t.id==="q"){S.q=t.value;if(S.tab==="entry"){var l=$("hinList");if(l)l.innerHTML=hinListHtml()}else{render.force=true;render()}}});
 document.addEventListener("change",function(e){
   var t=e.target;
-  if(t.id==="other"){S.form.other=t.value;render.force=true;render()}
+  if(t.id==="seedfile"){seedPreview()}
+  else if(t.id==="other"){S.form.other=t.value;render.force=true;render()}
   else if(t.id==="datepick"){if(t.value){S.date=t.value;render.force=true;render()}}
   else if(t.dataset&&t.dataset.day){
     var fld=t.dataset.day,k=S.date+":"+fld,val=t.value;
@@ -814,12 +815,155 @@ function startSubs(){
   db.collection("photos").onSnapshot(function(s){S.photos=s.docs.map(function(d){return Object.assign({id:d.id},d.data())});done("photos")},onErr("photos"));
   db.doc("config/main").onSnapshot(function(s){var d=s.exists?s.data():null;S.cfg=Object.assign({},DEFAULT_CFG,d||{});if(!rangeDays().length)S.cfg=DEFAULT_CFG;done("cfg")},onErr("cfg"));
 }
+/* ---- 商品マスタの読み込み（Excel / CSV / JSON） ---- */
+var SEED_FIELDS=[
+ {k:"sku",n:"SKU",syn:["sku","skuコード","skuid","商品sku","品番カラーサイズ"]},
+ {k:"hin",n:"品番",syn:["品番","品番コード","商品コード","スタイル","スタイルno","スタイルコード","style","styleno","型番","品番no"]},
+ {k:"name",n:"商品名",syn:["商品名","品名","名称","商品名称","アイテム名","name","商品"]},
+ {k:"color",n:"カラー",syn:["カラー","カラー名","色","color","colour"]},
+ {k:"size",n:"サイズ",syn:["サイズ","サイズ名","size"]},
+ {k:"jan",n:"JAN",syn:["jan","janコード","jancode","バーコード","jan13"]},
+ {k:"retail",n:"上代",syn:["上代","上代価格","定価","税抜上代","本体価格","通常価格","希望小売価格","retail"]},
+ {k:"qty",n:"投入数",syn:["投入数","投入","投入在庫","初期在庫","在庫数","在庫","数量","納品数","qty"]},
+ {k:"sale",n:"販売価格",syn:["販売価格","販売価","販売単価","売価","popup価格","sale"]}
+];
+function seedNorm(s){return String(s==null?"":s).replace(/[（(][^）)]*[）)]/g,"").replace(/[\s　｜|※*＊]/g,"").toLowerCase()}
+function seedMapHeader(row){
+  var map={},used={},hdr=row.map(seedNorm);
+  SEED_FIELDS.forEach(function(f){
+    for(var i=0;i<hdr.length;i++){if(!used[i]&&hdr[i]&&f.syn.indexOf(hdr[i])>=0){map[f.k]=i;used[i]=1;break}}
+  });
+  SEED_FIELDS.forEach(function(f){
+    if(map[f.k]!=null)return;
+    for(var i=0;i<hdr.length;i++){
+      if(used[i]||!hdr[i])continue;
+      if(f.syn.some(function(w){return w.length>=2&&hdr[i].indexOf(w)>=0})){map[f.k]=i;used[i]=1;break}
+    }
+  });
+  return map;
+}
+function seedFindHeader(rows){
+  var best=null;
+  for(var r=0;r<Math.min(rows.length,30);r++){
+    var m=seedMapHeader(rows[r]||[]),c=Object.keys(m).length;
+    if((m.hin!=null||m.sku!=null)&&c>=3&&(!best||c>best.c))best={r:r,m:m,c:c};
+  }
+  return best;
+}
+function seedNum(v){
+  if(v==null||v==="")return null;
+  if(typeof v==="number")return isFinite(v)?v:null;
+  var s=String(v).replace(/[,，¥￥円\s]/g,"").replace(/[０-９]/g,function(c){return String.fromCharCode(c.charCodeAt(0)-65248)});
+  if(s===""||isNaN(Number(s)))return null;return Number(s);
+}
+function seedText(v){
+  if(v==null)return"";
+  if(typeof v==="number")return Number.isInteger(v)?String(v):String(v);
+  return String(v).replace(/　/g," ").trim();
+}
+function seedRowsToPayload(rows){
+  var h=seedFindHeader(rows);
+  if(!h)return{error:"見出しの行が見つかりません。1行目に「品番」「商品名」「カラー」「サイズ」「JAN」「上代」「投入数」「販売価格」などの見出しを入れてください。"};
+  var m=h.m,miss=[];
+  if(m.hin==null&&m.sku==null)miss.push("品番");
+  if(m.qty==null)miss.push("投入数");
+  if(m.sale==null&&m.retail==null)miss.push("販売価格（または上代）");
+  if(miss.length)return{error:"次の見出しが見つかりません：" + miss.join("、")};
+  var out=[],seen={},warn=[],dup=0,sci=0,noPrice=0,row=[];
+  function g(k){return m[k]==null?"":row[m[k]]}
+  for(var r=h.r+1;r<rows.length;r++){
+    row=rows[r]||[];
+    var sku=seedText(g("sku")),hin=seedText(g("hin")),color=seedText(g("color")),size=seedText(g("size")),name=seedText(g("name")),jan=seedText(g("jan"));
+    if(!sku&&!hin)continue;
+    if(sku&&!hin||sku&&(!color&&!size)){var pr=sku.split(/[｜|]/);if(pr.length>=3){if(!hin)hin=pr[0].trim();if(!color)color=pr[1].trim();if(!size)size=pr.slice(2).join("｜").trim()}else if(!hin)hin=sku}
+    if(!sku)sku=hin+"｜"+color+"｜"+size;
+    if(seen[sku]){dup++;continue}seen[sku]=1;
+    if(/e\+/i.test(jan)){sci++;jan=""}
+    var retail=seedNum(g("retail")),sale=seedNum(g("sale")),qty=seedNum(g("qty"));
+    if(retail==null&&sale==null)noPrice++;
+    if(retail==null)retail=sale||0;if(sale==null)sale=retail||0;
+    out.push({sku:sku,hin:hin,name:name,color:color,size:size,jan:jan,retail:retail,qty:qty==null?0:qty,sale:sale});
+  }
+  if(!out.length)return{error:"商品の行が見つかりませんでした。"};
+  out.forEach(function(s,i){s.id="s"+String(i+1).padStart(3,"0")});
+  if(dup)warn.push("同じSKUの行 "+dup+" 件は、1件目だけを使いました");
+  if(sci)warn.push("JANが「4.58E+12」のような表示になっている行が "+sci+" 件あります（JANは空欄にしました。Excelの列を『文字列』にして入力し直してください）");
+  if(noPrice)warn.push("価格が空の行が "+noPrice+" 件あります（0円になります）");
+  return{skus:out,warn:warn};
+}
+function seedParseCsv(text){
+  text=text.replace(/^﻿/,"");
+  var first=text.split(/\r?\n/)[0]||"",d=(first.split("\t").length>first.split(",").length)?"\t":",";
+  var rows=[],row=[],cell="",q=false;
+  for(var i=0;i<text.length;i++){
+    var c=text[i];
+    if(q){if(c==='"'){if(text[i+1]==='"'){cell+='"';i++}else q=false}else cell+=c}
+    else if(c==='"')q=true;
+    else if(c===d){row.push(cell);cell=""}
+    else if(c==="\n"||c==="\r"){if(c==="\r"&&text[i+1]==="\n")i++;row.push(cell);rows.push(row);row=[];cell=""}
+    else cell+=c;
+  }
+  if(cell!==""||row.length){row.push(cell);rows.push(row)}
+  return rows;
+}
+function seedDecode(buf){
+  try{return new TextDecoder("utf-8",{fatal:true}).decode(buf)}
+  catch(e){try{return new TextDecoder("shift_jis").decode(buf)}catch(x){return new TextDecoder("utf-8").decode(buf)}}
+}
+function seedLoadXlsx(){
+  return new Promise(function(res,rej){
+    if(window.XLSX)return res();
+    var s=document.createElement("script");
+    s.src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+    s.onload=function(){res()};s.onerror=function(){rej(new Error("xlsx_load"))};
+    document.head.appendChild(s);
+  });
+}
+async function seedReadFile(f){
+  var nm=(f.name||"").toLowerCase();
+  if(/\.json$/.test(nm)||f.type==="application/json"){
+    var p=JSON.parse(await f.text());
+    return{payload:p,count:(p.skus||[]).length,warn:[]};
+  }
+  var rows;
+  if(/\.(xlsx|xlsm|xls)$/.test(nm)){
+    try{await seedLoadXlsx()}catch(e){return{error:"Excelを読み込む部品を取得できませんでした。通信を確認するか、Excelを「CSV UTF-8」で保存して、もう一度お試しください。"}}
+    var wb=XLSX.read(await f.arrayBuffer(),{type:"array"}),best=null;
+    wb.SheetNames.forEach(function(n){
+      var r=XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true,defval:""}),h=seedFindHeader(r);
+      if(h&&(!best||h.c>best.c))best={c:h.c,rows:r};
+    });
+    rows=best?best.rows:XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,raw:true,defval:""});
+  }else if(/\.(csv|tsv|txt)$/.test(nm)||/csv|text/.test(f.type)){
+    rows=seedParseCsv(seedDecode(await f.arrayBuffer()));
+  }else return{error:"対応しているファイルは、Excel（.xlsx / .xls）、CSV、JSON です。"};
+  var r=seedRowsToPayload(rows);
+  if(r.error)return r;
+  return{payload:{skus:r.skus},count:r.skus.length,warn:r.warn,sample:r.skus[0]};
+}
+async function seedPreview(){
+  var box=$("seedinfo"),f=$("seedfile")&&$("seedfile").files[0];
+  if(!box)return;
+  if(!f){box.textContent="";return}
+  box.className="seedinfo";box.textContent="読み込み中…";
+  try{
+    var r=await seedReadFile(f);
+    if(r.error){box.className="seedinfo bad";box.textContent=r.error;return}
+    var s=r.sample;
+    box.className="seedinfo ok";
+    box.textContent="✓ "+r.count+" 件の商品を読み込めました"+(s?"（例：" + [s.hin,s.name,s.color,s.size].filter(Boolean).join(" / ")+"、投入 "+s.qty+"）":"")+(r.warn&&r.warn.length?" ／ 注意：" + r.warn.join(" ／ "):"");
+  }catch(e){console.error(e);box.className="seedinfo bad";box.textContent="ファイルを読み込めませんでした。形式を確認してください。"}
+}
 async function doSeed(){
   var f=$("seedfile")&&$("seedfile").files[0],ad=($("admin")&&$("admin").value||"").trim();
   if(!f||!ad){toast("管理者コードと登録用ファイルを入れてください",true);return}
-  try{var p=JSON.parse(await f.text());await window.T8Data.seed(ad,p);toast("商品マスタを登録しました")}
-  catch(e){console.error(e);toast(e&&e.code==="server"&&/admin/.test(String(e.message))?"管理者コードが違います":"登録できませんでした。ファイルとコードを確認してください",true)}
+  var r;
+  try{r=await seedReadFile(f)}catch(e){console.error(e);toast("ファイルを読み込めませんでした。形式を確認してください",true);return}
+  if(r.error){toast(r.error,true);return}
+  try{await window.T8Data.seed(ad,r.payload);toast("商品マスタを登録しました（"+r.count+" 件）")}
+  catch(e){console.error(e);toast(e&&e.code==="server"&&/admin/.test(String(e.message))?"管理者コードが違います":"登録できませんでした。管理者コードとファイルを確認してください",true)}
 }
+
 render();
 boot();
 /* 見本データの案内（本番データが空のときの入口） */
