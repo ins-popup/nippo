@@ -113,12 +113,13 @@
   };
 
   /* 管理者コード付きの書き込み（商品マスタ・イベント設定。多いときは分けて送る） */
-  function adminWrite(admin, ops) {
+  function adminWrite(admin, ops, onProgress) {
     var chunks = [], i;
     for (i = 0; i < ops.length; i += 40) chunks.push(ops.slice(i, i + 40));
     inflight++;
     var p = Promise.resolve();
-    chunks.forEach(function (c) { p = p.then(function () { return post({ action: "write", admin: admin, ops: c }); }); });
+    var done = 0;
+    chunks.forEach(function (c) { p = p.then(function () { return post({ action: "write", admin: admin, ops: c }); }).then(function (r) { done += c.length; if (onProgress) onProgress(done, ops.length); return r; }); });
     return p.then(function () { inflight--; return refresh(); }, function (e) { inflight--; refresh().catch(function () {}); throw e; });
   }
   window.T8Data = {
@@ -126,10 +127,10 @@
     setCode: function (c) { code = c; },
     connect: connect, refresh: refresh, db: db, assets: assets, downloads: downloads,
     photoUrl: function (id) { return "https://drive.google.com/thumbnail?id=" + encodeURIComponent(id) + "&sz=w1600"; },
-    seed: function (admin, payload) {
+    seed: function (admin, payload, onProgress) {
       if (pfx === "") return post({ action: "seed", admin: admin, payload: payload }).then(function () { return refresh(); });
       var ops = (payload.skus || []).map(function (s) { var d = {}; Object.keys(s).forEach(function (k) { if (k !== "id") d[k] = s[k]; }); return { op: "set", collection: "skus", id: pfx + s.id, data: d }; });
-      return adminWrite(admin, ops);
+      return adminWrite(admin, ops, onProgress);
     },
     /* イベントの一覧と切替 */
     LEGACY: LEGACY,

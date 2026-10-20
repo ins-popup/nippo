@@ -1210,7 +1210,7 @@ async function doSeed(){
   if(r.error){say(r.error,true);return}
   var b0=$("seedinfo");if(b0){b0.className="seedinfo";b0.textContent="登録しています…"}
   seedKeepIds(r.payload);
-  try{await window.T8Data.seed(ad,r.payload);say("商品マスタを登録しました（"+evName()+"／"+r.count+" 件）");setTimeout(function(){var d=$("adminbox");if(d)d.open=false;var sa=$("admin");if(sa)sa.value="";var sf=$("seedfile");if(sf)try{sf.value=""}catch(e){}render.force=true;render()},2500)}
+  try{await window.T8Data.seed(ad,r.payload,function(n,t){var bb=$("seedinfo");if(bb)bb.textContent="登録しています…（"+n+" / "+t+"）"});say("商品マスタを登録しました（"+evName()+"／"+r.count+" 件）");setTimeout(function(){var d=$("adminbox");if(d)d.open=false;var sa=$("admin");if(sa)sa.value="";var sf=$("seedfile");if(sf)try{sf.value=""}catch(e){}render.force=true;render()},2500)}
   catch(e){console.error(e);say(e&&e.code==="server"&&/admin/.test(String(e.message))?"管理者コードが違います。ADMIN_CODE の値を入力してください（合言葉ではありません）":"登録できませんでした（"+(e&&e.message?e.message:"通信エラー")+"）",true)}
 }
 
