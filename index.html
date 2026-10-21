@@ -720,18 +720,17 @@ function vSales(){
    '<div class="kpi"><div class="l">会期予算に対する達成率</div><div class="v">'+pct(S.cfg.budget?cum/S.cfg.budget:null)+'</div><div class="n">残り '+yen(Math.max(0,S.cfg.budget-cum))+'</div></div>'+
    '<div class="kpi '+(pace!=null&&pace<1?'bad':'ok')+'"><div class="l">累計予算比（ペース）</div><div class="v">'+pct(pace)+'</div><div class="n">'+(last?mdw(last.date)+' 時点':'売上入力後に表示')+'</div></div>'+
    '<div class="kpi"><div class="l">累計 純販売点数</div><div class="v">'+tot.pn+'<small>点</small></div><div class="n">販売 '+tot.p+' ／ 返品 '+tot.pr+'</div></div></div>';
-  h+='<div class="tablewrap"><table><thead><tr><th>日付</th><th>総売上高<br>（税抜）</th><th>返品<br>（税抜）</th><th>ディス<br>カウント</th><th>純売上高<br>（税抜）</th><th>税金</th><th>合計<br>（税込）</th><th>予算比</th><th>累計<br>純売上</th><th>累計<br>予算比</th><th>客数</th><th>客単価<br>（税込）</th><th>販売<br>点数</th><th>返品<br>点数</th><th>純販売<br>点数</th><th>売れた<br>SKU数</th><th>レポート<br>との差</th></tr></thead><tbody>';
+  h+='<div class="tablewrap"><table><thead><tr><th>日付</th><th>総売上高<br>（税抜）</th><th>返品<br>（税抜）</th><th>ディス<br>カウント</th><th>純売上高<br>（税抜）</th><th>合計<br>（税込）</th><th>予算比</th><th>販売<br>点数</th><th>返品<br>点数</th><th>レポート<br>との差</th></tr></thead><tbody>';
   rows.forEach(function(d){
     var fut=d.date>today&&!d.lines,sel=d.date===S.date;
     var df=d.diff==null?'<span class="muted">—</span>':(d.diff===0?'<span class="pill ok">一致</span>':'<span class="pill bad">'+(d.diff>0?'+':'')+numf(d.diff)+'</span>');
     var e=d.lines>0;
     h+='<tr class="clickable'+(sel?' cur':'')+(fut?' future':'')+'" data-act="row" data-v="'+d.date+'"><td><b class="num">'+mdw(d.date)+'</b></td>'+
-      td(e,yen(d.total))+td(e,d.ret?yen(d.ret):"—",d.ret<0)+td(e,d.dis?yen(d.dis):"—",d.dis<0)+td(e,'<b>'+yen(d.net)+'</b>')+td(e,yen(d.tax))+td(e,yen(d.sum))+
-      td(e,pct(d.ratio))+td(e,d.cum?yen(d.cum):"—")+td(e,pct(d.cumRatio))+
-      '<td class="num">'+(d.cust==null?(e&&d.date<=today?'<span class="pill warn">未入力</span>':'—'):d.cust)+'</td><td class="num">'+(d.unit?yen(d.unit):"—")+'</td>'+
-      td(e,d.pcsSale)+td(e,d.pcsRet)+td(e,d.pcsNet)+td(e,d.skuCnt)+'<td>'+df+'</td></tr>';
+      td(e,yen(d.total))+td(e,d.ret?yen(d.ret):"—",d.ret<0)+td(e,d.dis?yen(d.dis):"—",d.dis<0)+td(e,'<b>'+yen(d.net)+'</b>')+td(e,yen(d.sum))+
+      td(e,pct(d.ratio))+
+      td(e,d.pcsSale)+td(e,d.pcsRet)+'<td>'+df+'</td></tr>';
   });
-  h+='<tr class="tot"><td>会期合計</td><td class="num">'+yen(tot.g)+'</td><td class="num">'+yen(tot.r)+'</td><td class="num">'+yen(tot.d)+'</td><td class="num">'+yen(tot.n)+'</td><td class="num">'+yen(tot.t)+'</td><td class="num">'+yen(tot.s)+'</td><td class="num">'+pct(S.cfg.budget?tot.n/S.cfg.budget:null)+'</td><td></td><td></td><td class="num">'+tot.c+'</td><td class="num">'+(tot.c?yen(tot.s/tot.c):"—")+'</td><td class="num">'+tot.p+'</td><td class="num">'+tot.pr+'</td><td class="num">'+tot.pn+'</td><td></td><td></td></tr>';
+  h+='<tr class="tot"><td>会期合計</td><td class="num">'+yen(tot.g)+'</td><td class="num">'+yen(tot.r)+'</td><td class="num">'+yen(tot.d)+'</td><td class="num">'+yen(tot.n)+'</td><td class="num">'+yen(tot.s)+'</td><td class="num">'+pct(S.cfg.budget?tot.n/S.cfg.budget:null)+'</td><td class="num">'+tot.p+'</td><td class="num">'+tot.pr+'</td><td></td></tr>';
   h+='</tbody></table></div>';
   h+='<div class="muted" style="font-size:12.5px">行を押すと、その日の詳細（客数・レポート写真・内訳）が下に開きます。金額はレジ（Square）のレポートと同じく、総売上高・返品・ディスカウント・純売上高は税抜、合計は税込です。</div>';
   h+=dayPanel(C.days[S.date]);
