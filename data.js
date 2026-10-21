@@ -146,6 +146,14 @@
     squareNow: function (admin) { return post({ action: "squarenow", admin: admin }).then(function (j) { return refresh().then(function () { return j; }); }); },
     squareAssign: function (admin, id, ev) { return post({ action: "squareassign", admin: admin, id: id, event: ev }).then(function (j) { return refresh().then(function () { return j; }); }); },
     squareDismiss: function (admin, id) { return post({ action: "squaredismiss", admin: admin, id: id }).then(function (j) { return refresh().then(function () { return j; }); }); },
+    /* 通常の書き込みをまとめて送る（今のイベントのIDに自動で接頭辞を付ける。エアレジCSVの取り込み用） */
+    batch: function (ops) {
+      var p = Promise.resolve(), i;
+      for (i = 0; i < ops.length; i += 20) (function (c) {
+        p = p.then(function () { return send(c.map(function (o) { return { op: o.op, collection: o.collection, id: pfx + o.id, data: o.data }; })); });
+      })(ops.slice(i, i + 20));
+      return p;
+    },
     /* 管理者コード付きの書き込み（今のイベントのIDに自動で接頭辞を付ける。エアレジCSVの取り込み用） */
     writeAdmin: function (admin, ops, onProgress) {
       return adminWrite(admin, ops.map(function (o) { return { op: o.op, collection: o.collection, id: pfx + o.id, data: o.data }; }), onProgress);

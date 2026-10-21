@@ -603,7 +603,7 @@ function sqPanel(){
   var A=window.T8Data,all=(A.rawImports&&A.rawImports())||[],evs=evList(),pend=all.filter(function(x){return x.id.indexOf("pending~")===0}).sort(function(a,b){return(b.data.at||0)-(a.data.at||0)});
   var pf=A.eventId()===A.LEGACY?"":"ev~"+A.eventId()+"~";
   var mine=all.filter(function(x){return x.id.indexOf("pending~")!==0&&(pf===""?x.id.indexOf("~")<0:x.id.indexOf(pf)===0)}).sort(function(a,b){return(b.data.at||0)-(a.data.at||0)}).slice(0,10);
-  var h='<details class="card" id="sqbox" style="margin-top:14px"'+(S.sqOpen?' open':'')+'><summary style="cursor:pointer;font-weight:700;min-height:44px;display:flex;align-items:center">管理者用：売上の取り込み（Square自動／エアレジCSV）'+(pend.length?' <span class="pill warn" style="margin-left:8px">未振り分け '+pend.length+' 件</span>':'')+'</summary>'+
+  var h='<details class="card" id="sqbox" style="margin-top:14px"'+(S.sqOpen?' open':'')+'><summary style="cursor:pointer;font-weight:700;min-height:44px;display:flex;align-items:center">管理者用：Squareの売上レポートの自動取り込み'+(pend.length?' <span class="pill warn" style="margin-left:8px">未振り分け '+pend.length+' 件</span>':'')+'</summary>'+
    '<div class="muted" style="font-size:13px;margin:6px 0 12px;line-height:1.7">Gmailに届いた「Square売上レポート」を30分ごとに読み取り、売上として登録します。どのイベントかは、①イベント設定の「Squareの拠点名」→②会期→③商品の一致、の順で自動で決まります。決められなかったものは、下の「未振り分け」に出ます。同じメールを二重に取り込むことはありません。返品と、商品なしの金額入力は手入力が必要です。</div>'+
    '<label class="f"><span>管理者コード</span><span class="pw"><input type="password" id="sq_admin" autocomplete="off" value="'+esc(S.sqAdmin||"")+'"><button type="button" class="eye" data-eye="1" aria-label="表示する" aria-pressed="false">表示</button></span></label>'+
    '<div style="margin:10px 0"><button class="btn primary" data-act="sqnow">今すぐ取り込む</button> <span id="sq_info" class="muted" style="font-size:13px">'+esc(S.sqMsg||"")+'</span></div>';
@@ -621,7 +621,6 @@ function sqPanel(){
     h+='<div style="padding:8px 0;border-top:1px solid var(--line);font-size:14px"><b>'+md(d.date)+'</b>　'+esc(d.loc||"")+'　<span class="muted" style="font-size:12.5px">'+(d.matched||0)+' 商品／'+(d.pcs||0)+' 点を登録（'+sqAgo(d.at)+'）</span>'+
      (um.length?'<div class="muted" style="font-size:12.5px;margin-top:3px;line-height:1.6">未登録 '+um.length+' 行：'+um.slice(0,6).map(function(u){return esc(u.name+(u.variant?"／"+u.variant:"")+" ×"+u.qty+"（"+u.why+"）")}).join("、")+(um.length>6?" ほか":"")+'</div>':'')+'</div>';
   });
-  h+=arPanel();
   return h+'</details>';
 }
 function adminPanel(){
@@ -667,6 +666,7 @@ function vEntry(){
    '<div class="kpi"><div class="l">合計（税込）</div><div class="v">'+yen(d.sum)+'</div></div>'+
    '<div class="kpi"><div class="l">予算比</div><div class="v">'+pct(d.ratio)+'</div><div class="n">1日予算 '+yen(C.dayB)+'</div></div>'+
    '<div class="kpi"><div class="l">純販売点数</div><div class="v">'+(d.pcsNet||0)+'<small>点</small></div><div class="n">入力 '+(d.lines||0)+' 件</div></div></div>';
+  if(can&&!S.demo)h+=arPanel();
   if(can){
   h+='<div class="card"><h2>① 商品を選ぶ <small>品番・商品名・カラーで絞り込めます</small></h2>'+
    '<label class="f"><span class="h" style="display:none">検索</span><input type="search" id="q" placeholder="例：HAPPY　／　WTL24102SN　／　BLACK" value="'+esc(S.q)+'" autocomplete="off"></label>'+
@@ -891,7 +891,7 @@ document.addEventListener("click",function(e){
     case"codeset":doCode(true);break;
     case"sqnow":doSq("now");break;
     case"arapply":doArApply();break;
-    case"arclear":S.ar=null;S.sqOpen=true;render.force=true;render();break;
+    case"arclear":S.ar=null;render.force=true;render();break;
     case"sqassign":doSq("assign",v);break;
     case"sqdismiss":doSq("dismiss",v);break;
     case"codeshow":doCode(false);break;
@@ -924,8 +924,8 @@ document.addEventListener("change",function(e){
   var t=e.target;
   if(t.id==="seedfile"||t.id==="seedoff"){seedPreview()}
   else if(t.id==="arfile"){arLoad(t)}
-  else if(t.id==="ar_date"){if(S.ar){S.ar.date=t.value;S.sqOpen=true;render.force=true;render()}}
-  else if(t.dataset&&t.dataset.arsel!==undefined&&t.dataset.arsel!==""){if(S.ar){S.ar.map[+t.dataset.arsel]=t.value===""?null:t.value;S.sqOpen=true;render.force=true;render()}}
+  else if(t.id==="ar_date"){if(S.ar){S.ar.date=t.value;render.force=true;render()}}
+  else if(t.dataset&&t.dataset.arsel!==undefined&&t.dataset.arsel!==""){if(S.ar){S.ar.map[+t.dataset.arsel]=t.value===""?null:t.value;render.force=true;render()}}
   else if(t.id==="other"){S.form.other=t.value;render.force=true;render()}
   else if(t.id==="datepick"){if(t.value){S.date=t.value;render.force=true;render()}}
   else if(t.dataset&&t.dataset.day){
@@ -1307,7 +1307,7 @@ async function arLoad(inp){
   }
   if(bad.length)toast("読み取れないファイルがありました："+bad.join("、"),true);
   st.files=[st.items&&st.items.name,st.sum&&st.sum.name].filter(Boolean);
-  S.ar=(st.items||st.sum)?st:null;S.sqOpen=true;render.force=true;render();
+  S.ar=(st.items||st.sum)?st:null;render.force=true;render();
 }
 function arIndex(){
   var ix={full:{},by:{}};
@@ -1344,10 +1344,10 @@ function arPlan(){
   return pl;
 }
 function arPanel(){
-  var st=S.ar,h='<h3 style="margin:18px 0 6px">エアレジのCSVを読み込む（'+esc(evName())+'）</h3>'+
-   '<div class="muted" style="font-size:13px;margin-bottom:8px;line-height:1.7">エアレジのバックオフィス（パソコンのブラウザ）で、「売上・分析 → 商品別売上 →『バリエーション単位で表示』→ ダウンロード」のCSVを、<b>1日ずつ</b>読み込みます。あわせて「日別売上 → CSVデータをダウンロードする →『売上集計』」のCSVを入れると、レポート合計と客数も入ります（複数日まとめてでも可）。</div>'+
+  var st=S.ar,h='<div class="card" id="arbox"><h2>売上ファイルを読み込む <small>エアレジのCSV</small></h2>'+
+   '<div class="muted" style="font-size:13px;margin-bottom:8px;line-height:1.7">エアレジのバックオフィス（パソコンのブラウザ）の「売上・分析 → 商品別売上 →『バリエーション単位で表示』→ ダウンロード」のCSVを、<b>1日ずつ</b>入れてください。「日別売上 → CSVデータをダウンロードする →『売上集計』」のCSVも一緒に入れると、レポート合計と客数も入ります（複数日まとめてでも可）。Squareの売上は自動で入るので、この操作は要りません。</div>'+
    '<div class="row"><input type="file" id="arfile" accept=".csv,text/csv" multiple style="flex:1 1 220px"></div>';
-  if(!st)return h+(S.arMsg?'<div class="muted" style="font-size:13px;margin-top:8px">'+esc(S.arMsg)+'</div>':'');
+  if(!st)return h+(S.arMsg?'<div class="muted" style="font-size:13px;margin-top:8px">'+esc(S.arMsg)+'</div>':'')+'</div>';
   var pl=arPlan(),sk=getSkus().slice().sort(function(a,b){return String(a.hin).localeCompare(String(b.hin))||String(a.color).localeCompare(String(b.color))});
   h+='<div style="margin-top:10px;padding:10px;border:1px solid var(--line);border-radius:10px"><div class="muted" style="font-size:12.5px">読み込んだファイル：'+st.files.map(esc).join("、")+'</div>';
   if(st.items){
@@ -1371,43 +1371,41 @@ function arPanel(){
   if(st.sum){
     h+='<div style="margin-top:10px;font-size:13px"><b>日別の合計（レポート合計・客数に反映）</b><div class="muted" style="font-size:12.5px;line-height:1.7">'+(st.sum.days.length?st.sum.days.slice(0,8).map(function(d){return md(d.date)+'　'+yen(d.total)+'／客数 '+d.cust}).join('<br>')+(st.sum.days.length>8?'<br>ほか '+(st.sum.days.length-8)+' 日':''):'日別の行がありません（「日別」で集計したCSVを使ってください）')+'</div></div>';
   }
-  h+='<div style="margin-top:12px"><button class="btn primary" data-act="arapply"'+(st.multi&&!st.sum?' disabled':'')+'>この内容で取り込む</button> <button class="btn" data-act="arclear">やめる</button> <span id="ar_info" class="muted" style="font-size:13px">'+esc(S.arMsg||"")+'</span></div></div>';
+  h+='<div style="margin-top:12px"><button class="btn primary" data-act="arapply"'+(st.multi&&!st.sum?' disabled':'')+'>この内容で取り込む</button> <button class="btn" data-act="arclear">やめる</button> <span id="ar_info" class="muted" style="font-size:13px">'+esc(S.arMsg||"")+'</span></div></div></div>';
   return h;
 }
 async function doArApply(){
-  var st=S.ar,inp=$("sq_admin"),ad=(inp&&inp.value||"").trim(),box=$("ar_info");
+  var st=S.ar,box=$("ar_info");
   function say(m,bad){toast(m,bad);S.arMsg=(bad?"× ":"✓ ")+m;if(box)box.textContent=S.arMsg}
-  if(!st)return;
-  if(!ad){say("上の「管理者コード」を入力してください",true);return}
-  S.sqAdmin=ad;
+  if(!st||S.busy)return;
+  if(S.demo){say("デモ中は取り込めません",true);return}
+  if(!ensureDb())return;
   var ops=[],A=window.T8Data,pl=arPlan(),date=st.date,doItems=!!(st.items&&!st.multi);
   if(st.items&&st.multi&&!st.sum){say("複数日のCSVは取り込めません。1日ずつダウンロードしてください",true);return}
   if(doItems&&!/^\d{4}-\d{2}-\d{2}$/.test(date)){say("売上の日付を入れてください",true);return}
   if(doItems){
-    var pre="ar-"+date+"-",keep={},at0=Date.parse(date+"T23:30:00+09:00")||Date.now(),i=0;
+    var pre="ar-"+date+"-",keep={},at0=Date.parse(date+"T23:30:00+09:00")||Date.now(),i=0,who=(S.who||"").trim();
     Object.keys(pl.acc).forEach(function(id){keep[pre+id]=1});
     getTx().forEach(function(r){var rid=String(r.id);if(rid.indexOf(pre)===0&&!keep[rid])ops.push({op:"delete",collection:"tx",id:rid})});
     var sm={};getSkus().forEach(function(s){sm[s.id]=s});
     Object.keys(pl.acc).forEach(function(id){
-      var a=pl.acc[id],std=unitIncl(sm[id].sale)*a.qty,rec={date:date,skuId:id,kind:"sale",qty:a.qty,at:at0+(i++),by:"エアレジCSV",memo:"エアレジCSV取込",src:"airregi"};
+      var a=pl.acc[id],std=unitIncl(sm[id].sale)*a.qty,rec={date:date,skuId:id,kind:"sale",qty:a.qty,at:at0+(i++),by:"エアレジCSV"+(who?"（"+who+"）":""),memo:"エアレジCSV取込",src:"airregi"};
       if(Math.abs(a.amount-std)>a.qty)rec.amount=Math.round(a.amount);
       ops.push({op:"set",collection:"tx",id:pre+id,data:rec});
     });
   }
   var nd=0;
   if(st.sum)st.sum.days.forEach(function(d){var p={reportTotal:Math.round(d.total)};if(d.cust>0)p.customers=Math.round(d.cust);ops.push({op:"update",collection:"days",id:d.date,data:p});nd++});
-  if(doItems){
-    var um=pl.un.filter(function(u){return !(S.ar.map[u.i])}).map(function(u){return{name:u.it.name,variant:[u.it.v1,u.it.v2].filter(Boolean).join(" / "),qty:u.it.sold,amount:u.it.amount,why:u.why}});
-    ops.push({op:"set",collection:"imports",id:"ar-"+date,data:{msgId:"ar-"+date,loc:"エアレジ（CSV）",date:date,event:A.eventId(),status:um.length?"partial":"done",matched:Object.keys(pl.acc).length,pcs:pl.pcs,unmatched:um,totals:{},at:Date.now(),src:"airregi"}});
-  }
   if(!ops.length){say("取り込む内容がありません",true);return}
-  say("取り込んでいます…");
+  var skip=pl.un.filter(function(u){return !(st.map[u.i])}).length;
+  say("取り込んでいます…");S.busy=true;
   try{
-    await A.writeAdmin(ad,ops);
-    if(doItems)logEv("売上","エアレジCSVを取り込み："+Object.keys(pl.acc).length+" 商品／"+pl.pcs+" 点",date);
-    S.ar=null;S.arMsg="✓ 取り込みました"+(doItems?"（"+md(date)+"：登録 "+Object.keys(pl.acc).length+" 商品／"+pl.pcs+" 点"+"）":"（日別の合計 "+nd+" 日）");
-    toast("取り込みました");S.sqOpen=true;render.force=true;render();
-  }catch(e){console.error(e);var m=String(e&&e.message||"");say(/admin/.test(m)?"管理者コードが違います":"うまくいきませんでした（"+(m||"通信エラー")+"）",true)}
+    await A.batch(ops);
+    var msg=(doItems?md(date)+"：登録 "+Object.keys(pl.acc).length+" 商品／"+pl.pcs+" 点"+(skip?"（登録しなかった行 "+skip+" 行は手入力してください）":""):"")+(nd?(doItems?"／":"")+"日別の合計 "+nd+" 日":"");
+    if(doItems)logEv("売上","エアレジCSVを取り込み："+Object.keys(pl.acc).length+" 商品／"+pl.pcs+" 点"+(skip?"（未登録 "+skip+" 行）":""),date);
+    if(doItems&&date)S.date=date;
+    S.ar=null;S.arMsg="✓ 取り込みました（"+msg+"）";toast("取り込みました");S.busy=false;render.force=true;render();
+  }catch(e){S.busy=false;dbErr(e);say("うまくいきませんでした。通信を確認してもう一度お試しください",true)}
 }
 async function doSq(kind,pid){
   var A=window.T8Data,inp=$("sq_admin"),ad=(inp&&inp.value||"").trim(),box=$("sq_info");
