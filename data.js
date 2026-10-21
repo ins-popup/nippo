@@ -4,7 +4,7 @@
   "use strict";
   var cfg = window.T8_CONFIG || {};
   var COLS = ["skus", "tx", "days", "counts", "photos", "log", "config"];
-  var store = {}, subs = [], code = "", inflight = 0, timer = null;
+  var store = {}, subs = [], code = "", inflight = 0, timer = null, scope = { role: "all", event: "" };
   /* イベント切替：イベントごとに、ドキュメントIDの先頭に「ev~イベントID~」を付けて同じ保存先に分けて入れる。
      最初のイベント（京都T8＝t8）は付けない（これまでのデータをそのまま使うため） */
   var LEGACY = "t8", evId = LEGACY, pfx = "";
@@ -34,6 +34,8 @@
   }
   function connect() {
     return post({ action: "list" }).then(function (j) {
+      /* 入った合言葉の範囲（admin＝管理者／all＝全イベント／event＝そのイベントだけ）。古い保存先では返らないので all 扱い */
+      scope = j.scope && j.scope.role ? { role: j.scope.role, event: j.scope.event || "" } : { role: "all", event: "" };
       applyList(j.data || {});
       clearInterval(timer);
       timer = setInterval(function () { if (!document.hidden) refresh().catch(function () {}); }, 20000);
@@ -138,6 +140,9 @@
   window.T8Data = {
     configured: configured,
     setCode: function (c) { code = c; },
+    scope: function () { return scope; },
+    getEventCodes: function (admin) { return post({ action: "getcodes", admin: admin }).then(function (j) { return j.codes || {}; }); },
+    setEventCode: function (admin, ev, newCode) { return post({ action: "setcode", admin: admin, event: ev, newCode: newCode }); },
     connect: connect, refresh: refresh, db: db, assets: assets, downloads: downloads,
     photoUrl: function (id) { return "https://drive.google.com/thumbnail?id=" + encodeURIComponent(id) + "&sz=w1600"; },
     seed: function (admin, payload, onProgress) {

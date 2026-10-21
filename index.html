@@ -1,6 +1,6 @@
 <!doctype html>
 <meta charset="utf-8">
-<title>WILD THINGS POPUP｜T8 日報・在庫管理</title>
+<title>POPUP 日報・在庫管理</title>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#e3e3e4">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%276%27 fill=%27%231d1f17%27/%3E%3Cpath d=%27M3 22 11 9l6 8 4-5 8 10z%27 fill=%27%23d8ff1a%27/%3E%3C/svg%3E">
@@ -544,11 +544,16 @@ function renderNav(){
 /* ---- イベント（会期が重なってもデータは別々に保存される） ---- */
 function evList(){var A=window.T8Data,l=A&&A.events&&A.events();if(l&&l.length)return l;return[{id:"t8",name:"京都高島屋S.C. T8",start:DEFAULT_CFG.start,end:DEFAULT_CFG.end}]}
 function evCur(){var id=window.T8Data.eventId(),f=evList().filter(function(e){return e.id===id})[0];return f||{id:id,name:id}}
+function scoped(){var A=window.T8Data;return!!(A&&A.scope&&A.scope().role==="event")}
+function brandName(){return S.cfg.brand||(window.T8Data.eventId()===window.T8Data.LEGACY?"WILD THINGS":"")}
+function brandKind(){return S.cfg.kind!=null&&S.cfg.brand?S.cfg.kind:(window.T8Data.eventId()===window.T8Data.LEGACY?"POPUP":"")}
+function setDocTitle(){var b=brandName(),k=brandKind();document.title=(b?b+(k?" "+k:"")+"｜":"")+evName()+" 日報・在庫管理"}
 function evName(){return S.cfg.name||evCur().name||"イベント"}
 function fnSafe(t){return String(t||"").replace(/[\\\/:*?"<>|\s　]/g,"")}
 function header(){
-  var h='<div class="top"><div class="brand"><small>'+esc(S.cfg.tag||"26FW POPUP ｜ DAILY REPORT")+'</small><b>WILD THINGS<em>POPUP</em></b><span class="jp">日報・売上・在庫管理</span><i>'+esc(evName())+(S.cfg.place?' ｜ '+esc(S.cfg.place):'')+' ｜ '+md(S.cfg.start)+'〜'+md(S.cfg.end)+'</i></div><div class="grow"></div>';
-  if(!S.demo&&evList().length>1)h+='<button class="btn small" data-act="evsw">イベント切替</button>';
+  try{setDocTitle()}catch(e){}
+  var h='<div class="top"><div class="brand"><small>'+esc(S.cfg.tag||(window.T8Data.eventId()===window.T8Data.LEGACY?"26FW POPUP ｜ DAILY REPORT":"DAILY REPORT"))+'</small><b>'+esc(brandName()||evName())+(brandKind()?'<em>'+esc(brandKind())+'</em>':'')+'</b><span class="jp">日報・売上・在庫管理</span><i>'+esc(evName())+(S.cfg.place?' ｜ '+esc(S.cfg.place):'')+' ｜ '+md(S.cfg.start)+'〜'+md(S.cfg.end)+'</i></div><div class="grow"></div>';
+  if(!S.demo&&!scoped()&&evList().length>1)h+='<button class="btn small" data-act="evsw">イベント切替</button>';
   h+=S.demo?'<span class="pill warn">見本データ表示中</span>':'<span class="pill ok">保存済みデータ</span>';
   if(!S.demo&&S.skus.length)h+='<button class="btn small" data-act="demo" data-v="on">見本データで試す</button>';
   h+='<label class="who"><span>入力者</span><input type="text" id="who" value="'+esc(S.who||"")+'" placeholder="あなたの名前" autocomplete="off"'+(S.who&&S.who.trim()?'':' class="need"')+'></label>';
@@ -563,29 +568,37 @@ function datebar(){
   return'<div class="datebar"><button class="btn" data-act="dshift" data-v="-1" aria-label="前の日">◀</button><div class="d"><b>'+mdw(S.date)+'</b><span>'+lab+(S.date===todayStr()?' ｜ 今日':'')+'</span></div><label class="pick" aria-label="日付を選ぶ">日付<input type="date" id="datepick" value="'+S.date+'" data-act="dpick"></label><button class="btn" data-act="dshift" data-v="1" aria-label="次の日">▶</button></div>';
 }
 function seedForm(){
-  return'<div class="grid" style="gap:12px"><label class="f"><span>管理者コード</span><span class="pw"><input type="password" id="admin" autocomplete="off"><button type="button" class="eye" data-eye="1" aria-label="表示する" aria-pressed="false">表示</button></span></label><div class="f"><span>商品マスタのファイル（Excel / CSV / JSON）</span><label class="drop" id="seeddrop"><input type="file" id="seedfile" accept=".xlsx,.xls,.xlsm,.csv,.tsv,.json,application/json,text/csv"><div class="di"><div class="ic">↑</div><b>ここにファイルをドロップ</b><span>またはここをクリックして選びます（Excel・CSV・JSON）</span><em id="seedname"></em></div></label></div><label class="f"><span>オフ率（％）<small>任意</small></span><input type="number" inputmode="decimal" id="seedoff" min="0" max="100" placeholder="例：30（備考にオフ率がない受注明細のとき）"></label><div id="seedinfo" class="seedinfo" aria-live="polite"></div><div class="muted" style="font-size:12px;line-height:1.7">基幹システム（アラジン）の「受注明細問合せ」のExcelを、そのまま選べます。販売価格は、明細備考の「30％OFF」から計算します。備考にない場合は、上の「オフ率」に入れると全商品に使います。<br>それ以外の表は、1行目に見出し（品番・商品名・カラー・サイズ・JAN・上代・投入数・販売価格）があればそのまま使えます。列の順番は自由です。</div><button class="btn primary" data-act="seed">登録する</button></div>';
+  return'<div class="grid" style="gap:12px"><label class="f"><span>管理者コード</span><span class="pw"><input type="password" id="admin" autocomplete="off"><button type="button" class="eye" data-eye="1" aria-label="表示する" aria-pressed="false">表示</button></span></label><div class="f"><span>商品マスタのファイル（Excel / CSV / JSON）</span><label class="drop" id="seeddrop"><input type="file" id="seedfile" accept=".xlsx,.xls,.xlsm,.csv,.tsv,.json,application/json,text/csv"><div class="di"><div class="ic">↑</div><b>ここにファイルをドロップ</b><span>またはここをクリックして選びます（Excel・CSV・JSON）</span><em id="seedname"></em></div></label></div><label class="f"><span>オフ率（％）<small>任意</small></span><input type="number" inputmode="decimal" id="seedoff" value="'+esc(S.cfg&&S.cfg.defOff!=null?S.cfg.defOff:"")+'" min="0" max="100" placeholder="例：30（備考にオフ率がない受注明細のとき）"></label><div id="seedinfo" class="seedinfo" aria-live="polite"></div><div class="muted" style="font-size:12px;line-height:1.7">基幹システム（アラジン）の「受注明細問合せ」のExcelを、そのまま選べます。販売価格は、明細備考の「30％OFF」から計算します。備考にない場合は、上の「オフ率」に入れると全商品に使います。<br>それ以外の表は、1行目に見出し（品番・商品名・カラー・サイズ・JAN・上代・投入数・販売価格）があればそのまま使えます。列の順番は自由です。</div><button class="btn primary" data-act="seed">登録する</button></div>';
 }
 function emptySku(){
+  if(scoped())return'<div class="card"><h2>商品マスタが未登録です</h2><p class="muted" style="font-size:14px">管理者が商品マスタを登録するまで、お待ちください。</p></div>';
   return'<div class="card"><h2>商品マスタが未登録です <small>管理者の方が最初に1回だけ登録します</small></h2>'+seedForm()+'</div>';
 }
 function eventForm(px,c,btn,label){
   var tax=c.tax!=null?Math.round(c.tax*1000)/10:10;
   function f(id,lab,val,type,ph){return'<label class="f"><span>'+lab+'</span><input type="'+(type||"text")+'" id="'+px+id+'" value="'+esc(val==null?"":val)+'"'+(ph?' placeholder="'+esc(ph)+'"':'')+(type==="number"?' inputmode="decimal"':'')+' autocomplete="off"></label>'}
   return'<div class="grid" style="gap:10px"><label class="f"><span>管理者コード</span><span class="pw"><input type="password" id="'+px+'admin" autocomplete="off"><button type="button" class="eye" data-eye="1" aria-label="表示する" aria-pressed="false">表示</button></span></label>'+
-   f("name","イベント名",c.name||"","text","例：渋谷PARCO POPUP")+f("place","場所・店舗名のメモ",c.place||"","text","例：渋谷PARCO 2F")+f("tag","サブタイトル（任意）",c.tag||"","text","例：27SS POPUP ｜ DAILY REPORT")+
+   f("name","イベント名",c.name||"","text","例：渋谷PARCO POPUP")+f("place","場所・店舗名のメモ",c.place||"","text","例：渋谷PARCO 2F")+f("brand","ブランド名（画面のタイトルに出ます）",c.brand==null?(px==="evN_"?"":"WILD THINGS"):c.brand,"text","例：WILD THINGS")+f("kind","イベントの種類（任意）",c.kind==null?"POPUP":c.kind,"text","例：POPUP")+f("tag","サブタイトル（任意）",c.tag||"","text","例：27SS POPUP ｜ DAILY REPORT")+
    '<div class="row">'+f("start","開始日",c.start||"","date")+f("end","終了日",c.end||"","date")+'</div>'+
    '<div class="row">'+f("budget","売上予算（税抜・円）",c.budget==null?"":c.budget,"number","例：2100000")+f("tax","消費税率（％）",tax,"number")+'</div>'+
+   '<div class="row">'+f("defOff","標準のオフ率（％・任意）",c.defOff==null?"":c.defOff,"number","例：30")+'<label class="f"><span>上代・販売価格の税区分</span><select id="'+px+'retailIncl"><option value="0"'+(c.retailIncl?'':' selected')+'>税抜の金額</option><option value="1"'+(c.retailIncl?' selected':'')+'>税込の金額</option></select></label></div>'+
+   '<div class="muted" style="font-size:12px;line-height:1.7">標準のオフ率は、商品マスタ登録の「オフ率」欄に最初から入ります。税込を選ぶと、取り込むときに消費税率で割って税抜に直します（サイト内の金額は税抜で管理します）。</div>'+
+   (px==="evN_"?f("code","このイベントの合言葉（社外メンバー用・任意）","","text","4文字以上。あとから設定もできます"):'')+
    '<button class="btn primary" data-act="'+btn+'">'+label+'</button></div>';
 }
 function eventPanel(){
+  if(scoped())return"";
   var id=window.T8Data.eventId(),url=location.origin+location.pathname+"?e="+encodeURIComponent(id);
   return'<details class="card" id="eventbox" style="margin-top:14px"><summary style="cursor:pointer;font-weight:700;min-height:44px;display:flex;align-items:center">管理者用：イベントの設定・追加</summary>'+
-   '<div class="muted" style="font-size:13px;margin:6px 0 12px;line-height:1.7">イベントごとに、商品・売上・在庫・日報は別々に保存されます。会期が重なっていても混ざりません。合言葉は共通で、入室後にイベントを選びます。</div>'+
+   '<div class="muted" style="font-size:13px;margin:6px 0 12px;line-height:1.7">イベントごとに、商品・売上・在庫・日報は別々に保存されます。会期が重なっていても混ざりません。社内用の合言葉（全イベント）と、イベントごとの合言葉（社外メンバー用・そのイベントだけ）の2種類があります。</div>'+
    '<h3 style="margin:8px 0">このイベントの設定（'+esc(evName())+'）</h3>'+eventForm("evE_",Object.assign({},S.cfg,{name:evName()}),"evsave","設定を保存する")+
+   '<h3 style="margin:18px 0 6px">このイベントの合言葉（社外メンバー用）</h3><div class="muted" style="font-size:12.5px;margin-bottom:8px;line-height:1.7">この合言葉で入った人は、このイベントだけ見られます（切替欄も出ません）。空欄で設定すると、合言葉を無効にします。</div>'+
+   '<div class="grid" style="gap:10px"><label class="f"><span>管理者コード</span><span class="pw"><input type="password" id="evC_admin" autocomplete="off"><button type="button" class="eye" data-eye="1" aria-label="表示する" aria-pressed="false">表示</button></span></label><label class="f"><span>このイベントの合言葉</span><input type="text" id="evC_code" autocomplete="off" placeholder="4文字以上"></label><div id="evC_info" class="muted" style="font-size:13px;line-height:1.7"></div><div class="row"><button class="btn" data-act="codeshow">いまの合言葉を確認する</button><button class="btn primary" data-act="codeset">合言葉を設定する</button></div></div>'+
    '<div class="muted" style="font-size:12.5px;margin-top:10px;word-break:break-all">このイベントに直接入るURL：<br>'+esc(url)+'</div>'+
    '<h3 style="margin:18px 0 8px">新しいイベントを追加する</h3><div class="muted" style="font-size:12.5px;margin-bottom:8px">追加すると、そのイベントに切り替わります。続けて「在庫」タブの下で商品マスタを登録してください。</div>'+eventForm("evN_",{tax:0.1},"evnew","イベントを追加する")+'</details>';
 }
 function adminPanel(){
+  if(scoped())return"";
   return'<details class="card" id="adminbox" style="margin-top:14px"><summary style="cursor:pointer;font-weight:700;min-height:44px;display:flex;align-items:center">管理者用：商品マスタを更新する <span style="font-weight:500;font-size:13px">（登録先：'+esc(evName())+'）</span></summary><div class="muted" style="font-size:13px;margin:6px 0 12px;line-height:1.7">同じ商品（品番・カラー・サイズ）は上書きされ、新しい商品は追加されます。売上の入力履歴は消えません。<span style="opacity:.6">（読み取り機能 '+SEED_VER+'）</span></div>'+seedForm()+'</details>';
 }
 
@@ -848,6 +861,8 @@ document.addEventListener("click",function(e){
     case"evback":S.gate=null;render.force=true;render();break;
     case"pickev":try{localStorage.setItem("t8event",v)}catch(x){}location.href=location.pathname+"?e="+encodeURIComponent(v);break;
     case"evsave":doEvent(false);break;
+    case"codeset":doCode(true);break;
+    case"codeshow":doCode(false);break;
     case"evnew":doEvent(true);break;
     case"seed":doSeed();break;
     case"reload":location.reload();break;
@@ -1000,6 +1015,7 @@ function chooseEvent(){
   try{sv=localStorage.getItem("t8event")||""}catch(e){}
   var list=evList(),ids=list.map(function(e){return e.id});
   var pick=q&&ids.indexOf(q)>=0?q:(sv&&ids.indexOf(sv)>=0?sv:"");
+  if(scoped()){A.setEvent(A.scope().event);return false}
   if(!pick){if(list.length>1){S.gate="events";return true}pick=list[0].id}
   try{localStorage.setItem("t8event",pick)}catch(e){}
   A.setEvent(pick);return false;
@@ -1011,9 +1027,9 @@ async function doLogin(){
   catch(e){console.error(e);S.gate=e&&e.code==="unauthorized"?"login":"net";S.gateErr=e&&e.code==="unauthorized"?"合言葉が違います。":"データを読み込めませんでした。通信を確認してください。";render.force=true;render()}
 }
 function gateHtml(){
-  var g=S.gate,h='<div class="gate"><div class="brand" style="margin-bottom:18px"><small>26FW POPUP ｜ DAILY REPORT</small><b>WILD THINGS<em>POPUP</em></b><span class="jp">日報・売上・在庫管理</span></div><div class="card">';
+  var g=S.gate,h='<div class="gate"><div class="brand" style="margin-bottom:18px"><small>DAILY REPORT</small><b>POPUP<em>DAILY</em></b><span class="jp">日報・売上・在庫管理</span></div><div class="card">';
   if(g==="setup")h+='<h2>初期設定がまだです</h2><p class="muted" style="font-size:14px">config.js に、Google Apps Script のウェブアプリURLを設定してください。手順は README.md に書いてあります。</p>';
-  else if(g==="events"){var A0=window.T8Data;h+='<h2>イベントを選んでください</h2><div style="display:grid;gap:10px;margin-top:10px">'+evList().map(function(e){return'<button class="btn" style="min-height:64px;text-align:left;display:block;width:100%" data-act="pickev" data-v="'+esc(e.id)+'"><b>'+esc(e.name||e.id)+'</b><br><span class="muted" style="font-size:12.5px">'+(e.place?esc(e.place)+' ｜ ':'')+(e.start&&e.end?md(e.start)+'〜'+md(e.end):'')+'</span></button>'}).join("")+'</div>'+(S.evBack?'<div style="margin-top:12px"><button class="btn small" data-act="evback">戻る</button></div>':'')}
+  else if(g==="events"){var A0=window.T8Data;h+='<h2>イベントを選んでください</h2><div style="display:grid;gap:10px;margin-top:10px">'+evList().map(function(e){return'<button class="btn" style="min-height:64px;text-align:left;display:block;width:100%" data-act="pickev" data-v="'+esc(e.id)+'"><b>'+esc((e.brand?e.brand+' ｜ ':'')+(e.name||e.id))+'</b><br><span class="muted" style="font-size:12.5px">'+(e.place?esc(e.place)+' ｜ ':'')+(e.start&&e.end?md(e.start)+'〜'+md(e.end):'')+'</span></button>'}).join("")+'</div>'+(S.evBack?'<div style="margin-top:12px"><button class="btn small" data-act="evback">戻る</button></div>':'')}
   else if(g==="loading")h+='<h2>読み込み中です</h2><p class="muted" style="font-size:14px">データを取得しています。数秒かかることがあります。</p>';
   else h+='<h2>合言葉を入力してください</h2>'+(S.gateErr?'<p class="warnline">'+esc(S.gateErr)+'</p>':'')+'<label class="f"><span>合言葉</span><span class="pw"><input type="password" id="code" autocomplete="current-password"><button type="button" class="eye" data-eye="1" aria-label="表示する" aria-pressed="false">表示</button></span></label><div style="margin-top:12px"><button class="btn primary" style="width:100%;min-height:52px" data-act="login">入る</button></div>';
   return h+'</div></div>';
@@ -1101,6 +1117,7 @@ function seedRowsToPayload(rows){
   if(m.sale==null&&m.retail==null)miss.push("販売価格（または上代）");
   if(miss.length)return{error:"次の見出しが見つかりません：" + miss.join("、")};
   var out=[],seen={},warn=[],dup=0,sci=0,noPrice=0,row=[],offN=0,noOff=0,merged=0;
+  var INCL_DIV=S.cfg&&S.cfg.retailIncl?1+(Number(S.cfg.tax)||0.1):1;
   function g(k){return m[k]==null?"":row[m[k]]}
   for(var r=h.r+1;r<rows.length;r++){
     row=rows[r]||[];
@@ -1117,11 +1134,13 @@ function seedRowsToPayload(rows){
     }
     if(retail==null&&sale==null)noPrice++;
     if(retail==null)retail=sale||0;if(sale==null)sale=retail||0;
+    if(INCL_DIV>1){retail=Math.round(retail/INCL_DIV);sale=Math.round(sale/INCL_DIV)}
     out.push({sku:sku,hin:hin,name:name,color:color,size:size,jan:jan,retail:retail,qty:qty==null?0:qty,sale:sale});
   }
   if(!out.length)return{error:"商品の行が見つかりませんでした。"};
   out.forEach(function(s,i){s.id="s"+String(i+1).padStart(3,"0")});
   if(m.juchu)warn.push("受注明細として読み込みました。販売価格は備考の「○○％OFF」から計算しています（"+offN+" 行）"+(noOff?"。オフ率が分からない "+noOff+" 行は上代と同じ価格にしています（上の「オフ率」欄に入れると全商品に使います）":"")+(merged?"。同じ商品の行 "+merged+" 件は数量を合算しました":""));
+  if(INCL_DIV>1)warn.push("このイベントは「税込の金額」の設定なので、上代・販売価格を消費税率（"+Math.round((INCL_DIV-1)*1000)/10+"％）で割って税抜に直しました");
   if(dup)warn.push("同じSKUの行 "+dup+" 件は、1件目だけを使いました");
   if(sci)warn.push("JANが「4.58E+12」のような表示になっている行が "+sci+" 件あります（JANは空欄にしました。Excelの列を『文字列』にして入力し直してください）");
   if(noPrice)warn.push("価格が空の行が "+noPrice+" 件あります（0円になります）");
@@ -1200,6 +1219,29 @@ function seedKeepIds(p){
   list.forEach(function(s){var id=ex[seedKeyOf(s)];if(id&&!used[id]){s.id=id;used[id]=1;s._ok=1}});
   list.forEach(function(s){if(s._ok){delete s._ok;return}do{mx++;s.id="s"+String(mx).padStart(3,"0")}while(used[s.id]);used[s.id]=1});
 }
+function codeErr(e){
+  var m=String(e&&e.message||"");
+  if(/unknown_action/.test(m))return"保存先（Apps Script）が古いままです。新しい Code.gs に更新してください";
+  if(/admin/.test(m))return"管理者コードが違います";
+  if(/code_in_use/.test(m))return"その合言葉は他で使われています。別の合言葉にしてください";
+  if(/code_too_short/.test(m))return"合言葉は4文字以上にしてください";
+  return m||"通信エラー";
+}
+async function doCode(isSet){
+  var A=window.T8Data,ad=($("evC_admin")&&$("evC_admin").value||"").trim(),cd=($("evC_code")&&$("evC_code").value||"").trim(),box=$("evC_info");
+  function say(m,bad){toast(m,bad);if(box)box.textContent=(bad?"× ":"✓ ")+m}
+  if(!ad){say("管理者コードを入力してください",true);return}
+  try{
+    if(isSet){
+      if(cd&&cd.length<4){say("合言葉は4文字以上にしてください",true);return}
+      await A.setEventCode(ad,A.eventId(),cd);
+      say(cd?"このイベントの合言葉を設定しました："+cd:"このイベントの合言葉を無効にしました");
+    }else{
+      var m=await A.getEventCodes(ad),c=m[A.eventId()];
+      say(c?"このイベントの合言葉：" + c:"このイベントの合言葉は、まだ設定されていません");
+    }
+  }catch(e){console.error(e);say(codeErr(e),true)}
+}
 async function doEvent(isNew){
   var px=isNew?"evN_":"evE_",A=window.T8Data;
   function v(k){var e=$(px+k);return e?String(e.value||"").trim():""}
@@ -1215,10 +1257,14 @@ async function doEvent(isNew){
   if(!isFinite(tax)||tax<0||tax>100){say("消費税率は0〜100の数字で入れてください",true);return}
   var id=isNew?"e"+Math.random().toString(36).slice(2,7):A.eventId();
   if(isNew&&evList().some(function(e){return e.id===id}))id+="x";
-  var place=v("place"),tag=v("tag"),cfgData={name:name,place:place,tag:tag,start:st,end:en,budget:budget,tax:Math.round(tax*10)/1000};
-  var ev={id:id,name:name,place:place,start:st,end:en};
+  var brand=v("brand"),kind=v("kind"),dof=v("defOff"),inc=$(px+"retailIncl")&&$(px+"retailIncl").value==="1",code=isNew?v("code"):"";
+  if(dof!==""&&(!isFinite(Number(dof))||Number(dof)<0||Number(dof)>100)){say("標準のオフ率は0〜100の数字で入れてください",true);return}
+  if(code&&code.length<4){say("合言葉は4文字以上にしてください",true);return}
+  var place=v("place"),tag=v("tag"),cfgData={name:name,place:place,tag:tag,brand:brand,kind:kind,defOff:dof===""?null:Number(dof),retailIncl:!!inc,start:st,end:en,budget:budget,tax:Math.round(tax*10)/1000};
+  var ev={id:id,name:name,brand:brand,place:place,start:st,end:en};
   try{
     await A.saveEvent(ad,ev,cfgData,evList());
+    if(isNew&&code){try{await A.setEventCode(ad,id,code)}catch(e2){say("イベントは追加しましたが、合言葉を設定できませんでした（"+codeErr(e2)+"）",true)}}
     if(isNew){try{localStorage.setItem("t8event",id)}catch(x){}say("イベントを追加しました。切り替えます");setTimeout(function(){location.href=location.pathname+"?e="+encodeURIComponent(id)},900)}
     else{say("イベントの設定を保存しました");var a2=$(px+"admin");if(a2)a2.value="";var d=$("eventbox");if(d)d.open=false;render.force=true;render()}
   }catch(e){console.error(e);say(e&&e.code==="server"&&/admin/.test(String(e.message))?"管理者コードが違います。ADMIN_CODE の値を入力してください（合言葉ではありません）":"保存できませんでした（"+(e&&e.message?e.message:"通信エラー")+"）",true)}
