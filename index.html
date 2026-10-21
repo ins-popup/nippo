@@ -354,6 +354,8 @@ input[type=password]{min-height:52px;border-radius:16px;background:var(--surface
   .datebar .d b{font-size:26px}
   .kpi .v{font-size:32px}
 }
+.card.inner{padding:4px 0 8px;border:0;border-radius:0;background:none;backdrop-filter:none;-webkit-backdrop-filter:none;box-shadow:none;margin:0 0 10px;border-top:1px solid var(--line);padding-top:14px}
+@media (max-width:560px){.entry{grid-template-columns:48px 1fr auto auto}.entry .nm{grid-column:1/-1;grid-row:2}}
 </style>
 
 <div id="shell">
@@ -388,7 +390,7 @@ var WEATHER=["晴れ","曇り","雨","雪"];
 
 /* ============ 状態 ============ */
 var S={
-  tab:"entry", date:null, cfg:DEFAULT_CFG, skus:[], tx:[], days:{}, counts:{}, photos:[],
+  tab:"sales", date:null, cfg:DEFAULT_CFG, skus:[], tx:[], days:{}, counts:{}, photos:[],
   loaded:{}, db:null, assets:null, user:null, dl:null, canWrite:null,
   demo:false, dTx:[], dDays:{}, dCounts:{}, dSkus:null,
   form:{hin:null,sku:null,kind:"sale",other:"add",qty:1,amount:"",memo:"",detail:false},
@@ -472,11 +474,11 @@ function checks(){
   var cn=getCounts();
   Object.keys(cn).forEach(function(id){var c=cn[id];if(!sm[id]||c.n==null)return;var th=stockAsOf(id,c.date),df=c.n-th;if(df!==0)out.push({lv:"red",tag:"カウントのズレ",txt:skuLabel(sm[id])+"：実数 "+c.n+" ／ 理論 "+th+"（"+(df>0?"+":"")+df+"）",sub:md(c.date)+" 時点のカウントです",go:{tab:"stock",q:sm[id].hin}})});
   C.rows.forEach(function(d){
-    if(!d.inRange){if(d.lines)out.push({lv:"red",tag:"会期外の日付",txt:mdw(d.date)+" に "+d.lines+" 件の入力があります",sub:"日付の入力ミスかもしれません。入力画面で確認してください",go:{tab:"entry",date:d.date}});return}
+    if(!d.inRange){if(d.lines)out.push({lv:"red",tag:"会期外の日付",txt:mdw(d.date)+" に "+d.lines+" 件の入力があります",sub:"日付の入力ミスかもしれません。売上タブの手入力欄で確認してください",go:{tab:"sales",date:d.date}});return}
     var past=d.date<=today,had=d.lines>0;
     if(d.diff!=null&&d.diff!==0)out.push({lv:"red",tag:"レジ報告と不一致",txt:mdw(d.date)+"：入力から計算した合計 "+yen(d.sum)+" ／ レポート "+yen(d.rep)+"（差 "+(d.diff>0?"+":"")+yen(d.diff).replace("¥","¥")+"）",sub:"入力漏れ・数量違い・値引きの入力を確認してください",go:{tab:"sales",date:d.date}});
     if(past&&(had||d.date<today)){
-      if(!had&&d.date<today)out.push({lv:"yel",tag:"売上の入力なし",txt:mdw(d.date)+" は売上の入力が0件です",sub:"売上ゼロの日なら問題ありません",go:{tab:"entry",date:d.date}});
+      if(!had&&d.date<today)out.push({lv:"yel",tag:"売上の入力なし",txt:mdw(d.date)+" は売上の入力が0件です",sub:"売上ゼロの日なら問題ありません",go:{tab:"sales",date:d.date}});
       if(had){
         if(d.cust==null)out.push({lv:"yel",tag:"客数が未入力",txt:mdw(d.date),sub:"売上明細の日別パネルで入力します",go:{tab:"sales",date:d.date}});
         if(!dayPhotos(d.date).length&&!S.demo)out.push({lv:"yel",tag:"レポート写真が未登録",txt:mdw(d.date),sub:"レジの売上レポートを撮影して登録してください",go:{tab:"sales",date:d.date}});
@@ -531,7 +533,7 @@ function render(){
   var html=header();
   if(!allLoaded&&!S.demo)html+='<div class="empty"><b>読み込み中です</b>保存されたデータを取得しています。</div>';
   else if(!getSkus().length&&S.tab!=="admin")html+=emptySku();
-  else html+=({entry:vEntry,sales:vSales,report:vReport,stock:vStock,check:vCheck,log:vLog,admin:vAdmin})[S.tab]();
+  else html+=({sales:vSales,report:vReport,stock:vStock,check:vCheck,log:vLog,admin:vAdmin})[S.tab]();
   $("main").innerHTML=html;
   renderNav();
   if(fid){var el=$(fid);if(el){el.focus();try{if(ss!=null)el.setSelectionRange(ss,se)}catch(e){}}}
@@ -539,7 +541,7 @@ function render(){
 }
 function renderNav(){
   var n=checks(),red=n.filter(function(c){return c.lv==="red"}).length;
-  var tabs=[["entry","入力","ENTRY"],["sales","売上","SALES"],["report","日報","REPORT"],["stock","在庫","STOCK"],["check","確認","CHECK"],["log","履歴","HISTORY"]];
+  var tabs=[["sales","売上","SALES"],["report","日報","REPORT"],["stock","在庫","STOCK"],["check","確認","CHECK"],["log","履歴","HISTORY"]];
   if(!scoped()&&!S.demo)tabs.push(["admin","管理者","ADMIN"]);
   $("nav").innerHTML=tabs.map(function(t){
     return'<button data-act="tab" data-v="'+t[0]+'"'+(S.tab===t[0]?' aria-current="page"':'')+'><span class="t">'+t[1]+'</span><span class="s">'+t[2]+'</span>'+(t[0]==="check"&&n.length?'<span class="badge'+(red?' red':'')+'">'+n.length+'</span>':'')+'</button>'}).join("");
@@ -662,21 +664,16 @@ function previewHtml(){
   if(k.s<0&&q>st)h+='<div class="warnline">⚠ 今の在庫は '+st+' 点です。数量かSKUを確認してください</div>';
   return h;
 }
-function vEntry(){
-  var f=S.form,C=calc(),d=C.days[S.date]||{net:0,pcsNet:0,lines:0,sum:0,ratio:null},can=writable();
-  var h='<details class="card"><summary style="cursor:pointer;font-weight:700">はじめての方へ：入力の流れ（4ステップ）</summary><ol style="margin:10px 0 0;padding-left:20px;font-size:14px"><li>画面上の日付を確認します。前日分を入れるときは ◀ ▶ か「日付」で変えます。</li><li>①で商品を選び、カラーとサイズのボタンを押します。</li><li>②で区分（販売・返品など）と数量を入れて「追加する」を押します。間違えたら下の一覧の「取消」で消せます。</li><li>閉店後に「売上」で客数・レジの売上レポート写真・レポートの合計を入れ、「確認」に赤い項目が残っていないか見ます。日報は「日報」に書きます。</li></ol></details>'+
-   '<div class="kpis"><div class="kpi"><div class="l">この日の純売上高（税抜）</div><div class="v">'+yen(d.net)+'</div></div>'+
-   '<div class="kpi"><div class="l">合計（税込）</div><div class="v">'+yen(d.sum)+'</div></div>'+
-   '<div class="kpi"><div class="l">予算比</div><div class="v">'+pct(d.ratio)+'</div><div class="n">1日予算 '+yen(C.dayB)+'</div></div>'+
-   '<div class="kpi"><div class="l">純販売点数</div><div class="v">'+(d.pcsNet||0)+'<small>点</small></div><div class="n">入力 '+(d.lines||0)+' 件</div></div></div>';
-  if(can&&!S.demo)h+=arPanel();
+function vManual(){
+  var f=S.form,C=calc(),can=writable();
+  var h='<p class="muted" style="font-size:13px;margin:0 0 10px;line-height:1.7">返品・補充・店舗間移動・破損・返送、取り込めなかった行、値引きの修正はここで手入力します。画面上の日付（'+mdw(S.date)+'）に入ります。前日分は ◀ ▶ か「日付」で変えてください。</p>';
   if(can){
-  h+='<div class="card"><h2>① 商品を選ぶ <small>品番・商品名・カラーで絞り込めます</small></h2>'+
+  h+='<div class="card inner"><h2>① 商品を選ぶ <small>品番・商品名・カラーで絞り込めます</small></h2>'+
    '<label class="f"><span class="h" style="display:none">検索</span><input type="search" id="q" placeholder="例：HAPPY　／　WTL24102SN　／　BLACK" value="'+esc(S.q)+'" autocomplete="off"></label>'+
    '<div class="hinlist" id="hinList" style="margin-top:10px">'+hinListHtml()+'</div>'+
    '<div id="variants" style="margin-top:6px">'+variantsHtml()+'</div></div>';
   var isOther=f.kind==="other";
-  h+='<div class="card"><h2>② 内容を入れる</h2><div class="grid" style="gap:14px">'+
+  h+='<div class="card inner"><h2>② 内容を入れる</h2><div class="grid" style="gap:14px">'+
    '<div><div class="seg" role="group" aria-label="区分">'+
    '<button data-act="kind" data-v="sale" aria-pressed="'+(f.kind==="sale")+'">販売</button>'+
    '<button data-act="kind" data-v="ret_ok" aria-pressed="'+(f.kind==="ret_ok")+'">返品<br><small>再販できる</small></button>'+
@@ -692,7 +689,7 @@ function vEntry(){
    '</div></div>';
   }
   var list=getTx().filter(function(r){return r.date===S.date}).sort(function(a,b){return(b.at||0)-(a.at||0)});
-  h+='<div class="card"><h2>'+mdw(S.date)+' の入力 <small>'+list.length+' 件（新しい順）</small></h2>';
+  h+='<div class="card inner"><h2>'+mdw(S.date)+' の入力 <small>'+list.length+' 件（新しい順）</small></h2>';
   if(!list.length)h+='<div class="empty"><b>まだ入力がありません</b>'+(can?'上の①②で商品を選んで「追加する」を押すと、ここに並びます。':'')+'</div>';
   else h+=list.map(function(r){
     var k=KMAP[r.kind]||{n:r.kind,t:"oth"},s=C.sm[r.skuId],tm=r.at?new Date(r.at):null;
@@ -702,7 +699,7 @@ function vEntry(){
       (r.amount!=null&&r.amount!==""?'<br><span class="muted" style="font-size:12.5px">実際の金額 '+yen(+r.amount)+'</span>':'')+(r.memo?'<br><span class="muted" style="font-size:12.5px">'+esc(r.memo)+'</span>':'')+(r.by?'<br><span class="muted" style="font-size:12.5px">入力：'+esc(r.by)+'</span>':'')+'</div><span class="q">×'+esc(r.qty)+'</span>'+
       (can?(conf?'<button class="btn small danger" data-act="del" data-v="'+r.id+'">削除する</button>':'<button class="btn small" data-act="del" data-v="'+r.id+'" aria-label="取り消す">取消</button>'):'<span></span>')+'</div>'}).join("");
   h+='</div>';
-  return h;
+  return'<details class="card" id="manbox" style="margin-top:14px"'+(S.manOpen?' open':'')+'><summary style="cursor:pointer;font-weight:700;min-height:44px;display:flex;align-items:center">手入力（返品・補充・移動・破損など） <span class="muted" style="font-weight:500;font-size:13px;margin-left:8px">'+(getTx().filter(function(r){return r.date===S.date}).length)+' 件（'+md(S.date)+'）</span></summary><div style="margin-top:10px">'+h+'</div></details>';
 }
 
 /* ---- 売上明細 ---- */
@@ -718,7 +715,7 @@ function vSales(){
   var cum=last?last.cum:0,pace=last?last.cumRatio:null;
   var tot={g:0,r:0,d:0,n:0,t:0,s:0,p:0,pr:0,pn:0,c:0};
   rows.forEach(function(d){tot.g+=d.total;tot.r+=d.ret;tot.d+=d.dis;tot.n+=d.net;tot.t+=d.tax;tot.s+=d.sum;tot.p+=d.pcsSale;tot.pr+=d.pcsRet;tot.pn+=d.pcsNet;tot.c+=d.cust||0});
-  var h='<div class="kpis"><div class="kpi"><div class="l">累計 純売上高（税抜）</div><div class="v">'+yen(cum)+'</div><div class="n">会期予算 '+yen(S.cfg.budget)+'</div></div>'+
+  var h=(writable()&&!S.demo?arPanel():'')+'<div class="kpis"><div class="kpi"><div class="l">累計 純売上高（税抜）</div><div class="v">'+yen(cum)+'</div><div class="n">会期予算 '+yen(S.cfg.budget)+'</div></div>'+
    '<div class="kpi"><div class="l">会期予算に対する達成率</div><div class="v">'+pct(S.cfg.budget?cum/S.cfg.budget:null)+'</div><div class="n">残り '+yen(Math.max(0,S.cfg.budget-cum))+'</div></div>'+
    '<div class="kpi '+(pace!=null&&pace<1?'bad':'ok')+'"><div class="l">累計予算比（ペース）</div><div class="v">'+pct(pace)+'</div><div class="n">'+(last?mdw(last.date)+' 時点':'売上入力後に表示')+'</div></div>'+
    '<div class="kpi"><div class="l">累計 純販売点数</div><div class="v">'+tot.pn+'<small>点</small></div><div class="n">販売 '+tot.p+' ／ 返品 '+tot.pr+'</div></div></div>';
@@ -738,6 +735,7 @@ function vSales(){
   h+=dayPanel(C.days[S.date]);
   h+='<div class="row"><button class="btn small" data-act="csv" data-v="sales">売上明細をCSVで保存</button><button class="btn small" data-act="csv" data-v="tx">入力履歴をCSVで保存</button></div>';
   h+=alCard();
+  h+=vManual();
   return h;
 }
 /* ---- アラジン入力用リスト（売れた商品を、品番・カラー・サイズごと・単価ごとに集計） ---- */
@@ -900,7 +898,7 @@ function vLog(){
   if(!list.length)h+='<div class="empty"><b>履歴はまだありません</b>入力・取消・日報の保存などを行うと、ここに名前つきで並びます。</div>';
   else h+=list.map(function(l){var d=new Date(l.at),t=(d.getMonth()+1)+"/"+d.getDate()+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");
     var k=l.act==="取消"?"ret":(l.act==="入力"?"sale":"oth");
-    return'<div class="logrow"><span class="tm">'+t+'</span><div class="tx"><span class="by">'+esc(l.by||"名前未設定")+'</span><span class="kind '+k+'">'+esc(l.act)+'</span> '+esc(l.txt)+(l.date?' <a href="#" data-act="go" data-tab="'+(l.act==="日報"?"report":(l.act==="売上"||l.act==="写真"?"sales":"entry"))+'" data-v="'+esc(l.date)+'" class="muted">'+mdw(l.date)+'</a>':'')+'</div></div>'}).join("");
+    return'<div class="logrow"><span class="tm">'+t+'</span><div class="tx"><span class="by">'+esc(l.by||"名前未設定")+'</span><span class="kind '+k+'">'+esc(l.act)+'</span> '+esc(l.txt)+(l.date?' <a href="#" data-act="go" data-tab="'+(l.act==="日報"?"report":"sales")+'" data-v="'+esc(l.date)+'" class="muted">'+mdw(l.date)+'</a>':'')+'</div></div>'}).join("");
   return h+'</div>';
 }
 
@@ -917,7 +915,7 @@ function vStock(){
   h+='<div class="card"><h2>SKU別の在庫 <small>理論在庫 ＝ 投入数 − 販売 ＋ 返品（再販可）＋ 補充等の増減</small></h2>'+
    '<div class="grid" style="gap:10px"><label class="f"><input type="search" id="q" placeholder="品番・商品名・カラーで絞り込み" value="'+esc(S.q)+'" autocomplete="off"></label>'+
    '<div class="filters">'+fl.map(function(f){return'<button data-act="sf" data-v="'+f[0]+'" aria-pressed="'+(S.stockFilter===f[0])+'">'+f[1]+'</button>'}).join("")+'</div>'+
-   (can?'<div class="muted" style="font-size:12.5px">「実数」は棚卸で数えた点数です。入れると '+mdw(S.date)+' 時点の理論在庫と比べてズレを出します（任意）。日付は入力画面・売上画面の日付と共通です。</div>':'')+'</div></div>';
+   (can?'<div class="muted" style="font-size:12.5px">「実数」は棚卸で数えた点数です。入れると '+mdw(S.date)+' 時点の理論在庫と比べてズレを出します（任意）。日付は売上画面の日付と共通です。</div>':'')+'</div></div>';
   var rows=sk.filter(function(s){
     var x=C.st[s.id],c=cn[s.id];
     if(q&&(s.hin+" "+s.name+" "+s.color+" "+s.size).toLowerCase().indexOf(q)<0)return false;
@@ -1015,7 +1013,7 @@ $("lb").addEventListener("click",function(){this.hidden=true});
 document.addEventListener("keydown",function(e){if(e.key==="Escape")$("lb").hidden=true;if(e.key==="Enter"&&e.target&&e.target.id==="code")doLogin()});
 document.addEventListener("input",function(e){
   var t=e.target,f=S.form;
-  if(t.id==="q"){S.q=t.value;if(S.comp)return;if(S.tab==="entry"){var l=$("hinList");if(l)l.innerHTML=hinListHtml()}else{render.force=true;render()}}
+  if(t.id==="q"){S.q=t.value;if(S.comp)return;var l=$("hinList");if(l)l.innerHTML=hinListHtml();else{render.force=true;render()}}
   else if(t.id==="qty"){var n=parseInt(t.value,10);f.qty=n>0?n:1;var p=$("preview");if(p)p.innerHTML=previewHtml()}
   else if(t.id==="amount"){f.amount=t.value}
   else if(t.id==="sq_admin"){S.sqAdmin=t.value}
@@ -1026,7 +1024,8 @@ document.addEventListener("input",function(e){
   else if(t.dataset&&t.dataset.count){S.draft["c:"+t.dataset.count]=t.value}
 });
 document.addEventListener("compositionstart",function(){S.comp=true});
-document.addEventListener("compositionend",function(e){S.comp=false;var t=e.target;if(t&&t.id==="q"){S.q=t.value;if(S.tab==="entry"){var l=$("hinList");if(l)l.innerHTML=hinListHtml()}else{render.force=true;render()}}});
+document.addEventListener("toggle",function(e){var t=e.target;if(t&&t.id==="manbox")S.manOpen=t.open},true);
+document.addEventListener("compositionend",function(e){S.comp=false;var t=e.target;if(t&&t.id==="q"){S.q=t.value;var l=$("hinList");if(l)l.innerHTML=hinListHtml();else{render.force=true;render()}}});
 document.addEventListener("change",function(e){
   var t=e.target;
   if(t.id==="seedfile"||t.id==="seedoff"){seedPreview()}
@@ -1506,7 +1505,7 @@ function arPanel(){
         if(tx.length)h+='<div class="pill warn" style="margin:8px 0;display:block;white-space:normal">この日にはすでに '+tx.length+' 件の入力があります'+(sq?'（うちSquare自動 '+sq+' 件）':'')+'。同じ売上を二重に入れていないか確認してください。</div>';
       }
     }
-    if(pl.rets)h+='<div class="muted" style="font-size:12.5px;margin-top:6px">返品 '+pl.rets+' 点があります。返品は自動では登録しないので、入力タブで手入力してください。</div>';
+    if(pl.rets)h+='<div class="muted" style="font-size:12.5px;margin-top:6px">返品 '+pl.rets+' 点があります。返品は自動では登録しないので、このタブ下の「手入力」で入力してください。</div>';
     if(pl.un.length){
       h+='<div style="margin-top:8px;font-size:13px"><b>登録しない行（商品を選ぶと登録します）</b></div>';
       pl.un.forEach(function(u){
