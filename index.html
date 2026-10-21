@@ -736,7 +736,105 @@ function vSales(){
   h+='<div class="muted" style="font-size:12.5px">行を押すと、その日の詳細（客数・レポート写真・内訳）が下に開きます。金額はレジ（Square）のレポートと同じく、総売上高・返品・ディスカウント・純売上高は税抜、合計は税込です。</div>';
   h+=dayPanel(C.days[S.date]);
   h+='<div class="row"><button class="btn small" data-act="csv" data-v="sales">売上明細をCSVで保存</button><button class="btn small" data-act="csv" data-v="tx">入力履歴をCSVで保存</button></div>';
+  h+=alCard();
   return h;
+}
+/* ---- アラジン入力用リスト（売れた商品を、品番・カラー・サイズごと・単価ごとに集計） ---- */
+function alData(from,to){
+  var t=S.cfg.tax,sm={},days={};
+  getSkus().forEach(function(s){sm[s.id]=s});
+  getTx().forEach(function(r){
+    var k=KMAP[r.kind];if(!k||(k.t!=="sale"&&k.t!=="ret"))return;
+    if(r.date<from||r.date>to)return;
+    var s=sm[r.skuId];if(!s)return;
+    var rq=+r.qty||0,q=rq*(k.t==="ret"?-1:1);if(!q)return;
+    var unit=(r.amount!=null&&r.amount!==""&&rq)?Math.round((+r.amount)/(1+t)/rq):Math.round(+s.sale||0);
+    var D=days[r.date]=days[r.date]||{},key=s.id+"|"+unit,L=D[key]=D[key]||{s:s,unit:unit,qty:0};L.qty+=q;
+  });
+  return days;
+}
+function alLines(map,order){
+  return Object.keys(map).map(function(k){return map[k]}).filter(function(l){return l.qty!==0}).sort(function(a,b){return(order[a.s.id]-order[b.s.id])||(a.unit-b.unit)});
+}
+function alTot(lines){
+  var t={qty:0,amt:0,retail:0};
+  lines.forEach(function(l){t.qty+=l.qty;t.amt+=l.unit*l.qty;t.retail+=(+l.s.retail||0)*l.qty});
+  t.incl=Math.round(t.amt*(1+S.cfg.tax));return t;
+}
+function alSig(date){
+  var d=alData(date,date)[date]||{},order={};getSkus().forEach(function(s,i){order[s.id]=i});
+  var t=alTot(alLines(d,order));return t.qty+"/"+t.amt;
+}
+function alStatus(date){
+  var dd=getDays()[date]||{},a=dd.aladdin;
+  if(!a)return{k:"no",t:"未出力"};
+  return a.sig===alSig(date)?{k:"ok",t:"出力済み"+(a.no?"（"+a.no+"）":"")}:{k:"chg",t:"出力後に変更あり"};
+}
+function alState(){
+  var dates={};getTx().forEach(function(r){var k=KMAP[r.kind];if(k&&(k.t==="sale"||k.t==="ret")&&r.date)dates[r.date]=1});
+  var ds=Object.keys(dates).sort();
+  if(!S.al){
+    var pend=ds.filter(function(d){return alStatus(d).k!=="ok"});
+    S.al={from:pend.length?pend[0]:(ds.length?ds[ds.length-1]:S.date),to:ds.length?ds[ds.length-1]:S.date,split:false,no:""};
+  }
+  return{dates:ds,st:S.al};
+}
+function alBuild(){
+  var A=alState(),st=A.st,order={};getSkus().forEach(function(s,i){order[s.id]=i});
+  var from=st.from<=st.to?st.from:st.to,to=st.from<=st.to?st.to:st.from,days=alData(from,to),ds=Object.keys(days).sort(),groups=[];
+  if(st.split)ds.forEach(function(d){var l=alLines(days[d],order);if(l.length)groups.push({date:d,lines:l,tot:alTot(l)})});
+  else{var m={};ds.forEach(function(d){Object.keys(days[d]).forEach(function(k){var x=days[d][k],y=m[k]=m[k]||{s:x.s,unit:x.unit,qty:0};y.qty+=x.qty})});var l2=alLines(m,order);if(l2.length)groups.push({date:null,lines:l2,tot:alTot(l2)})}
+  var all=[];groups.forEach(function(g){all=all.concat(g.lines)});
+  var C=calc(),site=0;C.rows.forEach(function(d){if(d.date>=from&&d.date<=to)site+=d.net});
+  return{from:from,to:to,days:ds,groups:groups,tot:alTot(all),site:site,st:st};
+}
+function alRowsOut(b){
+  var rows=[["日付","品番","商品名","カラー","サイズ","JAN","数量","単価（税抜）","金額（税抜）","上代単価（税抜）","上代金額（税抜）"]];
+  b.groups.forEach(function(g){g.lines.forEach(function(l){var s=l.s;rows.push([g.date||(b.from+"〜"+b.to),s.hin,s.name,s.color,s.size,s.jan||"",l.qty,l.unit,l.unit*l.qty,Math.round(+s.retail||0),Math.round((+s.retail||0)*l.qty)])})});
+  return rows;
+}
+function alCard(){
+  if(scoped())return"";
+  var b=alBuild(),A=alState(),st=b.st,can=writable()&&!S.demo;
+  var h='<div class="card" id="albox"><h2>アラジン入力用リスト <small>売れた商品を集計して、アラジンの受注入力に写します</small></h2>'+
+   '<div class="muted" style="font-size:13px;line-height:1.7;margin-bottom:10px">期間を選ぶと、売れた商品を品番・カラー・サイズごと（定価と違う単価は別の行）に集計します。返品は数量をマイナスにして差し引きます。金額は税抜で、アラジンの受注単価に合わせています。</div>'+
+   '<div class="row" style="align-items:flex-end"><label class="f" style="flex:1 1 150px"><span>はじめの日</span><input type="date" id="al_from" value="'+esc(st.from)+'"></label><label class="f" style="flex:1 1 150px"><span>おわりの日</span><input type="date" id="al_to" value="'+esc(st.to)+'"></label></div>'+
+   '<label style="display:flex;gap:8px;align-items:center;margin:10px 0;font-size:14px"><input type="checkbox" id="al_split"'+(st.split?' checked':'')+' style="width:20px;height:20px"> 日ごとに分けて出す（1日ごとに受注を作る場合）</label>';
+  if(A.dates.length){
+    h+='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">'+A.dates.map(function(d){var s=alStatus(d),inr=d>=b.from&&d<=b.to;return'<span class="pill '+(s.k==="ok"?'ok':s.k==="chg"?'bad':'warn')+'" style="'+(inr?'':'opacity:.55')+'">'+md(d)+' '+esc(s.t)+'</span>'}).join("")+'</div>';
+  }
+  if(!b.groups.length)return h+'<div class="empty">この期間に売れた商品はありません。</div></div>';
+  b.groups.forEach(function(g){
+    h+='<div style="font-weight:700;margin:12px 0 6px">'+(g.date?mdw(g.date):md(b.from)+'〜'+md(b.to))+'　<span class="muted" style="font-weight:500;font-size:13px">'+g.tot.qty+' 点／'+yen(g.tot.amt)+'（税抜）</span></div>'+
+     '<div class="tablewrap"><table><thead><tr><th>品番／カラー／サイズ</th><th>数量</th><th>単価<br>（税抜）</th><th>金額<br>（税抜）</th></tr></thead><tbody>'+
+     g.lines.map(function(l){var s=l.s,off=Math.round(+s.sale||0)!==l.unit;return'<tr><td><b>'+esc(s.hin)+'</b><br><span class="muted" style="font-size:12.5px">'+esc(s.color)+'｜'+esc(s.size)+'</span></td><td class="num'+(l.qty<0?' neg':'')+'"><b>'+l.qty+'</b></td><td class="num">'+numf(l.unit)+(off?'<br><span class="pill warn">値引き</span>':'')+'</td><td class="num">'+numf(l.unit*l.qty)+'</td></tr>'}).join("")+'</tbody></table></div>';
+  });
+  h+='<dl class="kv" style="margin-top:12px"><dt>数量の合計</dt><dd>'+b.tot.qty+' 点</dd><dt>上代の合計（税抜）</dt><dd>'+yen(b.tot.retail)+'</dd><dt>金額の合計（税抜）</dt><dd class="big">'+yen(b.tot.amt)+'</dd><dt>（参考）税込</dt><dd>'+yen(b.tot.incl)+'</dd></dl>';
+  var df=b.tot.amt-b.site;
+  h+='<div class="muted" style="font-size:12.5px;line-height:1.7;margin-top:6px">アラジンに入れたあと、画面下の「数量／上代計」「金額」がこの合計と合っているか確認してください。売上タブの純売上高（税抜）との差：'+(df===0?'<span class="pill ok">なし</span>':'<span class="pill warn">'+(df>0?'+':'')+numf(df)+' 円</span>（割引や端数の丸めによる差の場合があります）')+'</div>';
+  h+='<div class="row" style="margin-top:12px"><button class="btn primary" data-act="alcopy">表をコピー（Excelに貼り付け）</button><button class="btn" data-act="alcsv">CSVで保存</button></div>';
+  if(can)h+='<div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line)"><div style="font-size:13px;font-weight:700;margin-bottom:6px">アラジンに入力し終えたら</div><div class="row" style="align-items:flex-end"><label class="f" style="flex:1 1 180px"><span>受注NO（任意・メモ）</span><input type="text" id="al_no" value="'+esc(st.no)+'" placeholder="例：00017015" autocomplete="off"></label><button class="btn" data-act="almark">この期間を「出力済み」にする</button></div><div class="muted" style="font-size:12.5px;margin-top:6px">日付ごとに印が付きます。あとで入力が増えたり減ったりした日は「出力後に変更あり」と出るので、差分だけ入れ直せます。</div></div>';
+  return h+'</div>';
+}
+function alCopy(){
+  var rows=alRowsOut(alBuild()),txt=rows.map(function(r){return r.map(function(c){return String(c==null?"":c).replace(/[\t\r\n]+/g," ")}).join("\t")}).join("\n");
+  function fb(){var ta=document.createElement("textarea");ta.value=txt;ta.style.cssText="position:fixed;left:-9999px";document.body.appendChild(ta);ta.select();var ok=false;try{ok=document.execCommand("copy")}catch(e){}ta.remove();toast(ok?"コピーしました。Excelに貼り付けてください":"コピーできませんでした。CSVで保存してください",!ok)}
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(function(){toast("コピーしました。Excelに貼り付けてください")},fb);else fb();
+}
+function alCsv(){
+  var b=alBuild();if(!b.groups.length){toast("この期間に売れた商品はありません",true);return}
+  csvDl("アラジン入力用_"+evName()+"_"+b.from+(b.from===b.to?"":"-"+b.to)+".csv",alRowsOut(b));
+}
+async function alMark(){
+  var b=alBuild(),A=window.T8Data,who=(S.who||"").trim();
+  if(!b.groups.length||S.busy)return;
+  if(!ensureDb())return;
+  var ops=b.days.filter(function(d){return(alData(d,d)[d]&&Object.keys(alData(d,d)[d]).length)}).map(function(d){return{op:"update",collection:"days",id:d,data:{aladdin:{at:Date.now(),by:who||"名前未設定",no:(S.al.no||"").trim(),sig:alSig(d)}}}});
+  if(!ops.length)return;
+  S.busy=true;
+  try{await A.batch(ops);logEv("売上","アラジン入力用リストを出力済みにしました："+md(b.from)+(b.from===b.to?"":"〜"+md(b.to))+"（"+ops.length+" 日）");toast("出力済みにしました")}
+  catch(e){dbErr(e)}
+  S.busy=false;render.force=true;render();
 }
 function td(has,v,neg){return'<td class="num'+(neg?' neg':'')+'">'+(has?v:'<span class="muted">—</span>')+'</td>'}
 function dayPanel(d){
@@ -896,6 +994,9 @@ document.addEventListener("click",function(e){
     case"codeset":doCode(true);break;
     case"sqnow":doSq("now");break;
     case"arapply":doArApply();break;
+    case"alcopy":alCopy();break;
+    case"alcsv":alCsv();break;
+    case"almark":alMark();break;
     case"arclear":S.ar=null;render.force=true;render();break;
     case"sqassign":doSq("assign",v);break;
     case"sqdismiss":doSq("dismiss",v);break;
@@ -918,6 +1019,7 @@ document.addEventListener("input",function(e){
   else if(t.id==="qty"){var n=parseInt(t.value,10);f.qty=n>0?n:1;var p=$("preview");if(p)p.innerHTML=previewHtml()}
   else if(t.id==="amount"){f.amount=t.value}
   else if(t.id==="sq_admin"){S.sqAdmin=t.value}
+  else if(t.id==="al_no"){alState();S.al.no=t.value}
   else if(t.id==="memo"){f.memo=t.value}
   else if(t.id==="who"){S.who=t.value;try{localStorage.setItem("t8who",t.value)}catch(e){}}
   else if(t.dataset&&t.dataset.day){S.draft[S.date+":"+t.dataset.day]=t.value}
@@ -929,6 +1031,8 @@ document.addEventListener("change",function(e){
   var t=e.target;
   if(t.id==="seedfile"||t.id==="seedoff"){seedPreview()}
   else if(t.id==="arfile"){arLoad(t)}
+  else if(t.id==="al_from"||t.id==="al_to"){alState();S.al[t.id==="al_from"?"from":"to"]=t.value;render.force=true;render()}
+  else if(t.id==="al_split"){alState();S.al.split=t.checked;render.force=true;render()}
   else if(t.id==="ar_date"){if(S.ar){S.ar.date=t.value;render.force=true;render()}}
   else if(t.dataset&&t.dataset.arsel!==undefined&&t.dataset.arsel!==""){if(S.ar){S.ar.map[+t.dataset.arsel]=t.value===""?null:t.value;render.force=true;render()}}
   else if(t.id==="other"){S.form.other=t.value;render.force=true;render()}
