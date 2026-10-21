@@ -1482,7 +1482,7 @@ function arPlan(){
 }
 function arPanel(){
   var st=S.ar,h='<div class="card" id="arbox"><h2>売上ファイルを読み込む <small>エアレジ／SquareのCSV</small></h2>'+
-   '<div class="muted" style="font-size:13px;margin-bottom:8px;line-height:1.7"><b>エアレジ</b>：バックオフィス（パソコンのブラウザ）の「売上・分析 → 商品別売上 →『バリエーション単位で表示』→ ダウンロード」のCSVを、<b>1日ずつ</b>入れてください。「日別売上 → CSVデータをダウンロードする →『売上集計』」のCSVも一緒に入れると、レポート合計・客数・割引も入ります。<br><b>Square</b>：管理画面でダウンロードした、商品ごとの売上のCSV（日付つき）をそのまま入れてください。複数日まとめてでも読み込めます。割引は商品ごとの金額に反映されます。</div>'+
+   '<div class="muted" style="font-size:13px;margin-bottom:8px;line-height:1.7"><b>このファイルは、レジ本体からは出せません。</b>エアレジ・Squareの管理画面（アプリ、またはパソコンのサイト）にログインできる<b>管理者</b>がダウンロードして、ここに入れてください。<br><b>エアレジ</b>：「売上・分析 → 商品別売上 →『バリエーション単位で表示』→ ダウンロード」のCSVを<b>1日ずつ</b>。「日別売上 → CSVデータをダウンロードする →『売上集計』」のCSVも一緒に入れると、レポート合計・客数・割引も入ります。<br><b>Square</b>：管理画面でダウンロードした商品ごとの売上のCSV（日付つき）。複数日まとめてでも読み込めます。割引は商品ごとの金額に反映されます。</div>'+
    '<div class="row"><input type="file" id="arfile" accept=".csv,text/csv" multiple style="flex:1 1 220px"></div>';
   if(!st)return h+(S.arMsg?'<div class="muted" style="font-size:13px;margin-top:8px">'+esc(S.arMsg)+'</div>':'')+'</div>';
   var pl=arPlan(),sk=getSkus().slice().sort(function(a,b){return String(a.hin).localeCompare(String(b.hin))||String(a.color).localeCompare(String(b.color))}),isSq=!!(st.items&&st.items.src==="sq");
