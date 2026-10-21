@@ -774,8 +774,7 @@ function alState(){
   var dates={};getTx().forEach(function(r){var k=KMAP[r.kind];if(k&&(k.t==="sale"||k.t==="ret")&&r.date)dates[r.date]=1});
   var ds=Object.keys(dates).sort();
   if(!S.al){
-    var pend=ds.filter(function(d){return alStatus(d).k!=="ok"});
-    S.al={from:pend.length?pend[0]:(ds.length?ds[ds.length-1]:S.date),to:ds.length?ds[ds.length-1]:S.date,split:false,no:""};
+    S.al={from:ds.length?ds[0]:S.date,to:ds.length?ds[ds.length-1]:S.date,split:false,no:""};
   }
   return{dates:ds,st:S.al};
 }
@@ -799,7 +798,7 @@ function alCard(){
   var h='<div class="card" id="albox"><h2>アラジン入力用リスト <small>売れた商品を集計して、アラジンの受注入力に写します</small></h2>'+
    '<div class="muted" style="font-size:13px;line-height:1.7;margin-bottom:10px">期間を選ぶと、売れた商品を品番・カラー・サイズごと（定価と違う単価は別の行）に集計します。返品は数量をマイナスにして差し引きます。金額は税抜で、アラジンの受注単価に合わせています。</div>'+
    '<div class="row" style="align-items:flex-end"><label class="f" style="flex:1 1 150px"><span>はじめの日</span><input type="date" id="al_from" value="'+esc(st.from)+'"></label><label class="f" style="flex:1 1 150px"><span>おわりの日</span><input type="date" id="al_to" value="'+esc(st.to)+'"></label></div>'+
-   '<label style="display:flex;gap:8px;align-items:center;margin:10px 0;font-size:14px"><input type="checkbox" id="al_split"'+(st.split?' checked':'')+' style="width:20px;height:20px"> 日ごとに分けて出す（1日ごとに受注を作る場合）</label>';
+   '<label style="display:flex;gap:8px;align-items:center;margin:10px 0;font-size:14px"><input type="checkbox" id="al_split"'+(st.split?' checked':'')+' style="width:20px;height:20px"> 日ごとに分けて出す（日ごとに受注を作る場合）</label>';
   if(A.dates.length){
     h+='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">'+A.dates.map(function(d){var s=alStatus(d),inr=d>=b.from&&d<=b.to;return'<span class="pill '+(s.k==="ok"?'ok':s.k==="chg"?'bad':'warn')+'" style="'+(inr?'':'opacity:.55')+'">'+md(d)+' '+esc(s.t)+'</span>'}).join("")+'</div>';
   }
