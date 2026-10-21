@@ -146,6 +146,10 @@
     squareNow: function (admin) { return post({ action: "squarenow", admin: admin }).then(function (j) { return refresh().then(function () { return j; }); }); },
     squareAssign: function (admin, id, ev) { return post({ action: "squareassign", admin: admin, id: id, event: ev }).then(function (j) { return refresh().then(function () { return j; }); }); },
     squareDismiss: function (admin, id) { return post({ action: "squaredismiss", admin: admin, id: id }).then(function (j) { return refresh().then(function () { return j; }); }); },
+    /* 管理者コード付きの書き込み（今のイベントのIDに自動で接頭辞を付ける。エアレジCSVの取り込み用） */
+    writeAdmin: function (admin, ops, onProgress) {
+      return adminWrite(admin, ops.map(function (o) { return { op: o.op, collection: o.collection, id: pfx + o.id, data: o.data }; }), onProgress);
+    },
     getEventCodes: function (admin) { return post({ action: "getcodes", admin: admin }).then(function (j) { return j.codes || {}; }); },
     setEventCode: function (admin, ev, newCode) { return post({ action: "setcode", admin: admin, event: ev, newCode: newCode }); },
     connect: connect, refresh: refresh, db: db, assets: assets, downloads: downloads,

@@ -603,7 +603,7 @@ function sqPanel(){
   var A=window.T8Data,all=(A.rawImports&&A.rawImports())||[],evs=evList(),pend=all.filter(function(x){return x.id.indexOf("pending~")===0}).sort(function(a,b){return(b.data.at||0)-(a.data.at||0)});
   var pf=A.eventId()===A.LEGACY?"":"ev~"+A.eventId()+"~";
   var mine=all.filter(function(x){return x.id.indexOf("pending~")!==0&&(pf===""?x.id.indexOf("~")<0:x.id.indexOf(pf)===0)}).sort(function(a,b){return(b.data.at||0)-(a.data.at||0)}).slice(0,10);
-  var h='<details class="card" id="sqbox" style="margin-top:14px"'+(S.sqOpen?' open':'')+'><summary style="cursor:pointer;font-weight:700;min-height:44px;display:flex;align-items:center">管理者用：Squareの売上レポートの自動取り込み'+(pend.length?' <span class="pill warn" style="margin-left:8px">未振り分け '+pend.length+' 件</span>':'')+'</summary>'+
+  var h='<details class="card" id="sqbox" style="margin-top:14px"'+(S.sqOpen?' open':'')+'><summary style="cursor:pointer;font-weight:700;min-height:44px;display:flex;align-items:center">管理者用：売上の取り込み（Square自動／エアレジCSV）'+(pend.length?' <span class="pill warn" style="margin-left:8px">未振り分け '+pend.length+' 件</span>':'')+'</summary>'+
    '<div class="muted" style="font-size:13px;margin:6px 0 12px;line-height:1.7">Gmailに届いた「Square売上レポート」を30分ごとに読み取り、売上として登録します。どのイベントかは、①イベント設定の「Squareの拠点名」→②会期→③商品の一致、の順で自動で決まります。決められなかったものは、下の「未振り分け」に出ます。同じメールを二重に取り込むことはありません。返品と、商品なしの金額入力は手入力が必要です。</div>'+
    '<label class="f"><span>管理者コード</span><span class="pw"><input type="password" id="sq_admin" autocomplete="off" value="'+esc(S.sqAdmin||"")+'"><button type="button" class="eye" data-eye="1" aria-label="表示する" aria-pressed="false">表示</button></span></label>'+
    '<div style="margin:10px 0"><button class="btn primary" data-act="sqnow">今すぐ取り込む</button> <span id="sq_info" class="muted" style="font-size:13px">'+esc(S.sqMsg||"")+'</span></div>';
@@ -621,6 +621,7 @@ function sqPanel(){
     h+='<div style="padding:8px 0;border-top:1px solid var(--line);font-size:14px"><b>'+md(d.date)+'</b>　'+esc(d.loc||"")+'　<span class="muted" style="font-size:12.5px">'+(d.matched||0)+' 商品／'+(d.pcs||0)+' 点を登録（'+sqAgo(d.at)+'）</span>'+
      (um.length?'<div class="muted" style="font-size:12.5px;margin-top:3px;line-height:1.6">未登録 '+um.length+' 行：'+um.slice(0,6).map(function(u){return esc(u.name+(u.variant?"／"+u.variant:"")+" ×"+u.qty+"（"+u.why+"）")}).join("、")+(um.length>6?" ほか":"")+'</div>':'')+'</div>';
   });
+  h+=arPanel();
   return h+'</details>';
 }
 function adminPanel(){
@@ -889,6 +890,8 @@ document.addEventListener("click",function(e){
     case"evsave":doEvent(false);break;
     case"codeset":doCode(true);break;
     case"sqnow":doSq("now");break;
+    case"arapply":doArApply();break;
+    case"arclear":S.ar=null;S.sqOpen=true;render.force=true;render();break;
     case"sqassign":doSq("assign",v);break;
     case"sqdismiss":doSq("dismiss",v);break;
     case"codeshow":doCode(false);break;
@@ -909,6 +912,7 @@ document.addEventListener("input",function(e){
   if(t.id==="q"){S.q=t.value;if(S.comp)return;if(S.tab==="entry"){var l=$("hinList");if(l)l.innerHTML=hinListHtml()}else{render.force=true;render()}}
   else if(t.id==="qty"){var n=parseInt(t.value,10);f.qty=n>0?n:1;var p=$("preview");if(p)p.innerHTML=previewHtml()}
   else if(t.id==="amount"){f.amount=t.value}
+  else if(t.id==="sq_admin"){S.sqAdmin=t.value}
   else if(t.id==="memo"){f.memo=t.value}
   else if(t.id==="who"){S.who=t.value;try{localStorage.setItem("t8who",t.value)}catch(e){}}
   else if(t.dataset&&t.dataset.day){S.draft[S.date+":"+t.dataset.day]=t.value}
@@ -919,6 +923,9 @@ document.addEventListener("compositionend",function(e){S.comp=false;var t=e.targ
 document.addEventListener("change",function(e){
   var t=e.target;
   if(t.id==="seedfile"||t.id==="seedoff"){seedPreview()}
+  else if(t.id==="arfile"){arLoad(t)}
+  else if(t.id==="ar_date"){if(S.ar){S.ar.date=t.value;S.sqOpen=true;render.force=true;render()}}
+  else if(t.dataset&&t.dataset.arsel!==undefined&&t.dataset.arsel!==""){if(S.ar){S.ar.map[+t.dataset.arsel]=t.value===""?null:t.value;S.sqOpen=true;render.force=true;render()}}
   else if(t.id==="other"){S.form.other=t.value;render.force=true;render()}
   else if(t.id==="datepick"){if(t.value){S.date=t.value;render.force=true;render()}}
   else if(t.dataset&&t.dataset.day){
@@ -1247,6 +1254,160 @@ function seedKeepIds(p){
   (S.skus||[]).forEach(function(s){ex[seedKeyOf(s)]=s.id;var n=parseInt(String(s.id).replace(/\D/g,""),10);if(n>mx)mx=n});
   list.forEach(function(s){var id=ex[seedKeyOf(s)];if(id&&!used[id]){s.id=id;used[id]=1;s._ok=1}});
   list.forEach(function(s){if(s._ok){delete s._ok;return}do{mx++;s.id="s"+String(mx).padStart(3,"0")}while(used[s.id]);used[s.id]=1});
+}
+/* ---- エアレジのCSV（商品別／バリエーション別売上、売上集計）の取り込み ---- */
+function arKey(t){return String(t==null?"":t).normalize("NFKC").toUpperCase().replace(/[^0-9A-Z぀-ヿ一-鿿]/g,"")}
+function arNum(x){var n=parseFloat(String(x==null?"":x).replace(/[,\s¥￥]/g,""));return isNaN(n)?0:n}
+function arDecode(buf){
+  try{return new TextDecoder("utf-8",{fatal:true}).decode(buf)}catch(e){}
+  try{return new TextDecoder("shift_jis").decode(buf)}catch(e2){return new TextDecoder("utf-8").decode(buf)}
+}
+function arCsv(t){
+  var rows=[],row=[],f="",q=false,i=0,c;t=String(t).replace(/^﻿/,"");
+  for(;i<t.length;i++){c=t[i];
+    if(q){if(c==='"'){if(t[i+1]==='"'){f+='"';i++}else q=false}else f+=c}
+    else if(c==='"')q=true;
+    else if(c===","){row.push(f);f=""}
+    else if(c==="\n"||c==="\r"){if(c==="\r"&&t[i+1]==="\n")i++;row.push(f);f="";rows.push(row);row=[]}
+    else f+=c}
+  if(f!==""||row.length){row.push(f);rows.push(row)}
+  return rows.filter(function(r){return r.some(function(x){return String(x).trim()!==""})});
+}
+function arIso(d8){return d8.slice(0,4)+"-"+d8.slice(4,6)+"-"+d8.slice(6,8)}
+function arParse(name,text){
+  var rows=arCsv(text);if(!rows.length)return{kind:null};
+  var hd=rows[0].map(function(x){return String(x).trim()});
+  function ix(n){return hd.indexOf(n)}
+  function g(r,n){var k=ix(n);return k<0?"":String(r[k]==null?"":r[k]).trim()}
+  if(ix("商品名")>=0&&ix("販売商品数")>=0){
+    var m=/(\d{8})\D+(\d{8})/.exec(name),out={kind:"items",name:name,from:m?m[1]:"",to:m?m[2]:"",items:[]};
+    rows.slice(1).forEach(function(r){var nm=g(r,"商品名");if(!nm||nm==="合計")return;
+      out.items.push({name:nm,v1:g(r,"種別1"),v2:g(r,"種別2"),tax:g(r,"税区分"),amount:arNum(g(r,"販売総売上")),sold:arNum(g(r,"販売商品数")),ret:arNum(g(r,"返品商品数"))})});
+    return out;
+  }
+  if(ix("集計期間")>=0&&ix("会計数")>=0){
+    var o2={kind:"summary",name:name,days:[],skipped:0};
+    rows.slice(1).forEach(function(r){var p=g(r,"集計期間");if(/^\d{8}$/.test(p))o2.days.push({date:arIso(p),total:arNum(g(r,"売上")),cust:arNum(g(r,"客数")),checks:arNum(g(r,"会計数"))});else o2.skipped++});
+    return o2;
+  }
+  return{kind:null};
+}
+async function arLoad(inp){
+  S.arMsg="";
+  var files=Array.prototype.slice.call(inp.files||[]),st=S.ar||{items:null,sum:null,date:"",multi:false,map:{},files:[]},bad=[];
+  for(var i=0;i<files.length;i++){
+    try{
+      var r=arParse(files[i].name,arDecode(await files[i].arrayBuffer()));
+      if(r.kind==="items"){
+        st.items=r;st.map={};
+        if(r.from&&r.from===r.to){st.date=arIso(r.from);st.multi=false}else if(r.from&&r.to){st.date="";st.multi=true}else{st.date=st.date||S.date;st.multi=false}
+      }else if(r.kind==="summary")st.sum=r;
+      else bad.push(files[i].name);
+    }catch(e){console.error(e);bad.push(files[i].name)}
+  }
+  if(bad.length)toast("読み取れないファイルがありました："+bad.join("、"),true);
+  st.files=[st.items&&st.items.name,st.sum&&st.sum.name].filter(Boolean);
+  S.ar=(st.items||st.sum)?st:null;S.sqOpen=true;render.force=true;render();
+}
+function arIndex(){
+  var ix={full:{},by:{}};
+  getSkus().forEach(function(s){
+    var co=arKey(s.color),sz=arKey(s.size);
+    [arKey(s.name),arKey(s.hin),arKey(s.hin+s.name)].forEach(function(nm){
+      if(!nm)return;
+      ix.full[nm+"|"+co+"|"+sz]=s.id;ix.full[nm+"|"+sz+"|"+co]=s.id;
+      (ix.by[nm]=ix.by[nm]||[]).push({id:s.id,co:co,sz:sz});
+    });
+  });
+  return ix;
+}
+function arMatch(ix,it){
+  var nm=arKey(it.name),v=[it.v1,it.v2].map(arKey).filter(Boolean),c=ix.by[nm]||[],id;
+  if(v.length>=2){id=ix.full[nm+"|"+v[0]+"|"+v[1]]||ix.full[nm+"|"+v[1]+"|"+v[0]];return id||null}
+  if(v.length===1){var h=c.filter(function(x){return x.co===v[0]||x.sz===v[0]}),u={};h.forEach(function(x){u[x.id]=1});return Object.keys(u).length===1?Object.keys(u)[0]:null}
+  var u2={};c.forEach(function(x){u2[x.id]=1});return Object.keys(u2).length===1?Object.keys(u2)[0]:null;
+}
+function arPlan(){
+  var st=S.ar,pl={acc:{},un:[],pcs:0,rets:0,rows:0};
+  if(!st||!st.items)return pl;
+  var ix=arIndex(),sm={};getSkus().forEach(function(s){sm[s.id]=s});
+  st.items.items.forEach(function(it,i){
+    var id=st.map[i]!==undefined?st.map[i]:arMatch(ix,it);
+    if(it.ret>0)pl.rets+=it.ret;
+    if(it.sold<=0){if(it.ret>0)pl.un.push({i:i,it:it,why:"返品のみ（手入力してください）",sku:id});return}
+    pl.rows++;
+    if(!id||!sm[id]){pl.un.push({i:i,it:it,why:"商品マスタに見つかりません",sku:null});return}
+    var a=pl.acc[id]=pl.acc[id]||{qty:0,amount:0};
+    a.qty+=it.sold;a.amount+=(it.tax==="外税"?Math.round(it.amount*(1+S.cfg.tax)):it.amount);
+  });
+  Object.keys(pl.acc).forEach(function(k){pl.pcs+=pl.acc[k].qty});
+  return pl;
+}
+function arPanel(){
+  var st=S.ar,h='<h3 style="margin:18px 0 6px">エアレジのCSVを読み込む（'+esc(evName())+'）</h3>'+
+   '<div class="muted" style="font-size:13px;margin-bottom:8px;line-height:1.7">エアレジのバックオフィス（パソコンのブラウザ）で、「売上・分析 → 商品別売上 →『バリエーション単位で表示』→ ダウンロード」のCSVを、<b>1日ずつ</b>読み込みます。あわせて「日別売上 → CSVデータをダウンロードする →『売上集計』」のCSVを入れると、レポート合計と客数も入ります（複数日まとめてでも可）。</div>'+
+   '<div class="row"><input type="file" id="arfile" accept=".csv,text/csv" multiple style="flex:1 1 220px"></div>';
+  if(!st)return h+(S.arMsg?'<div class="muted" style="font-size:13px;margin-top:8px">'+esc(S.arMsg)+'</div>':'');
+  var pl=arPlan(),sk=getSkus().slice().sort(function(a,b){return String(a.hin).localeCompare(String(b.hin))||String(a.color).localeCompare(String(b.color))});
+  h+='<div style="margin-top:10px;padding:10px;border:1px solid var(--line);border-radius:10px"><div class="muted" style="font-size:12.5px">読み込んだファイル：'+st.files.map(esc).join("、")+'</div>';
+  if(st.items){
+    if(st.multi)h+='<div class="pill warn" style="margin:8px 0;display:block;white-space:normal">このCSVは複数日まとめて出力されています。商品別CSVは日付が入っていないため、<b>1日ずつ</b>ダウンロードし直してください。</div>';
+    h+='<div class="row" style="align-items:flex-end;margin-top:8px"><label class="f" style="flex:0 0 170px"><span>売上の日付</span><input type="date" id="ar_date" value="'+esc(st.date)+'"></label><div style="flex:1 1 200px;font-size:14px;line-height:1.7"><b>'+Object.keys(pl.acc).length+' 商品／'+pl.pcs+' 点</b>を売上として登録します'+(pl.un.length?'<br><span class="muted" style="font-size:12.5px">登録しない行：'+pl.un.length+' 行</span>':'')+'</div></div>';
+    if(st.date){
+      var tx=getTx().filter(function(r){return r.date===st.date&&String(r.id).indexOf("ar-"+st.date+"-")!==0}),sq=tx.filter(function(r){return r.src==="square"||r.by==="Square自動"}).length;
+      var prev=getTx().filter(function(r){return String(r.id).indexOf("ar-"+st.date+"-")===0}).length;
+      if(prev)h+='<div class="muted" style="font-size:12.5px;margin-top:6px">この日にエアレジから取り込み済みの '+prev+' 件は、読み込み直すと置き換わります（二重になりません）。</div>';
+      if(tx.length)h+='<div class="pill warn" style="margin:8px 0;display:block;white-space:normal">この日にはすでに '+tx.length+' 件の入力があります'+(sq?'（うちSquare自動 '+sq+' 件）':'')+'。同じ売上を二重に入れていないか確認してください。</div>';
+    }
+    if(pl.rets)h+='<div class="muted" style="font-size:12.5px;margin-top:6px">返品 '+pl.rets+' 点があります。返品は自動では登録しないので、入力タブで手入力してください。</div>';
+    if(pl.un.length){
+      h+='<div style="margin-top:8px;font-size:13px"><b>登録しない行（商品を選ぶと登録します）</b></div>';
+      pl.un.forEach(function(u){
+        h+='<div style="padding:6px 0;border-top:1px solid var(--line);font-size:13px"><div>'+esc(u.it.name+(u.it.v1?"／"+u.it.v1:"")+(u.it.v2?"／"+u.it.v2:"")+" ×"+u.it.sold)+' <span class="muted">'+yen(u.it.amount)+'｜'+esc(u.why)+'</span></div>'+
+         '<select data-arsel="'+u.i+'" style="width:100%;margin-top:4px"><option value="">（登録しない）</option>'+sk.map(function(s){return'<option value="'+esc(s.id)+'"'+(String(S.ar.map[u.i])===String(s.id)?' selected':'')+'>'+esc(skuLabel(s))+(s.name?"｜"+esc(s.name):"")+'</option>'}).join("")+'</select></div>';
+      });
+    }
+  }
+  if(st.sum){
+    h+='<div style="margin-top:10px;font-size:13px"><b>日別の合計（レポート合計・客数に反映）</b><div class="muted" style="font-size:12.5px;line-height:1.7">'+(st.sum.days.length?st.sum.days.slice(0,8).map(function(d){return md(d.date)+'　'+yen(d.total)+'／客数 '+d.cust}).join('<br>')+(st.sum.days.length>8?'<br>ほか '+(st.sum.days.length-8)+' 日':''):'日別の行がありません（「日別」で集計したCSVを使ってください）')+'</div></div>';
+  }
+  h+='<div style="margin-top:12px"><button class="btn primary" data-act="arapply"'+(st.multi&&!st.sum?' disabled':'')+'>この内容で取り込む</button> <button class="btn" data-act="arclear">やめる</button> <span id="ar_info" class="muted" style="font-size:13px">'+esc(S.arMsg||"")+'</span></div></div>';
+  return h;
+}
+async function doArApply(){
+  var st=S.ar,inp=$("sq_admin"),ad=(inp&&inp.value||"").trim(),box=$("ar_info");
+  function say(m,bad){toast(m,bad);S.arMsg=(bad?"× ":"✓ ")+m;if(box)box.textContent=S.arMsg}
+  if(!st)return;
+  if(!ad){say("上の「管理者コード」を入力してください",true);return}
+  S.sqAdmin=ad;
+  var ops=[],A=window.T8Data,pl=arPlan(),date=st.date,doItems=!!(st.items&&!st.multi);
+  if(st.items&&st.multi&&!st.sum){say("複数日のCSVは取り込めません。1日ずつダウンロードしてください",true);return}
+  if(doItems&&!/^\d{4}-\d{2}-\d{2}$/.test(date)){say("売上の日付を入れてください",true);return}
+  if(doItems){
+    var pre="ar-"+date+"-",keep={},at0=Date.parse(date+"T23:30:00+09:00")||Date.now(),i=0;
+    Object.keys(pl.acc).forEach(function(id){keep[pre+id]=1});
+    getTx().forEach(function(r){var rid=String(r.id);if(rid.indexOf(pre)===0&&!keep[rid])ops.push({op:"delete",collection:"tx",id:rid})});
+    var sm={};getSkus().forEach(function(s){sm[s.id]=s});
+    Object.keys(pl.acc).forEach(function(id){
+      var a=pl.acc[id],std=unitIncl(sm[id].sale)*a.qty,rec={date:date,skuId:id,kind:"sale",qty:a.qty,at:at0+(i++),by:"エアレジCSV",memo:"エアレジCSV取込",src:"airregi"};
+      if(Math.abs(a.amount-std)>a.qty)rec.amount=Math.round(a.amount);
+      ops.push({op:"set",collection:"tx",id:pre+id,data:rec});
+    });
+  }
+  var nd=0;
+  if(st.sum)st.sum.days.forEach(function(d){var p={reportTotal:Math.round(d.total)};if(d.cust>0)p.customers=Math.round(d.cust);ops.push({op:"update",collection:"days",id:d.date,data:p});nd++});
+  if(doItems){
+    var um=pl.un.filter(function(u){return !(S.ar.map[u.i])}).map(function(u){return{name:u.it.name,variant:[u.it.v1,u.it.v2].filter(Boolean).join(" / "),qty:u.it.sold,amount:u.it.amount,why:u.why}});
+    ops.push({op:"set",collection:"imports",id:"ar-"+date,data:{msgId:"ar-"+date,loc:"エアレジ（CSV）",date:date,event:A.eventId(),status:um.length?"partial":"done",matched:Object.keys(pl.acc).length,pcs:pl.pcs,unmatched:um,totals:{},at:Date.now(),src:"airregi"}});
+  }
+  if(!ops.length){say("取り込む内容がありません",true);return}
+  say("取り込んでいます…");
+  try{
+    await A.writeAdmin(ad,ops);
+    if(doItems)logEv("売上","エアレジCSVを取り込み："+Object.keys(pl.acc).length+" 商品／"+pl.pcs+" 点",date);
+    S.ar=null;S.arMsg="✓ 取り込みました"+(doItems?"（"+md(date)+"：登録 "+Object.keys(pl.acc).length+" 商品／"+pl.pcs+" 点"+"）":"（日別の合計 "+nd+" 日）");
+    toast("取り込みました");S.sqOpen=true;render.force=true;render();
+  }catch(e){console.error(e);var m=String(e&&e.message||"");say(/admin/.test(m)?"管理者コードが違います":"うまくいきませんでした（"+(m||"通信エラー")+"）",true)}
 }
 async function doSq(kind,pid){
   var A=window.T8Data,inp=$("sq_admin"),ad=(inp&&inp.value||"").trim(),box=$("sq_info");
