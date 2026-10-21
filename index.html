@@ -319,6 +319,18 @@ body{padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
   .who{width:100%;justify-content:flex-start}
   .who input{flex:1;width:auto}
 }
+/* 商品マスタのドロップ欄（広く・大きく） */
+.drop{position:relative;display:flex;align-items:center;justify-content:center;text-align:center;min-height:190px;padding:28px 18px;border:2.5px dashed rgba(29,31,23,.38);border-radius:28px;background:rgba(255,255,255,.55);cursor:pointer;transition:background .15s,border-color .15s,transform .15s}
+.drop:hover,.drop.over{background:rgba(216,255,26,.38);border-color:var(--char)}
+.drop.over{transform:scale(1.01)}
+.drop.has{border-style:solid;border-color:var(--char);background:rgba(216,255,26,.28)}
+.drop input[type=file]{position:absolute;inset:0;width:100%;height:100%;min-height:0;opacity:0;cursor:pointer;border:0;padding:0;border-radius:28px!important}
+.drop .di{display:grid;gap:8px;justify-items:center;pointer-events:none}
+.drop .di .ic{width:52px;height:52px;border-radius:50%;background:var(--char);color:var(--lime);display:grid;place-items:center;font:800 26px/1 var(--font-brand,sans-serif)}
+.drop .di b{font-size:19px}
+.drop .di span{font-size:13.5px;color:var(--muted)}
+.drop .di em{font-style:normal;font-weight:700;font-size:15px;word-break:break-all;color:var(--char)}
+#seedinfo{margin:4px 0}
 nav:empty{display:none}
 input[type=password]{min-height:52px;border-radius:16px;background:var(--surface2);border:1px solid var(--line2);color:var(--ink)}
 /* ---- 微調整（スマホで画面を広く使う／折り返し対策） ---- */
@@ -547,7 +559,7 @@ function datebar(){
   return'<div class="datebar"><button class="btn" data-act="dshift" data-v="-1" aria-label="前の日">◀</button><div class="d"><b>'+mdw(S.date)+'</b><span>'+lab+(S.date===todayStr()?' ｜ 今日':'')+'</span></div><label class="pick" aria-label="日付を選ぶ">日付<input type="date" id="datepick" value="'+S.date+'" data-act="dpick"></label><button class="btn" data-act="dshift" data-v="1" aria-label="次の日">▶</button></div>';
 }
 function seedForm(){
-  return'<div class="grid" style="gap:12px"><label class="f"><span>管理者コード</span><input type="password" id="admin" autocomplete="off"></label><label class="f"><span>商品マスタのファイル（Excel / CSV / JSON）</span><input type="file" id="seedfile" accept=".xlsx,.xls,.xlsm,.csv,.tsv,.json,application/json,text/csv" style="min-height:44px"></label><label class="f"><span>オフ率（％）<small>任意</small></span><input type="number" inputmode="decimal" id="seedoff" min="0" max="100" placeholder="例：30（備考にオフ率がない受注明細のとき）"></label><div id="seedinfo" class="seedinfo" aria-live="polite"></div><div class="muted" style="font-size:12px;line-height:1.7">基幹システム（アラジン）の「受注明細問合せ」のExcelを、そのまま選べます。販売価格は、明細備考の「30％OFF」から計算します。備考にない場合は、上の「オフ率」に入れると全商品に使います。<br>それ以外の表は、1行目に見出し（品番・商品名・カラー・サイズ・JAN・上代・投入数・販売価格）があればそのまま使えます。列の順番は自由です。</div><button class="btn primary" data-act="seed">登録する</button></div>';
+  return'<div class="grid" style="gap:12px"><label class="f"><span>管理者コード</span><input type="password" id="admin" autocomplete="off"></label><div class="f"><span>商品マスタのファイル（Excel / CSV / JSON）</span><label class="drop" id="seeddrop"><input type="file" id="seedfile" accept=".xlsx,.xls,.xlsm,.csv,.tsv,.json,application/json,text/csv"><div class="di"><div class="ic">↑</div><b>ここにファイルをドロップ</b><span>またはここをクリックして選びます（Excel・CSV・JSON）</span><em id="seedname"></em></div></label></div><label class="f"><span>オフ率（％）<small>任意</small></span><input type="number" inputmode="decimal" id="seedoff" min="0" max="100" placeholder="例：30（備考にオフ率がない受注明細のとき）"></label><div id="seedinfo" class="seedinfo" aria-live="polite"></div><div class="muted" style="font-size:12px;line-height:1.7">基幹システム（アラジン）の「受注明細問合せ」のExcelを、そのまま選べます。販売価格は、明細備考の「30％OFF」から計算します。備考にない場合は、上の「オフ率」に入れると全商品に使います。<br>それ以外の表は、1行目に見出し（品番・商品名・カラー・サイズ・JAN・上代・投入数・販売価格）があればそのまま使えます。列の順番は自由です。</div><button class="btn primary" data-act="seed">登録する</button></div>';
 }
 function emptySku(){
   return'<div class="card"><h2>商品マスタが未登録です <small>管理者の方が最初に1回だけ登録します</small></h2>'+seedForm()+'</div>';
@@ -839,6 +851,8 @@ document.addEventListener("click",function(e){
   }
 });
 $("lb").addEventListener("click",function(){this.hidden=true});
+["dragenter","dragover"].forEach(function(n){document.addEventListener(n,function(e){var z=e.target&&e.target.closest&&e.target.closest("#seeddrop");if(z)z.classList.add("over")})});
+["dragleave","drop"].forEach(function(n){document.addEventListener(n,function(e){var z=e.target&&e.target.closest&&e.target.closest("#seeddrop");if(z)z.classList.remove("over")})});
 document.addEventListener("keydown",function(e){if(e.key==="Escape")$("lb").hidden=true;if(e.key==="Enter"&&e.target&&e.target.id==="code")doLogin()});
 document.addEventListener("input",function(e){
   var t=e.target,f=S.form;
@@ -1160,6 +1174,7 @@ async function seedReadFile(f){
 }
 async function seedPreview(){
   var box=$("seedinfo"),f=$("seedfile")&&$("seedfile").files[0];
+  var nm0=$("seedname"),dz=$("seeddrop");if(nm0)nm0.textContent=f?f.name:"";if(dz)dz.classList.toggle("has",!!f);
   if(!box)return;
   if(!f){box.textContent="";return}
   box.className="seedinfo";box.textContent="読み込み中…";
