@@ -3,7 +3,7 @@
 (function () {
   "use strict";
   var cfg = window.T8_CONFIG || {};
-  var COLS = ["skus", "tx", "days", "counts", "photos", "log", "config"];
+  var COLS = ["skus", "tx", "days", "counts", "photos", "log", "config", "imports"];
   var store = {}, subs = [], code = "", inflight = 0, timer = null, scope = { role: "all", event: "" };
   /* イベント切替：イベントごとに、ドキュメントIDの先頭に「ev~イベントID~」を付けて同じ保存先に分けて入れる。
      最初のイベント（京都T8＝t8）は付けない（これまでのデータをそのまま使うため） */
@@ -141,6 +141,11 @@
     configured: configured,
     setCode: function (c) { code = c; },
     scope: function () { return scope; },
+    /* Square自動取り込み：管理者用（未振り分けと取り込み履歴は、イベントに関係なく生のIDのまま返す） */
+    rawImports: function () { var o = store.imports || {}; return Object.keys(o).map(function (k) { return { id: k, data: o[k] }; }); },
+    squareNow: function (admin) { return post({ action: "squarenow", admin: admin }).then(function (j) { return refresh().then(function () { return j; }); }); },
+    squareAssign: function (admin, id, ev) { return post({ action: "squareassign", admin: admin, id: id, event: ev }).then(function (j) { return refresh().then(function () { return j; }); }); },
+    squareDismiss: function (admin, id) { return post({ action: "squaredismiss", admin: admin, id: id }).then(function (j) { return refresh().then(function () { return j; }); }); },
     getEventCodes: function (admin) { return post({ action: "getcodes", admin: admin }).then(function (j) { return j.codes || {}; }); },
     setEventCode: function (admin, ev, newCode) { return post({ action: "setcode", admin: admin, event: ev, newCode: newCode }); },
     connect: connect, refresh: refresh, db: db, assets: assets, downloads: downloads,

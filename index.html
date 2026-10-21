@@ -520,8 +520,8 @@ function render(){
   var a=document.activeElement;
   if(!render.force&&S.hold&&Date.now()<S.hold){S.pending=true;return}
   if(a&&a!==document.body&&(a.tagName==="TEXTAREA"||(a.tagName==="INPUT"&&/^(text|number|search)$/.test(a.type)))&&$("main").contains(a)&&!render.force){S.pending=true;return}
-  var sf=$("seedfile"),ab=$("adminbox"),eb=$("eventbox");
-  if(!render.force&&((sf&&((sf.files&&sf.files.length)||($("admin")&&$("admin").value)||(ab&&ab.open)))||(eb&&eb.open))){S.pending=true;return}
+  var sf=$("seedfile"),ab=$("adminbox"),eb=$("eventbox"),sq=$("sqbox");
+  if(!render.force&&((sf&&((sf.files&&sf.files.length)||($("admin")&&$("admin").value)||(ab&&ab.open)))||(eb&&eb.open)||(sq&&sq.open))){S.pending=true;return}
   render.force=false;S.pending=false;
   if(S.gate){$("nav").innerHTML="";$("main").innerHTML=gateHtml();return}
   var fid=a&&a.id,ss=a&&a.selectionStart,se=a&&a.selectionEnd,sy=window.scrollY;
@@ -578,7 +578,7 @@ function eventForm(px,c,btn,label){
   var tax=c.tax!=null?Math.round(c.tax*1000)/10:10;
   function f(id,lab,val,type,ph){return'<label class="f"><span>'+lab+'</span><input type="'+(type||"text")+'" id="'+px+id+'" value="'+esc(val==null?"":val)+'"'+(ph?' placeholder="'+esc(ph)+'"':'')+(type==="number"?' inputmode="decimal"':'')+' autocomplete="off"></label>'}
   return'<div class="grid" style="gap:10px"><label class="f"><span>管理者コード</span><span class="pw"><input type="password" id="'+px+'admin" autocomplete="off"><button type="button" class="eye" data-eye="1" aria-label="表示する" aria-pressed="false">表示</button></span></label>'+
-   f("name","イベント名",c.name||"","text","例：渋谷PARCO POPUP")+f("place","場所・店舗名のメモ",c.place||"","text","例：渋谷PARCO 2F")+f("brand","ブランド名（画面のタイトルに出ます）",c.brand==null?(px==="evN_"?"":"WILD THINGS"):c.brand,"text","例：WILD THINGS")+f("kind","イベントの種類（任意）",c.kind==null?"POPUP":c.kind,"text","例：POPUP")+f("tag","サブタイトル（任意）",c.tag||"","text","例：27SS POPUP ｜ DAILY REPORT")+
+   f("name","イベント名",c.name||"","text","例：渋谷PARCO POPUP")+f("place","場所・店舗名のメモ",c.place||"","text","例：渋谷PARCO 2F")+f("squareNames","Squareの拠点名（売上レポートの見出し・任意）",c.squareNames||"","text","例：WILD THINGS関連①　（複数ならカンマ区切り）")+f("brand","ブランド名（画面のタイトルに出ます）",c.brand==null?(px==="evN_"?"":"WILD THINGS"):c.brand,"text","例：WILD THINGS")+f("kind","イベントの種類（任意）",c.kind==null?"POPUP":c.kind,"text","例：POPUP")+f("tag","サブタイトル（任意）",c.tag||"","text","例：27SS POPUP ｜ DAILY REPORT")+
    '<div class="row">'+f("start","開始日",c.start||"","date")+f("end","終了日",c.end||"","date")+'</div>'+
    '<div class="row">'+f("budget","売上予算（税抜・円）",c.budget==null?"":c.budget,"number","例：2100000")+f("tax","消費税率（％）",tax,"number")+'</div>'+
    '<div class="row">'+f("defOff","標準のオフ率（％・任意）",c.defOff==null?"":c.defOff,"number","例：30")+'<label class="f"><span>上代・販売価格の税区分</span><select id="'+px+'retailIncl"><option value="0"'+(c.retailIncl?'':' selected')+'>税抜の金額</option><option value="1"'+(c.retailIncl?' selected':'')+'>税込の金額</option></select></label></div>'+
@@ -596,6 +596,32 @@ function eventPanel(){
    '<div class="grid" style="gap:10px"><label class="f"><span>管理者コード</span><span class="pw"><input type="password" id="evC_admin" autocomplete="off"><button type="button" class="eye" data-eye="1" aria-label="表示する" aria-pressed="false">表示</button></span></label><label class="f"><span>このイベントの合言葉</span><input type="text" id="evC_code" autocomplete="off" placeholder="4文字以上"></label><div id="evC_info" class="muted" style="font-size:13px;line-height:1.7"></div><div class="row"><button class="btn" data-act="codeshow">いまの合言葉を確認する</button><button class="btn primary" data-act="codeset">合言葉を設定する</button></div></div>'+
    '<div class="muted" style="font-size:12.5px;margin-top:10px;word-break:break-all">このイベントに直接入るURL：<br>'+esc(url)+'</div>'+
    '<h3 style="margin:18px 0 8px">新しいイベントを追加する</h3><div class="muted" style="font-size:12.5px;margin-bottom:8px">追加すると、そのイベントに切り替わります。続けて「在庫」タブの下で商品マスタを登録してください。</div>'+eventForm("evN_",{tax:0.1},"evnew","イベントを追加する")+'</details>';
+}
+function sqAgo(t){if(!t)return"";var d=new Date(t);return(d.getMonth()+1)+"/"+d.getDate()+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")}
+function sqPanel(){
+  if(scoped())return"";
+  var A=window.T8Data,all=(A.rawImports&&A.rawImports())||[],evs=evList(),pend=all.filter(function(x){return x.id.indexOf("pending~")===0}).sort(function(a,b){return(b.data.at||0)-(a.data.at||0)});
+  var pf=A.eventId()===A.LEGACY?"":"ev~"+A.eventId()+"~";
+  var mine=all.filter(function(x){return x.id.indexOf("pending~")!==0&&(pf===""?x.id.indexOf("~")<0:x.id.indexOf(pf)===0)}).sort(function(a,b){return(b.data.at||0)-(a.data.at||0)}).slice(0,10);
+  var h='<details class="card" id="sqbox" style="margin-top:14px"'+(S.sqOpen?' open':'')+'><summary style="cursor:pointer;font-weight:700;min-height:44px;display:flex;align-items:center">管理者用：Squareの売上レポートの自動取り込み'+(pend.length?' <span class="pill warn" style="margin-left:8px">未振り分け '+pend.length+' 件</span>':'')+'</summary>'+
+   '<div class="muted" style="font-size:13px;margin:6px 0 12px;line-height:1.7">Gmailに届いた「Square売上レポート」を30分ごとに読み取り、売上として登録します。どのイベントかは、①イベント設定の「Squareの拠点名」→②会期→③商品の一致、の順で自動で決まります。決められなかったものは、下の「未振り分け」に出ます。同じメールを二重に取り込むことはありません。返品と、商品なしの金額入力は手入力が必要です。</div>'+
+   '<label class="f"><span>管理者コード</span><span class="pw"><input type="password" id="sq_admin" autocomplete="off" value="'+esc(S.sqAdmin||"")+'"><button type="button" class="eye" data-eye="1" aria-label="表示する" aria-pressed="false">表示</button></span></label>'+
+   '<div style="margin:10px 0"><button class="btn primary" data-act="sqnow">今すぐ取り込む</button> <span id="sq_info" class="muted" style="font-size:13px">'+esc(S.sqMsg||"")+'</span></div>';
+  h+='<h3 style="margin:14px 0 6px">未振り分け（'+pend.length+'）</h3>';
+  if(!pend.length)h+='<div class="muted" style="font-size:13px">ありません。</div>';
+  pend.forEach(function(x){
+    var d=x.data,t=d.parsed&&d.parsed.totals||{},n=(d.parsed&&d.parsed.lines||[]).length;
+    h+='<div class="entry" style="display:block;padding:10px 0;border-top:1px solid var(--line)"><div><b>'+(d.date?md(d.date):"日付不明")+'</b>　'+esc(d.loc||"拠点名なし")+'　<span class="muted" style="font-size:12.5px">'+n+' 行'+(t.total!=null?'／合計 '+yen(t.total):'')+'</span></div><div class="muted" style="font-size:12.5px;margin:2px 0 8px">'+esc(d.reason||"")+'</div>'+
+     '<div class="row"><select data-sqsel="'+esc(x.id)+'" style="flex:1 1 200px">'+evs.map(function(e){return'<option value="'+esc(e.id)+'"'+((d.cands||[])[0]===e.id?' selected':'')+'>'+esc((e.brand?e.brand+" ｜ ":"")+(e.name||e.id))+'</option>'}).join("")+'</select><button class="btn" data-act="sqassign" data-v="'+esc(x.id)+'">このイベントで取り込む</button><button class="btn small" data-act="sqdismiss" data-v="'+esc(x.id)+'">破棄</button></div></div>';
+  });
+  h+='<h3 style="margin:18px 0 6px">このイベントの取り込み履歴（新しい順）</h3>';
+  if(!mine.length)h+='<div class="muted" style="font-size:13px">まだありません。</div>';
+  mine.forEach(function(x){
+    var d=x.data,um=d.unmatched||[];
+    h+='<div style="padding:8px 0;border-top:1px solid var(--line);font-size:14px"><b>'+md(d.date)+'</b>　'+esc(d.loc||"")+'　<span class="muted" style="font-size:12.5px">'+(d.matched||0)+' 商品／'+(d.pcs||0)+' 点を登録（'+sqAgo(d.at)+'）</span>'+
+     (um.length?'<div class="muted" style="font-size:12.5px;margin-top:3px;line-height:1.6">未登録 '+um.length+' 行：'+um.slice(0,6).map(function(u){return esc(u.name+(u.variant?"／"+u.variant:"")+" ×"+u.qty+"（"+u.why+"）")}).join("、")+(um.length>6?" ほか":"")+'</div>':'')+'</div>';
+  });
+  return h+'</details>';
 }
 function adminPanel(){
   if(scoped())return"";
@@ -801,7 +827,7 @@ function vStock(){
     if(S.stockFilter==="still")return x.sold===0&&x.stock>0;
     if(S.stockFilter==="gap")return c&&c.n!=null&&c.n!==stockAsOf(s.id,c.date);
     return true});
-  if(!rows.length)return h+'<div class="empty"><b>該当する商品がありません</b>絞り込みを変えてください。</div>'+adminPanel()+eventPanel();
+  if(!rows.length)return h+'<div class="empty"><b>該当する商品がありません</b>絞り込みを変えてください。</div>'+adminPanel()+eventPanel()+sqPanel();
   h+='<div class="tablewrap" style="max-height:70vh"><table><thead><tr><th>商品（品番｜カラー｜サイズ）</th><th>投入</th><th>販売</th><th>返品<br>再販可</th><th>返品<br>再販不可</th><th>補充等<br>増減</th><th>理論<br>在庫</th><th>消化率</th><th>実数<br>（任意）</th><th>ズレ</th></tr></thead><tbody>';
   var last="";
   rows.forEach(function(s){
@@ -813,7 +839,7 @@ function vStock(){
      '<td style="width:96px"><input type="number" inputmode="numeric" id="c_'+s.id+'" data-count="'+s.id+'" value="'+esc(cv)+'" style="min-height:38px;width:84px;padding:4px 8px"'+(can?'':' readonly')+'></td>'+
      '<td class="num">'+(df==null?'<span class="muted">—</span>':(df===0?'<span class="pill ok">0</span>':'<span class="pill bad">'+(df>0?'+':'')+df+'</span>'))+'</td></tr>';
   });
-  return h+'</tbody></table></div>'+adminPanel()+eventPanel();
+  return h+'</tbody></table></div>'+adminPanel()+eventPanel()+sqPanel();
 }
 
 /* ---- 確認 ---- */
@@ -862,6 +888,9 @@ document.addEventListener("click",function(e){
     case"pickev":try{localStorage.setItem("t8event",v)}catch(x){}location.href=location.pathname+"?e="+encodeURIComponent(v);break;
     case"evsave":doEvent(false);break;
     case"codeset":doCode(true);break;
+    case"sqnow":doSq("now");break;
+    case"sqassign":doSq("assign",v);break;
+    case"sqdismiss":doSq("dismiss",v);break;
     case"codeshow":doCode(false);break;
     case"evnew":doEvent(true);break;
     case"seed":doSeed();break;
@@ -1219,6 +1248,27 @@ function seedKeepIds(p){
   list.forEach(function(s){var id=ex[seedKeyOf(s)];if(id&&!used[id]){s.id=id;used[id]=1;s._ok=1}});
   list.forEach(function(s){if(s._ok){delete s._ok;return}do{mx++;s.id="s"+String(mx).padStart(3,"0")}while(used[s.id]);used[s.id]=1});
 }
+async function doSq(kind,pid){
+  var A=window.T8Data,inp=$("sq_admin"),ad=(inp&&inp.value||"").trim(),box=$("sq_info");
+  function say(m,bad){toast(m,bad);S.sqMsg=(bad?"× ":"✓ ")+m;if(box)box.textContent=S.sqMsg}
+  if(!ad){say("管理者コードを入力してください",true);return}
+  S.sqAdmin=ad;
+  try{
+    if(kind==="now"){
+      say("取り込んでいます…");var r=await A.squareNow(ad);
+      var ms=r.done+r.partial+r.pending;
+      say(ms?("取り込みました：登録 "+(r.done+r.partial)+" 件（うち一部未登録 "+r.partial+" 件）／未振り分け "+r.pending+" 件"):"新しいレポートはありませんでした");
+    }else if(kind==="assign"){
+      var sel=document.querySelector('[data-sqsel="'+(window.CSS&&CSS.escape?CSS.escape(pid):pid)+'"]'),evid=sel?sel.value:"";
+      if(!evid){say("イベントを選んでください",true);return}
+      var r2=await A.squareAssign(ad,pid,evid);
+      say("取り込みました（登録 "+r2.matched+" 商品／未登録 "+r2.unmatched+" 行）");
+    }else{
+      await A.squareDismiss(ad,pid);say("破棄しました");
+    }
+    S.sqOpen=true;render.force=true;render();
+  }catch(e){console.error(e);var m=String(e&&e.message||"");say(/unknown_action/.test(m)?"保存先（Apps Script）が古いままです。新しい Code.gs に更新してください":/admin/.test(m)?"管理者コードが違います":"うまくいきませんでした（"+(m||"通信エラー")+"）",true)}
+}
 function codeErr(e){
   var m=String(e&&e.message||"");
   if(/unknown_action/.test(m))return"保存先（Apps Script）が古いままです。新しい Code.gs に更新してください";
@@ -1257,10 +1307,10 @@ async function doEvent(isNew){
   if(!isFinite(tax)||tax<0||tax>100){say("消費税率は0〜100の数字で入れてください",true);return}
   var id=isNew?"e"+Math.random().toString(36).slice(2,7):A.eventId();
   if(isNew&&evList().some(function(e){return e.id===id}))id+="x";
-  var brand=v("brand"),kind=v("kind"),dof=v("defOff"),inc=$(px+"retailIncl")&&$(px+"retailIncl").value==="1",code=isNew?v("code"):"";
+  var squareNames=v("squareNames"),brand=v("brand"),kind=v("kind"),dof=v("defOff"),inc=$(px+"retailIncl")&&$(px+"retailIncl").value==="1",code=isNew?v("code"):"";
   if(dof!==""&&(!isFinite(Number(dof))||Number(dof)<0||Number(dof)>100)){say("標準のオフ率は0〜100の数字で入れてください",true);return}
   if(code&&code.length<4){say("合言葉は4文字以上にしてください",true);return}
-  var place=v("place"),tag=v("tag"),cfgData={name:name,place:place,tag:tag,brand:brand,kind:kind,defOff:dof===""?null:Number(dof),retailIncl:!!inc,start:st,end:en,budget:budget,tax:Math.round(tax*10)/1000};
+  var place=v("place"),tag=v("tag"),cfgData={name:name,place:place,tag:tag,squareNames:squareNames,brand:brand,kind:kind,defOff:dof===""?null:Number(dof),retailIncl:!!inc,start:st,end:en,budget:budget,tax:Math.round(tax*10)/1000};
   var ev={id:id,name:name,brand:brand,place:place,start:st,end:en};
   try{
     await A.saveEvent(ad,ev,cfgData,evList());
