@@ -463,7 +463,7 @@ function checks(){
         if(d.cust==null)out.push({lv:"yel",tag:"客数が未入力",txt:mdw(d.date),sub:"売上明細の日別パネルで入力します",go:{tab:"sales",date:d.date}});
         if(!dayPhotos(d.date).length&&!S.demo)out.push({lv:"yel",tag:"レポート写真が未登録",txt:mdw(d.date),sub:"レジの売上レポートを撮影して登録してください",go:{tab:"sales",date:d.date}});
         var dd=getDays()[d.date]||{};
-        if(!(dd.reporter||dd.hot||dd.event||dd.notice||dd.weather))out.push({lv:"yel",tag:"日報が未記入",txt:mdw(d.date),sub:"天気・売れ筋・連絡事項などを記入します",go:{tab:"report",date:d.date}});
+        if(!(dd.reporter||dd.hot||dd.comment||dd.event||dd.notice||dd.weather))out.push({lv:"yel",tag:"日報が未記入",txt:mdw(d.date),sub:"天気・売れ筋・コメント・連絡事項などを記入します",go:{tab:"report",date:d.date}});
       }
     }
   });
@@ -498,8 +498,11 @@ async function putCount(id,date,n){
 function bump(){S._ver=(S._ver||0)+1;render()}
 
 /* ============ 描画 ============ */
+/* 入力欄から次の入力欄へ移る瞬間に画面が作り直されて、次の欄の入力が途切れるのを防ぐ（保存直後の0.4秒だけ描き直しを待つ） */
+function holdRender(){S.hold=Date.now()+400;setTimeout(function(){if(S.pending){var a=document.activeElement;if(!(a&&(a.tagName==="TEXTAREA"||(a.tagName==="INPUT"&&/^(text|number|search)$/.test(a.type)))))render()}},460)}
 function render(){
   var a=document.activeElement;
+  if(!render.force&&S.hold&&Date.now()<S.hold){S.pending=true;return}
   if(a&&a!==document.body&&(a.tagName==="TEXTAREA"||(a.tagName==="INPUT"&&/^(text|number|search)$/.test(a.type)))&&$("main").contains(a)&&!render.force){S.pending=true;return}
   var sf=$("seedfile"),ab=$("adminbox"),eb=$("eventbox");
   if(!render.force&&((sf&&((sf.files&&sf.files.length)||($("admin")&&$("admin").value)||(ab&&ab.open)))||(eb&&eb.open))){S.pending=true;return}
@@ -711,25 +714,26 @@ function dayPanel(d){
 function dv(field){var k=S.date+":"+field,v=S.draft[k];if(v!==undefined)return v;var d=getDays()[S.date]||{};return d[field]==null?"":d[field]}
 function vReport(){
   var can=writable(),C=calc(),w=dv("weather"),d=C.days[S.date];
-  var ta=function(f,label,ph){return'<label class="f"><span>'+label+'</span><textarea id="f_'+f+'" data-day="'+f+'" placeholder="'+ph+'"'+(can?'':' readonly')+'>'+esc(dv(f))+'</textarea></label>'};
+  var ta=function(f,label,ph,rows){return'<label class="f"><span>'+label+'</span><textarea id="f_'+f+'" data-day="'+f+'"'+(rows?' rows="'+rows+'"':'')+' placeholder="'+ph+'"'+(can?'':' readonly')+'>'+esc(dv(f))+'</textarea></label>'};
   var h='<div class="card"><h2>'+mdw(S.date)+' の日報'+(d&&d.lines?'<small>この日の純売上 '+yen(d.net)+'（売上画面で自動計算済み）</small>':'')+'</h2><div class="grid" style="gap:14px">'+
    '<div class="row"><label class="f" style="flex:1 1 200px"><span>報告者</span><input type="text" id="f_reporter" data-day="reporter" value="'+esc(dv("reporter"))+'" placeholder="お名前"'+(can?'':' readonly')+'></label></div>'+
    '<div><div style="font-size:13px;font-weight:700;margin-bottom:6px">天気</div><div class="chips">'+WEATHER.map(function(x){return'<button class="chip" style="min-height:44px;flex-direction:row" data-act="weather" data-v="'+x+'" aria-pressed="'+(w===x)+'"><b>'+x+'</b></button>'}).join("")+'</div></div>'+
    ta("event","館のイベント・混雑状況","例：高島屋の催事で午後に来店が増えた")+
-   ta("hot","売れ筋・お客様の声（動きの悪い商品・質問も）","例：HAPPY JACKETのCAMOが動いた。サイズ感の質問が多い")+
+   ta("hot","売れ筋（動きの悪い商品も）","例：HAPPY JACKETのCAMOが動いた。Lサイズが残り少ない")+
+   ta("comment","日報（コメント）","例：午前は静かで、午後から来店が増えた。接客で気づいたこと・お客様の様子・スタッフの動きなど、自由に書いてください",6)+
    ta("notice","連絡・依頼・トラブル・返品理由（インス宛）","例：Lサイズの追加をお願いしたい")+
    '</div><div class="muted" style="font-size:12.5px;margin-top:10px">入力欄から離れると自動で保存されます。</div></div>';
-  var list=Object.keys(getDays()).filter(function(k){var x=getDays()[k];return x.reporter||x.event||x.hot||x.notice||x.weather}).sort().reverse();
+  var list=Object.keys(getDays()).filter(function(k){var x=getDays()[k];return x.reporter||x.event||x.hot||x.comment||x.notice||x.weather}).sort().reverse();
   h+='<div class="card"><h2>これまでの日報 <small>'+list.length+' 日分</small></h2>';
   if(!list.length)h+='<div class="empty"><b>まだ日報がありません</b>上の欄に書くと、ここに日付順で並びます。</div>';
   else h+=list.map(function(k){var x=getDays()[k],c=C.days[k];
     return'<div class="rep"><h3><a href="#" data-act="go" data-tab="report" data-v="'+k+'" style="color:inherit"><span class="num" style="font-size:18px">'+mdw(k)+'</span></a>'+(x.weather?'<span class="pill">'+esc(x.weather)+'</span>':'')+(x.reporter?'<span class="muted" style="font-size:13px">'+esc(x.reporter)+'</span>':'')+(c&&c.lines?'<span class="pill ok">純売上 '+yen(c.net)+'</span>':'')+'</h3>'+
-     (x.event?'<p><b>館のイベント・混雑状況</b>'+esc(x.event)+'</p>':'')+(x.hot?'<p><b>売れ筋・お客様の声</b>'+esc(x.hot)+'</p>':'')+(x.notice?'<p><b>連絡・依頼・トラブル（インス宛）</b>'+esc(x.notice)+'</p>':'')+'</div>'}).join("");
+     (x.event?'<p><b>館のイベント・混雑状況</b>'+esc(x.event)+'</p>':'')+(x.hot?'<p><b>売れ筋</b>'+esc(x.hot)+'</p>':'')+(x.comment?'<p><b>日報（コメント）</b>'+esc(x.comment)+'</p>':'')+(x.notice?'<p><b>連絡・依頼・トラブル（インス宛）</b>'+esc(x.notice)+'</p>':'')+'</div>'}).join("");
   return h+'</div>';
 }
 
 /* ---- 履歴 ---- */
-var FLAB={customers:"客数",reportTotal:"レポート合計",reporter:"報告者",event:"館のイベント・混雑状況",hot:"売れ筋・お客様の声",notice:"連絡・依頼・トラブル",weather:"天気"};
+var FLAB={customers:"客数",reportTotal:"レポート合計",reporter:"報告者",event:"館のイベント・混雑状況",hot:"売れ筋",comment:"日報（コメント）",notice:"連絡・依頼・トラブル",weather:"天気"};
 function logEv(act,txt,date){
   var rec={at:Date.now(),by:(S.who||"").trim()||"名前未設定",act:act,txt:txt};if(date)rec.date=date;
   if(S.demo){rec.id="l"+Date.now()+Math.random().toString(36).slice(2,5);S.dLog.unshift(rec);S._ver=(S._ver||0)+1;return}
@@ -858,11 +862,13 @@ document.addEventListener("change",function(e){
   else if(t.id==="other"){S.form.other=t.value;render.force=true;render()}
   else if(t.id==="datepick"){if(t.value){S.date=t.value;render.force=true;render()}}
   else if(t.dataset&&t.dataset.day){
+    holdRender();
     var fld=t.dataset.day,k=S.date+":"+fld,val=t.value;
     if(fld==="customers"||fld==="reportTotal")val=val===""?null:Math.round(+val);
     var d1=S.date;putDay(d1,(function(o){o[fld]=val;return o})({})).then(function(ok){delete S.draft[k];if(ok){toast("保存しました");logEv(fld==="customers"||fld==="reportTotal"?"売上":"日報",FLAB[fld]+"："+(val==null||val===""?"（空）":String(val).replace(/\s+/g," ").slice(0,40)),d1)}else render()});
   }
   else if(t.dataset&&t.dataset.count){
+    holdRender();
     var id=t.dataset.count,v=t.value===""?null:Math.round(+t.value);
     var d2=S.date;putCount(id,d2,v).then(function(ok){delete S.draft["c:"+id];if(ok){toast("実数を保存しました");logEv("在庫","実数："+skuLabel(calc().sm[id])+" ＝ "+(v==null?"（削除）":v),d2)}});
   }

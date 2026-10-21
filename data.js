@@ -40,9 +40,13 @@
       document.addEventListener("visibilitychange", function () { if (!document.hidden) refresh().catch(function () {}); });
     });
   }
+  /* 書き込みは1件ずつ順番に送る（続けて保存したとき、後の内容が先に届いて前の内容で上書きされるのを防ぐ） */
+  var sendChain = Promise.resolve();
   function send(ops) {
     inflight++;
-    return post({ action: "write", ops: ops }).then(function () { inflight--; return refresh(); }, function (e) { inflight--; refresh().catch(function () {}); throw e; });
+    var pr = sendChain.then(function () { return post({ action: "write", ops: ops }); });
+    sendChain = pr.catch(function () {});
+    return pr.then(function () { inflight--; return refresh(); }, function (e) { inflight--; refresh().catch(function () {}); throw e; });
   }
   function rid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
 
