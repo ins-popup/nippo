@@ -112,14 +112,23 @@
     }
   };
 
+  /* 保存先が他の人の処理で混み合って「ロックのタイムアウト」になったときは、少し待ってやり直す */
+  function postRetry(body, tries) {
+    return post(body).catch(function (e) {
+      if (tries > 0 && /ロック|lock/i.test(String(e && e.message))) {
+        return new Promise(function (res) { setTimeout(res, 5000); }).then(function () { return postRetry(body, tries - 1); });
+      }
+      throw e;
+    });
+  }
   /* 管理者コード付きの書き込み（商品マスタ・イベント設定。多いときは分けて送る） */
   function adminWrite(admin, ops, onProgress) {
     var chunks = [], i;
-    for (i = 0; i < ops.length; i += 40) chunks.push(ops.slice(i, i + 40));
+    for (i = 0; i < ops.length; i += 20) chunks.push(ops.slice(i, i + 20));
     inflight++;
     var p = Promise.resolve();
     var done = 0;
-    chunks.forEach(function (c) { p = p.then(function () { return post({ action: "write", admin: admin, ops: c }); }).then(function (r) { done += c.length; if (onProgress) onProgress(done, ops.length); return r; }); });
+    chunks.forEach(function (c) { p = p.then(function () { return postRetry({ action: "write", admin: admin, ops: c }, 8); }).then(function (r) { done += c.length; if (onProgress) onProgress(done, ops.length); return r; }); });
     return p.then(function () { inflight--; return refresh(); }, function (e) { inflight--; refresh().catch(function () {}); throw e; });
   }
   window.T8Data = {
@@ -129,7 +138,10 @@
     photoUrl: function (id) { return "https://drive.google.com/thumbnail?id=" + encodeURIComponent(id) + "&sz=w1600"; },
     seed: function (admin, payload, onProgress) {
       if (pfx === "") return post({ action: "seed", admin: admin, payload: payload }).then(function () { return refresh(); });
-      var ops = (payload.skus || []).map(function (s) { var d = {}; Object.keys(s).forEach(function (k) { if (k !== "id") d[k] = s[k]; }); return { op: "set", collection: "skus", id: pfx + s.id, data: d }; });
+      var cur = store.skus || {};
+      var ops = (payload.skus || []).map(function (s) { var d = {}; Object.keys(s).forEach(function (k) { if (k !== "id") d[k] = s[k]; }); return { op: "set", collection: "skus", id: pfx + s.id, data: d }; })
+        .filter(function (o) { return JSON.stringify(cur[o.id]) !== JSON.stringify(o.data); });
+      if (!ops.length) return refresh();
       return adminWrite(admin, ops, onProgress);
     },
     /* イベントの一覧と切替 */
