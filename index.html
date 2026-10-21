@@ -463,7 +463,7 @@ function checks(){
         if(d.cust==null)out.push({lv:"yel",tag:"客数が未入力",txt:mdw(d.date),sub:"売上明細の日別パネルで入力します",go:{tab:"sales",date:d.date}});
         if(!dayPhotos(d.date).length&&!S.demo)out.push({lv:"yel",tag:"レポート写真が未登録",txt:mdw(d.date),sub:"レジの売上レポートを撮影して登録してください",go:{tab:"sales",date:d.date}});
         var dd=getDays()[d.date]||{};
-        if(!(dd.reporter||dd.hot||dd.comment||dd.event||dd.notice||dd.weather))out.push({lv:"yel",tag:"日報が未記入",txt:mdw(d.date),sub:"天気・売れ筋・コメント・連絡事項などを記入します",go:{tab:"report",date:d.date}});
+        if(!(dd.reporter||dd.hot||dd.comment||dd.event||dd.notice||dd.weather))out.push({lv:"yel",tag:"日報が未記入",txt:mdw(d.date),sub:"日報（コメント）・連絡事項などを記入します",go:{tab:"report",date:d.date}});
       }
     }
   });
@@ -713,13 +713,9 @@ function dayPanel(d){
 /* ---- 日報 ---- */
 function dv(field){var k=S.date+":"+field,v=S.draft[k];if(v!==undefined)return v;var d=getDays()[S.date]||{};return d[field]==null?"":d[field]}
 function vReport(){
-  var can=writable(),C=calc(),w=dv("weather"),d=C.days[S.date];
+  var can=writable(),C=calc(),d=C.days[S.date];
   var ta=function(f,label,ph,rows){return'<label class="f"><span>'+label+'</span><textarea id="f_'+f+'" data-day="'+f+'"'+(rows?' rows="'+rows+'"':'')+' placeholder="'+ph+'"'+(can?'':' readonly')+'>'+esc(dv(f))+'</textarea></label>'};
   var h='<div class="card"><h2>'+mdw(S.date)+' の日報'+(d&&d.lines?'<small>この日の純売上 '+yen(d.net)+'（売上画面で自動計算済み）</small>':'')+'</h2><div class="grid" style="gap:14px">'+
-   '<div class="row"><label class="f" style="flex:1 1 200px"><span>報告者</span><input type="text" id="f_reporter" data-day="reporter" value="'+esc(dv("reporter"))+'" placeholder="お名前"'+(can?'':' readonly')+'></label></div>'+
-   '<div><div style="font-size:13px;font-weight:700;margin-bottom:6px">天気</div><div class="chips">'+WEATHER.map(function(x){return'<button class="chip" style="min-height:44px;flex-direction:row" data-act="weather" data-v="'+x+'" aria-pressed="'+(w===x)+'"><b>'+x+'</b></button>'}).join("")+'</div></div>'+
-   ta("event","館のイベント・混雑状況","例：高島屋の催事で午後に来店が増えた")+
-   ta("hot","売れ筋（動きの悪い商品も）","例：HAPPY JACKETのCAMOが動いた。Lサイズが残り少ない")+
    ta("comment","日報（コメント）","例：午前は静かで、午後から来店が増えた。接客で気づいたこと・お客様の様子・スタッフの動きなど、自由に書いてください",6)+
    ta("notice","連絡・依頼・トラブル・返品理由（インス宛）","例：Lサイズの追加をお願いしたい")+
    '</div><div class="muted" style="font-size:12.5px;margin-top:10px">入力欄から離れると自動で保存されます。</div></div>';
