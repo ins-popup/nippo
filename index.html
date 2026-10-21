@@ -443,15 +443,17 @@ function calc(){
   var idx=0;
   ordered.forEach(function(ds){
     var d=days[ds]||{date:ds,gross:0,actual:0,refund:0,retail:0,pcsSale:0,pcsRet:0,skus:{},sold:{},moves:[],lines:0};
-    var tot=Math.round(d.gross/(1+t)),ret=-Math.round(d.refund/(1+t)),dis=-Math.round((d.gross-d.actual)/(1+t));
+    var dd=getDays()[ds]||{},dsc=+dd.disc>0?+dd.disc:0;
+    d.disc=dsc;
+    var tot=Math.round(d.gross/(1+t)),ret=-Math.round(d.refund/(1+t)),dis=-Math.round((d.gross-d.actual+dsc)/(1+t));
     d.total=tot;d.ret=ret;d.dis=dis;d.net=tot+ret+dis;d.tax=Math.round(d.net*t);d.sum=d.net+d.tax;
     d.pcsNet=d.pcsSale-d.pcsRet;d.skuCnt=Object.keys(d.skus).filter(function(k){return d.skus[k]>0}).length;
     d.inRange=!!inRange[ds];
     if(d.inRange){idx++;cum+=d.net;d.cum=cum;d.ratio=dayB?d.net/dayB:null;d.cumRatio=dayB?cum/(dayB*idx):null;d.idx=idx}
-    var dd=getDays()[ds]||{};d.cust=dd.customers!=null&&dd.customers!==""?+dd.customers:null;
+    d.cust=dd.customers!=null&&dd.customers!==""?+dd.customers:null;
     d.unit=d.cust?d.sum/d.cust:null;d.rep=dd.reportTotal!=null&&dd.reportTotal!==""?+dd.reportTotal:null;
     d.diff=d.rep!=null?d.sum-d.rep:null;
-    d.actualNet=d.actual-d.refund;
+    d.actualNet=d.actual-d.refund-dsc;
     rows.push(d);days[ds]=d;
   });
   var v={days:days,rows:rows,st:st,sm:sm,dayB:dayB,n:n};
@@ -1032,6 +1034,7 @@ document.addEventListener("change",function(e){
   else if(t.id==="al_from"||t.id==="al_to"){alState();S.al[t.id==="al_from"?"from":"to"]=t.value;render.force=true;render()}
   else if(t.id==="al_split"){alState();S.al.split=t.checked;render.force=true;render()}
   else if(t.id==="ar_date"){if(S.ar){S.ar.date=t.value;render.force=true;render()}}
+  else if(t.id==="ar_loc"){if(S.ar){S.ar.loc=t.value;S.ar.map={};render.force=true;render()}}
   else if(t.dataset&&t.dataset.arsel!==undefined&&t.dataset.arsel!==""){if(S.ar){S.ar.map[+t.dataset.arsel]=t.value===""?null:t.value;render.force=true;render()}}
   else if(t.id==="other"){S.form.other=t.value;render.force=true;render()}
   else if(t.id==="datepick"){if(t.value){S.date=t.value;render.force=true;render()}}
@@ -1381,33 +1384,57 @@ function arCsv(t){
   return rows.filter(function(r){return r.some(function(x){return String(x).trim()!==""})});
 }
 function arIso(d8){return d8.slice(0,4)+"-"+d8.slice(4,6)+"-"+d8.slice(6,8)}
+function arDate(v){var m=/(\d{4})\D+(\d{1,2})\D+(\d{1,2})/.exec(String(v||""));return m?m[1]+"-"+("0"+m[2]).slice(-2)+"-"+("0"+m[3]).slice(-2):""}
+function arMoney(x){var s=String(x==null?"":x).trim(),neg=/^\(.*\)$/.test(s)||/^[-−△▲]/.test(s);var n=Math.abs(arNum(s.replace(/^[(（△▲−-]+|[)）]+$/g,"")));return neg?-n:n}
 function arParse(name,text){
   var rows=arCsv(text);if(!rows.length)return{kind:null};
   var hd=rows[0].map(function(x){return String(x).trim()});
   function ix(n){return hd.indexOf(n)}
   function g(r,n){var k=ix(n);return k<0?"":String(r[k]==null?"":r[k]).trim()}
   if(ix("商品名")>=0&&ix("販売商品数")>=0){
-    var m=/(\d{8})\D+(\d{8})/.exec(name),out={kind:"items",name:name,from:m?m[1]:"",to:m?m[2]:"",items:[]};
+    var m=/(\d{8})\D+(\d{8})/.exec(name),out={kind:"items",src:"ar",name:name,from:m?m[1]:"",to:m?m[2]:"",items:[]};
     rows.slice(1).forEach(function(r){var nm=g(r,"商品名");if(!nm||nm==="合計")return;
       out.items.push({name:nm,v1:g(r,"種別1"),v2:g(r,"種別2"),tax:g(r,"税区分"),amount:arNum(g(r,"販売総売上")),sold:arNum(g(r,"販売商品数")),ret:arNum(g(r,"返品商品数"))})});
     return out;
   }
   if(ix("集計期間")>=0&&ix("会計数")>=0){
     var o2={kind:"summary",name:name,days:[],skipped:0};
-    rows.slice(1).forEach(function(r){var p=g(r,"集計期間");if(/^\d{8}$/.test(p))o2.days.push({date:arIso(p),total:arNum(g(r,"売上")),cust:arNum(g(r,"客数")),checks:arNum(g(r,"会計数"))});else o2.skipped++});
+    rows.slice(1).forEach(function(r){var p=g(r,"集計期間");if(/^\d{8}$/.test(p))o2.days.push({date:arIso(p),total:arNum(g(r,"売上")),cust:arNum(g(r,"客数")),checks:arNum(g(r,"会計数")),disc:Math.abs(arNum(g(r,"割引額")))});else o2.skipped++});
     return o2;
+  }
+  function col(al){for(var a=0;a<al.length;a++){for(var k=0;k<hd.length;k++)if(arKey(hd[k])===arKey(al[a]))return k}return -1}
+  var cD=col(["日付","Date"]),cI=col(["アイテム","商品","商品名","Item"]),cQ=col(["数量","Qty","Quantity"]),cG=col(["総売上","総売上高","Gross Sales"]),cN=col(["純売上","純売上高","Net Sales"]),
+      cV=col(["価格ポイント名","価格ポイント","バリエーション","バリエーション名","Price Point Name","Variation","Variation Name"]),cX=col(["割引","ディスカウント","Discounts"]),
+      cL=col(["場所","店舗","ロケーション","拠点","Location"]),cE=col(["イベントタイプ","Event Type"]);
+  if(cD>=0&&cI>=0&&cQ>=0&&(cG>=0||cN>=0)){
+    var agg={},list=[],locs={},dates={};
+    function cell(r,k){return k<0?"":String(r[k]==null?"":r[k]).trim()}
+    rows.slice(1).forEach(function(r){
+      var d=arDate(cell(r,cD)),nm=cell(r,cI);if(!d||!nm)return;
+      var q=arNum(cell(r,cQ)),gross=cG>=0?arMoney(cell(r,cG)):0,disc=cX>=0?Math.abs(arMoney(cell(r,cX))):0;
+      var net=cN>=0?arMoney(cell(r,cN)):gross-disc;
+      var vr=cell(r,cV);if(/^(regular|レギュラー|通常|標準)$/i.test(vr))vr="";
+      var parts=vr.split("/").map(function(x){return x.trim()}).filter(Boolean),loc=cell(r,cL),ev=cell(r,cE);
+      var isRet=q<0||net<0||/refund|返金|返品|払い戻し/i.test(ev);
+      var key=[d,loc,nm,vr].join("\u0001"),a=agg[key];
+      if(!a){a=agg[key]={date:d,loc:loc,name:nm,v1:parts[0]||"",v2:parts.slice(1).join("/"),tax:"外税",amount:0,sold:0,ret:0};list.push(a)}
+      if(isRet)a.ret+=Math.abs(q);else{a.sold+=q;a.amount+=net}
+      if(loc)locs[loc]=1;dates[d]=1;
+    });
+    return{kind:"items",src:"sq",name:name,from:"",to:"",items:list,locs:Object.keys(locs).sort(),dates:Object.keys(dates).sort()};
   }
   return{kind:null};
 }
 async function arLoad(inp){
   S.arMsg="";
-  var files=Array.prototype.slice.call(inp.files||[]),st=S.ar||{items:null,sum:null,date:"",multi:false,map:{},files:[]},bad=[];
+  var files=Array.prototype.slice.call(inp.files||[]),st=S.ar||{items:null,sum:null,date:"",multi:false,map:{},files:[],loc:""},bad=[];
   for(var i=0;i<files.length;i++){
     try{
       var r=arParse(files[i].name,arDecode(await files[i].arrayBuffer()));
       if(r.kind==="items"){
-        st.items=r;st.map={};
-        if(r.from&&r.from===r.to){st.date=arIso(r.from);st.multi=false}else if(r.from&&r.to){st.date="";st.multi=true}else{st.date=st.date||S.date;st.multi=false}
+        st.items=r;st.map={};st.loc="";
+        if(r.src==="sq"){st.date="";st.multi=false}
+        else if(r.from&&r.from===r.to){st.date=arIso(r.from);st.multi=false}else if(r.from&&r.to){st.date="";st.multi=true}else{st.date=st.date||S.date;st.multi=false}
       }else if(r.kind==="summary")st.sum=r;
       else bad.push(files[i].name);
     }catch(e){console.error(e);bad.push(files[i].name)}
@@ -1435,50 +1462,63 @@ function arMatch(ix,it){
   var u2={};c.forEach(function(x){u2[x.id]=1});return Object.keys(u2).length===1?Object.keys(u2)[0]:null;
 }
 function arPlan(){
-  var st=S.ar,pl={acc:{},un:[],pcs:0,rets:0,rows:0};
+  var st=S.ar,pl={by:{},un:[],pcs:0,rets:0,rows:0,nprod:0,dates:[]};
   if(!st||!st.items)return pl;
-  var ix=arIndex(),sm={};getSkus().forEach(function(s){sm[s.id]=s});
+  var ix=arIndex(),sm={},isSq=st.items.src==="sq",fd={};getSkus().forEach(function(s){sm[s.id]=s});
   st.items.items.forEach(function(it,i){
+    if(isSq&&st.loc&&it.loc!==st.loc)return;
+    var date=isSq?it.date:st.date;if(date)fd[date]=1;
     var id=st.map[i]!==undefined?st.map[i]:arMatch(ix,it);
     if(it.ret>0)pl.rets+=it.ret;
     if(it.sold<=0){if(it.ret>0)pl.un.push({i:i,it:it,why:"返品のみ（手入力してください）",sku:id});return}
     pl.rows++;
-    if(!id||!sm[id]){pl.un.push({i:i,it:it,why:"商品マスタに見つかりません",sku:null});return}
-    var a=pl.acc[id]=pl.acc[id]||{qty:0,amount:0};
+    if(!id||!sm[id]){pl.un.push({i:i,it:it,why:(/任意の金額|custom amount/i.test(it.name)?"金額だけの入力（商品なし）":"商品マスタに見つかりません"),sku:null});return}
+    var D=pl.by[date]=pl.by[date]||{},a=D[id]=D[id]||{qty:0,amount:0};
     a.qty+=it.sold;a.amount+=(it.tax==="外税"?Math.round(it.amount*(1+S.cfg.tax)):it.amount);
   });
-  Object.keys(pl.acc).forEach(function(k){pl.pcs+=pl.acc[k].qty});
+  pl.dates=Object.keys(fd).sort();
+  Object.keys(pl.by).forEach(function(d){Object.keys(pl.by[d]).forEach(function(k){pl.nprod++;pl.pcs+=pl.by[d][k].qty})});
   return pl;
 }
 function arPanel(){
-  var st=S.ar,h='<div class="card" id="arbox"><h2>売上ファイルを読み込む <small>エアレジのCSV</small></h2>'+
-   '<div class="muted" style="font-size:13px;margin-bottom:8px;line-height:1.7">エアレジのバックオフィス（パソコンのブラウザ）の「売上・分析 → 商品別売上 →『バリエーション単位で表示』→ ダウンロード」のCSVを、<b>1日ずつ</b>入れてください。「日別売上 → CSVデータをダウンロードする →『売上集計』」のCSVも一緒に入れると、レポート合計と客数も入ります（複数日まとめてでも可）。Squareの売上は自動で入るので、この操作は要りません。</div>'+
+  var st=S.ar,h='<div class="card" id="arbox"><h2>売上ファイルを読み込む <small>エアレジ／SquareのCSV</small></h2>'+
+   '<div class="muted" style="font-size:13px;margin-bottom:8px;line-height:1.7"><b>エアレジ</b>：バックオフィス（パソコンのブラウザ）の「売上・分析 → 商品別売上 →『バリエーション単位で表示』→ ダウンロード」のCSVを、<b>1日ずつ</b>入れてください。「日別売上 → CSVデータをダウンロードする →『売上集計』」のCSVも一緒に入れると、レポート合計・客数・割引も入ります。<br><b>Square</b>：管理画面でダウンロードした、商品ごとの売上のCSV（日付つき）をそのまま入れてください。複数日まとめてでも読み込めます。割引は商品ごとの金額に反映されます。</div>'+
    '<div class="row"><input type="file" id="arfile" accept=".csv,text/csv" multiple style="flex:1 1 220px"></div>';
   if(!st)return h+(S.arMsg?'<div class="muted" style="font-size:13px;margin-top:8px">'+esc(S.arMsg)+'</div>':'')+'</div>';
-  var pl=arPlan(),sk=getSkus().slice().sort(function(a,b){return String(a.hin).localeCompare(String(b.hin))||String(a.color).localeCompare(String(b.color))});
+  var pl=arPlan(),sk=getSkus().slice().sort(function(a,b){return String(a.hin).localeCompare(String(b.hin))||String(a.color).localeCompare(String(b.color))}),isSq=!!(st.items&&st.items.src==="sq");
   h+='<div style="margin-top:10px;padding:10px;border:1px solid var(--line);border-radius:10px"><div class="muted" style="font-size:12.5px">読み込んだファイル：'+st.files.map(esc).join("、")+'</div>';
   if(st.items){
-    if(st.multi)h+='<div class="pill warn" style="margin:8px 0;display:block;white-space:normal">このCSVは複数日まとめて出力されています。商品別CSVは日付が入っていないため、<b>1日ずつ</b>ダウンロードし直してください。</div>';
-    h+='<div class="row" style="align-items:flex-end;margin-top:8px"><label class="f" style="flex:0 0 170px"><span>売上の日付</span><input type="date" id="ar_date" value="'+esc(st.date)+'"></label><div style="flex:1 1 200px;font-size:14px;line-height:1.7"><b>'+Object.keys(pl.acc).length+' 商品／'+pl.pcs+' 点</b>を売上として登録します'+(pl.un.length?'<br><span class="muted" style="font-size:12.5px">登録しない行：'+pl.un.length+' 行</span>':'')+'</div></div>';
-    if(st.date){
-      var tx=getTx().filter(function(r){return r.date===st.date&&String(r.id).indexOf("ar-"+st.date+"-")!==0}),sq=tx.filter(function(r){return r.src==="square"||r.by==="Square自動"}).length;
-      var prev=getTx().filter(function(r){return String(r.id).indexOf("ar-"+st.date+"-")===0}).length;
-      if(prev)h+='<div class="muted" style="font-size:12.5px;margin-top:6px">この日にエアレジから取り込み済みの '+prev+' 件は、読み込み直すと置き換わります（二重になりません）。</div>';
-      if(tx.length)h+='<div class="pill warn" style="margin:8px 0;display:block;white-space:normal">この日にはすでに '+tx.length+' 件の入力があります'+(sq?'（うちSquare自動 '+sq+' 件）':'')+'。同じ売上を二重に入れていないか確認してください。</div>';
+    if(!isSq&&st.multi)h+='<div class="pill warn" style="margin:8px 0;display:block;white-space:normal">このCSVは複数日まとめて出力されています。商品別CSVは日付が入っていないため、<b>1日ずつ</b>ダウンロードし直してください。</div>';
+    if(isSq){
+      if(st.items.locs.length>1)h+='<label class="f" style="margin-top:8px"><span>Squareの場所（店舗）</span><select id="ar_loc"><option value="">すべて</option>'+st.items.locs.map(function(l){return'<option value="'+esc(l)+'"'+(st.loc===l?' selected':'')+'>'+esc(l)+'</option>'}).join("")+'</select></label>';
+      h+='<div style="margin-top:8px;font-size:14px;line-height:1.7"><b>'+pl.dates.length+' 日分（'+(pl.dates.length?md(pl.dates[0])+(pl.dates.length>1?'〜'+md(pl.dates[pl.dates.length-1]):''):'—')+'）／'+pl.nprod+' 商品・日／'+pl.pcs+' 点</b>を売上として登録します'+(pl.un.length?'<br><span class="muted" style="font-size:12.5px">登録しない行：'+pl.un.length+' 行</span>':'')+'</div>';
+      h+='<div class="muted" style="font-size:12.5px;line-height:1.7;margin-top:6px">'+pl.dates.slice(0,8).map(function(d){var D=pl.by[d]||{},n=0,q=0,a=0;Object.keys(D).forEach(function(k){n++;q+=D[k].qty;a+=D[k].amount});return md(d)+'　'+n+' 商品／'+q+' 点／'+yen(a)+'（税込）'}).join('<br>')+(pl.dates.length>8?'<br>ほか '+(pl.dates.length-8)+' 日':'')+'</div>';
+      var prevN=0,othN=0;
+      getTx().forEach(function(r){if(pl.dates.indexOf(r.date)<0)return;if(String(r.id).indexOf("sc-"+r.date+"-")===0)prevN++;else othN++});
+      if(prevN)h+='<div class="muted" style="font-size:12.5px;margin-top:6px">これらの日にSquareのCSVから取り込み済みの '+prevN+' 件は、読み込み直すと置き換わります（二重になりません）。</div>';
+      if(othN)h+='<div class="pill warn" style="margin:8px 0;display:block;white-space:normal">これらの日にはすでに '+othN+' 件の別の入力があります（Square自動・手入力など）。同じ売上を二重に入れていないか確認してください。</div>';
+    }else{
+      h+='<div class="row" style="align-items:flex-end;margin-top:8px"><label class="f" style="flex:0 0 170px"><span>売上の日付</span><input type="date" id="ar_date" value="'+esc(st.date)+'"></label><div style="flex:1 1 200px;font-size:14px;line-height:1.7"><b>'+pl.nprod+' 商品／'+pl.pcs+' 点</b>を売上として登録します'+(pl.un.length?'<br><span class="muted" style="font-size:12.5px">登録しない行：'+pl.un.length+' 行</span>':'')+'</div></div>';
+      if(st.date){
+        var tx=getTx().filter(function(r){return r.date===st.date&&String(r.id).indexOf("ar-"+st.date+"-")!==0}),sq=tx.filter(function(r){return r.src==="square"||r.by==="Square自動"}).length;
+        var prev=getTx().filter(function(r){return String(r.id).indexOf("ar-"+st.date+"-")===0}).length;
+        if(prev)h+='<div class="muted" style="font-size:12.5px;margin-top:6px">この日にエアレジから取り込み済みの '+prev+' 件は、読み込み直すと置き換わります（二重になりません）。</div>';
+        if(tx.length)h+='<div class="pill warn" style="margin:8px 0;display:block;white-space:normal">この日にはすでに '+tx.length+' 件の入力があります'+(sq?'（うちSquare自動 '+sq+' 件）':'')+'。同じ売上を二重に入れていないか確認してください。</div>';
+      }
     }
     if(pl.rets)h+='<div class="muted" style="font-size:12.5px;margin-top:6px">返品 '+pl.rets+' 点があります。返品は自動では登録しないので、入力タブで手入力してください。</div>';
     if(pl.un.length){
       h+='<div style="margin-top:8px;font-size:13px"><b>登録しない行（商品を選ぶと登録します）</b></div>';
       pl.un.forEach(function(u){
-        h+='<div style="padding:6px 0;border-top:1px solid var(--line);font-size:13px"><div>'+esc(u.it.name+(u.it.v1?"／"+u.it.v1:"")+(u.it.v2?"／"+u.it.v2:"")+" ×"+u.it.sold)+' <span class="muted">'+yen(u.it.amount)+'｜'+esc(u.why)+'</span></div>'+
+        h+='<div style="padding:6px 0;border-top:1px solid var(--line);font-size:13px"><div>'+esc((isSq?md(u.it.date)+"　":"")+u.it.name+(u.it.v1?"／"+u.it.v1:"")+(u.it.v2?"／"+u.it.v2:"")+(u.it.sold>0?" ×"+u.it.sold:"（返品 ×"+u.it.ret+"）"))+' <span class="muted">'+yen(u.it.amount)+(u.it.tax==="外税"?'（税抜）':'')+'｜'+esc(u.why)+'</span></div>'+
          '<select data-arsel="'+u.i+'" style="width:100%;margin-top:4px"><option value="">（登録しない）</option>'+sk.map(function(s){return'<option value="'+esc(s.id)+'"'+(String(S.ar.map[u.i])===String(s.id)?' selected':'')+'>'+esc(skuLabel(s))+(s.name?"｜"+esc(s.name):"")+'</option>'}).join("")+'</select></div>';
       });
     }
   }
   if(st.sum){
-    h+='<div style="margin-top:10px;font-size:13px"><b>日別の合計（レポート合計・客数に反映）</b><div class="muted" style="font-size:12.5px;line-height:1.7">'+(st.sum.days.length?st.sum.days.slice(0,8).map(function(d){return md(d.date)+'　'+yen(d.total)+'／客数 '+d.cust}).join('<br>')+(st.sum.days.length>8?'<br>ほか '+(st.sum.days.length-8)+' 日':''):'日別の行がありません（「日別」で集計したCSVを使ってください）')+'</div></div>';
+    h+='<div style="margin-top:10px;font-size:13px"><b>日別の合計（レポート合計・客数・割引に反映）</b><div class="muted" style="font-size:12.5px;line-height:1.7">'+(st.sum.days.length?st.sum.days.slice(0,8).map(function(d){return md(d.date)+'　'+yen(d.total)+'／客数 '+d.cust+(d.disc?'／割引 '+yen(d.disc):'')}).join('<br>')+(st.sum.days.length>8?'<br>ほか '+(st.sum.days.length-8)+' 日':''):'日別の行がありません（「日別」で集計したCSVを使ってください）')+'</div></div>';
   }
-  h+='<div style="margin-top:12px"><button class="btn primary" data-act="arapply"'+(st.multi&&!st.sum?' disabled':'')+'>この内容で取り込む</button> <button class="btn" data-act="arclear">やめる</button> <span id="ar_info" class="muted" style="font-size:13px">'+esc(S.arMsg||"")+'</span></div></div></div>';
+  h+='<div style="margin-top:12px"><button class="btn primary" data-act="arapply"'+(st.items&&!isSq&&st.multi&&!st.sum?' disabled':'')+'>この内容で取り込む</button> <button class="btn" data-act="arclear">やめる</button> <span id="ar_info" class="muted" style="font-size:13px">'+esc(S.arMsg||"")+'</span></div></div></div>';
   return h;
 }
 async function doArApply(){
@@ -1487,30 +1527,33 @@ async function doArApply(){
   if(!st||S.busy)return;
   if(S.demo){say("デモ中は取り込めません",true);return}
   if(!ensureDb())return;
-  var ops=[],A=window.T8Data,pl=arPlan(),date=st.date,doItems=!!(st.items&&!st.multi);
-  if(st.items&&st.multi&&!st.sum){say("複数日のCSVは取り込めません。1日ずつダウンロードしてください",true);return}
-  if(doItems&&!/^\d{4}-\d{2}-\d{2}$/.test(date)){say("売上の日付を入れてください",true);return}
+  var ops=[],A=window.T8Data,pl=arPlan(),isSq=!!(st.items&&st.items.src==="sq"),date=st.date,doItems=!!(st.items&&(isSq||!st.multi));
+  if(st.items&&!isSq&&st.multi&&!st.sum){say("複数日のCSVは取り込めません。1日ずつダウンロードしてください",true);return}
+  if(doItems&&!isSq&&!/^\d{4}-\d{2}-\d{2}$/.test(date)){say("売上の日付を入れてください",true);return}
+  var label=isSq?"SquareのCSV":"エアレジCSV",pfx0=isSq?"sc-":"ar-",src=isSq?"squarecsv":"airregi";
   if(doItems){
-    var pre="ar-"+date+"-",keep={},at0=Date.parse(date+"T23:30:00+09:00")||Date.now(),i=0,who=(S.who||"").trim();
-    Object.keys(pl.acc).forEach(function(id){keep[pre+id]=1});
-    getTx().forEach(function(r){var rid=String(r.id);if(rid.indexOf(pre)===0&&!keep[rid])ops.push({op:"delete",collection:"tx",id:rid})});
-    var sm={};getSkus().forEach(function(s){sm[s.id]=s});
-    Object.keys(pl.acc).forEach(function(id){
-      var a=pl.acc[id],std=unitIncl(sm[id].sale)*a.qty,rec={date:date,skuId:id,kind:"sale",qty:a.qty,at:at0+(i++),by:"エアレジCSV"+(who?"（"+who+"）":""),memo:"エアレジCSV取込",src:"airregi"};
-      if(Math.abs(a.amount-std)>a.qty)rec.amount=Math.round(a.amount);
-      ops.push({op:"set",collection:"tx",id:pre+id,data:rec});
+    var who=(S.who||"").trim(),sm={};getSkus().forEach(function(s){sm[s.id]=s});
+    pl.dates.forEach(function(d){
+      var pre=pfx0+d+"-",keep={},at0=Date.parse(d+"T23:30:00+09:00")||Date.now(),i=0,D=pl.by[d]||{};
+      Object.keys(D).forEach(function(id){keep[pre+id]=1});
+      getTx().forEach(function(r){var rid=String(r.id);if(rid.indexOf(pre)===0&&!keep[rid])ops.push({op:"delete",collection:"tx",id:rid})});
+      Object.keys(D).forEach(function(id){
+        var a=D[id],std=unitIncl(sm[id].sale)*a.qty,rec={date:d,skuId:id,kind:"sale",qty:a.qty,at:at0+(i++),by:label+(who?"（"+who+"）":""),memo:label+"取込",src:src};
+        if(Math.abs(a.amount-std)>a.qty)rec.amount=Math.round(a.amount);
+        ops.push({op:"set",collection:"tx",id:pre+id,data:rec});
+      });
     });
   }
   var nd=0;
-  if(st.sum)st.sum.days.forEach(function(d){var p={reportTotal:Math.round(d.total)};if(d.cust>0)p.customers=Math.round(d.cust);ops.push({op:"update",collection:"days",id:d.date,data:p});nd++});
+  if(st.sum)st.sum.days.forEach(function(d){var p={reportTotal:Math.round(d.total),disc:Math.round(d.disc||0)};if(d.cust>0)p.customers=Math.round(d.cust);ops.push({op:"update",collection:"days",id:d.date,data:p});nd++});
   if(!ops.length){say("取り込む内容がありません",true);return}
   var skip=pl.un.filter(function(u){return !(st.map[u.i])}).length;
   say("取り込んでいます…");S.busy=true;
   try{
     await A.batch(ops);
-    var msg=(doItems?md(date)+"：登録 "+Object.keys(pl.acc).length+" 商品／"+pl.pcs+" 点"+(skip?"（登録しなかった行 "+skip+" 行は手入力してください）":""):"")+(nd?(doItems?"／":"")+"日別の合計 "+nd+" 日":"");
-    if(doItems)logEv("売上","エアレジCSVを取り込み："+Object.keys(pl.acc).length+" 商品／"+pl.pcs+" 点"+(skip?"（未登録 "+skip+" 行）":""),date);
-    if(doItems&&date)S.date=date;
+    var msg=(doItems?(isSq?pl.dates.length+" 日分":md(date))+"：登録 "+pl.nprod+" 商品"+(isSq?"・日":"")+"／"+pl.pcs+" 点"+(skip?"（登録しなかった行 "+skip+" 行は手入力してください）":""):"")+(nd?(doItems?"／":"")+"日別の合計 "+nd+" 日":"");
+    if(doItems)logEv("売上",label+"を取り込み："+pl.nprod+" 商品"+(isSq?"・日":"")+"／"+pl.pcs+" 点"+(skip?"（未登録 "+skip+" 行）":""),isSq?pl.dates[0]:date);
+    if(doItems){var ld=isSq?pl.dates[pl.dates.length-1]:date;if(ld)S.date=ld}
     S.ar=null;S.arMsg="✓ 取り込みました（"+msg+"）";toast("取り込みました");S.busy=false;render.force=true;render();
   }catch(e){S.busy=false;dbErr(e);say("うまくいきませんでした。通信を確認してもう一度お試しください",true)}
 }
