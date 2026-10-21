@@ -27,7 +27,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 #shell{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:1fr;gap:0}
 main{min-width:0;display:flex;flex-direction:column;gap:14px;padding-top:12px}
 /* nav */
-nav{position:fixed;left:0;right:0;bottom:0;z-index:20;display:grid;grid-template-columns:repeat(6,1fr);background:var(--surface);
+nav{position:fixed;left:0;right:0;bottom:0;z-index:20;display:grid;grid-auto-flow:column;grid-auto-columns:1fr;background:var(--surface);
   border-top:1px solid var(--line);padding:0 max(8px,env(safe-area-inset-left,0px)) env(safe-area-inset-bottom,0px) max(8px,env(safe-area-inset-right,0px))}
 nav button{position:relative;border:0;background:none;padding:10px 4px 9px;min-height:56px;color:var(--muted);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:1px}
 nav button .t{font-size:15px;font-weight:700}
@@ -39,7 +39,7 @@ nav .badge.red{background:var(--bad)}
 @media (min-width:900px){
   body{padding-block:0 40px}
   #shell{grid-template-columns:1fr}
-  nav{position:sticky;top:0;bottom:auto;grid-template-columns:repeat(6,minmax(96px,auto));justify-content:start;gap:2px;padding:0;background:var(--bg);border:0;border-bottom:1px solid var(--line);z-index:12}
+  nav{position:sticky;top:0;bottom:auto;grid-auto-flow:column;grid-auto-columns:minmax(96px,auto);justify-content:start;gap:2px;padding:0;background:var(--bg);border:0;border-bottom:1px solid var(--line);z-index:12}
   nav button{flex-direction:row;gap:8px;align-items:baseline;justify-content:center;padding:14px 18px;min-height:0}
   nav button[aria-current="page"]{background:none;box-shadow:inset 0 -3px 0 var(--accent)}
   nav .badge{position:static;margin-left:2px}
@@ -235,14 +235,14 @@ nav{left:50%;right:auto;transform:translateX(-50%);width:min(520px,calc(100% - 2
   border:1px solid rgba(255,255,255,.8);border-radius:36px;padding:7px;gap:2px;background:rgba(255,255,255,.62);backdrop-filter:blur(22px) saturate(1.3);
   box-shadow:0 16px 44px rgba(40,44,60,.2)}
 nav button{min-height:56px;padding:8px 2px 6px;border-radius:28px;color:var(--muted);border:0;transition:background .15s}
-nav button .t{font-size:15px;font-weight:700}
+nav button .t{font-size:14px;font-weight:700;white-space:nowrap}
 nav button .s{font:700 9px "Plus Jakarta Sans",sans-serif;letter-spacing:.14em;opacity:.8}
 nav button[aria-current="page"]{background:var(--char);color:#fff;box-shadow:0 8px 20px rgba(29,31,23,.3)}
 nav button[aria-current="page"] .s{color:var(--lime);opacity:1}
 nav .badge{right:calc(50% - 24px);background:var(--lime)!important;color:var(--char)!important}
 @media (min-width:900px){
   nav{position:sticky;left:auto;transform:none;top:10px;bottom:auto;width:max-content;max-width:100%;margin:10px 0 0;
-    display:inline-grid;grid-template-columns:repeat(6,minmax(96px,auto));padding:5px;border-radius:999px;box-shadow:0 10px 30px rgba(40,44,60,.14);z-index:12}
+    display:inline-grid;grid-auto-flow:column;grid-auto-columns:minmax(96px,auto);padding:5px;border-radius:999px;box-shadow:0 10px 30px rgba(40,44,60,.14);z-index:12}
   nav button{min-height:0;padding:11px 20px;border-radius:999px;flex-direction:row;gap:8px;align-items:baseline;justify-content:center}
   .brand b{font-size:50px}
 }
@@ -528,8 +528,8 @@ function render(){
   var allLoaded=S.demo||(S.loaded.skus&&S.loaded.tx&&S.loaded.days&&S.loaded.cfg);
   var html=header();
   if(!allLoaded&&!S.demo)html+='<div class="empty"><b>読み込み中です</b>保存されたデータを取得しています。</div>';
-  else if(!getSkus().length)html+=emptySku();
-  else html+=({entry:vEntry,sales:vSales,report:vReport,stock:vStock,check:vCheck,log:vLog})[S.tab]();
+  else if(!getSkus().length&&S.tab!=="admin")html+=emptySku();
+  else html+=({entry:vEntry,sales:vSales,report:vReport,stock:vStock,check:vCheck,log:vLog,admin:vAdmin})[S.tab]();
   $("main").innerHTML=html;
   renderNav();
   if(fid){var el=$(fid);if(el){el.focus();try{if(ss!=null)el.setSelectionRange(ss,se)}catch(e){}}}
@@ -538,6 +538,7 @@ function render(){
 function renderNav(){
   var n=checks(),red=n.filter(function(c){return c.lv==="red"}).length;
   var tabs=[["entry","入力","ENTRY"],["sales","売上","SALES"],["report","日報","REPORT"],["stock","在庫","STOCK"],["check","確認","CHECK"],["log","履歴","HISTORY"]];
+  if(!scoped()&&!S.demo)tabs.push(["admin","管理者","ADMIN"]);
   $("nav").innerHTML=tabs.map(function(t){
     return'<button data-act="tab" data-v="'+t[0]+'"'+(S.tab===t[0]?' aria-current="page"':'')+'><span class="t">'+t[1]+'</span><span class="s">'+t[2]+'</span>'+(t[0]==="check"&&n.length?'<span class="badge'+(red?' red':'')+'">'+n.length+'</span>':'')+'</button>'}).join("");
 }
@@ -560,7 +561,7 @@ function header(){
   h+='</div><div class="muted note-sync" style="font-size:12.5px">変更はすぐに全員の画面へ反映され、「履歴」に名前つきで残ります。</div>';
   if(S.demo)h+='<div class="banner demo"><span>これは操作を試すための見本です。ここで入力した内容は保存されず、本番のデータには入りません。</span><button class="btn small" data-act="demo" data-v="off">本番データに戻る</button></div>';
   else if(S.canWrite===false)h+='<div class="banner ro">閲覧のみのアカウントです。入力・変更はできません。</div>';
-  if(S.tab!=="check"&&S.tab!=="stock"&&S.tab!=="log"&&getSkus().length)h+=datebar();
+  if(S.tab!=="check"&&S.tab!=="stock"&&S.tab!=="log"&&S.tab!=="admin"&&getSkus().length)h+=datebar();
   return h;
 }
 function datebar(){
@@ -589,13 +590,13 @@ function eventForm(px,c,btn,label){
 function eventPanel(){
   if(scoped())return"";
   var id=window.T8Data.eventId(),url=location.origin+location.pathname+"?e="+encodeURIComponent(id);
-  return'<details class="card" id="eventbox" style="margin-top:14px"><summary style="cursor:pointer;font-weight:700;min-height:44px;display:flex;align-items:center">管理者用：イベントの設定・追加</summary>'+
+  return'<details class="card" id="eventbox" style="margin-top:14px"><summary style="cursor:pointer;font-weight:700;min-height:44px;display:flex;align-items:center">イベントの設定・追加</summary>'+
    '<div class="muted" style="font-size:13px;margin:6px 0 12px;line-height:1.7">イベントごとに、商品・売上・在庫・日報は別々に保存されます。会期が重なっていても混ざりません。社内用の合言葉（全イベント）と、イベントごとの合言葉（社外メンバー用・そのイベントだけ）の2種類があります。</div>'+
    '<h3 style="margin:8px 0">このイベントの設定（'+esc(evName())+'）</h3>'+eventForm("evE_",Object.assign({},S.cfg,{name:evName()}),"evsave","設定を保存する")+
    '<h3 style="margin:18px 0 6px">このイベントの合言葉（社外メンバー用）</h3><div class="muted" style="font-size:12.5px;margin-bottom:8px;line-height:1.7">この合言葉で入った人は、このイベントだけ見られます（切替欄も出ません）。空欄で設定すると、合言葉を無効にします。</div>'+
    '<div class="grid" style="gap:10px"><label class="f"><span>管理者コード</span><span class="pw"><input type="password" id="evC_admin" autocomplete="off"><button type="button" class="eye" data-eye="1" aria-label="表示する" aria-pressed="false">表示</button></span></label><label class="f"><span>このイベントの合言葉</span><input type="text" id="evC_code" autocomplete="off" placeholder="4文字以上"></label><div id="evC_info" class="muted" style="font-size:13px;line-height:1.7"></div><div class="row"><button class="btn" data-act="codeshow">いまの合言葉を確認する</button><button class="btn primary" data-act="codeset">合言葉を設定する</button></div></div>'+
    '<div class="muted" style="font-size:12.5px;margin-top:10px;word-break:break-all">このイベントに直接入るURL：<br>'+esc(url)+'</div>'+
-   '<h3 style="margin:18px 0 8px">新しいイベントを追加する</h3><div class="muted" style="font-size:12.5px;margin-bottom:8px">追加すると、そのイベントに切り替わります。続けて「在庫」タブの下で商品マスタを登録してください。</div>'+eventForm("evN_",{tax:0.1},"evnew","イベントを追加する")+'</details>';
+   '<h3 style="margin:18px 0 8px">新しいイベントを追加する</h3><div class="muted" style="font-size:12.5px;margin-bottom:8px">追加すると、そのイベントに切り替わります。続けて、上の「商品マスタを更新する」で商品マスタを登録してください。</div>'+eventForm("evN_",{tax:0.1},"evnew","イベントを追加する")+'</details>';
 }
 function sqAgo(t){if(!t)return"";var d=new Date(t);return(d.getMonth()+1)+"/"+d.getDate()+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")}
 function sqPanel(){
@@ -603,7 +604,7 @@ function sqPanel(){
   var A=window.T8Data,all=(A.rawImports&&A.rawImports())||[],evs=evList(),pend=all.filter(function(x){return x.id.indexOf("pending~")===0}).sort(function(a,b){return(b.data.at||0)-(a.data.at||0)});
   var pf=A.eventId()===A.LEGACY?"":"ev~"+A.eventId()+"~";
   var mine=all.filter(function(x){return x.id.indexOf("pending~")!==0&&(pf===""?x.id.indexOf("~")<0:x.id.indexOf(pf)===0)}).sort(function(a,b){return(b.data.at||0)-(a.data.at||0)}).slice(0,10);
-  var h='<details class="card" id="sqbox" style="margin-top:14px"'+(S.sqOpen?' open':'')+'><summary style="cursor:pointer;font-weight:700;min-height:44px;display:flex;align-items:center">管理者用：Squareの売上レポートの自動取り込み'+(pend.length?' <span class="pill warn" style="margin-left:8px">未振り分け '+pend.length+' 件</span>':'')+'</summary>'+
+  var h='<details class="card" id="sqbox" style="margin-top:14px"'+(S.sqOpen?' open':'')+'><summary style="cursor:pointer;font-weight:700;min-height:44px;display:flex;align-items:center">Squareの売上レポートの自動取り込み'+(pend.length?' <span class="pill warn" style="margin-left:8px">未振り分け '+pend.length+' 件</span>':'')+'</summary>'+
    '<div class="muted" style="font-size:13px;margin:6px 0 12px;line-height:1.7">Gmailに届いた「Square売上レポート」を30分ごとに読み取り、売上として登録します。どのイベントかは、①イベント設定の「Squareの拠点名」→②会期→③商品の一致、の順で自動で決まります。決められなかったものは、下の「未振り分け」に出ます。同じメールを二重に取り込むことはありません。返品と、商品なしの金額入力は手入力が必要です。</div>'+
    '<label class="f"><span>管理者コード</span><span class="pw"><input type="password" id="sq_admin" autocomplete="off" value="'+esc(S.sqAdmin||"")+'"><button type="button" class="eye" data-eye="1" aria-label="表示する" aria-pressed="false">表示</button></span></label>'+
    '<div style="margin:10px 0"><button class="btn primary" data-act="sqnow">今すぐ取り込む</button> <span id="sq_info" class="muted" style="font-size:13px">'+esc(S.sqMsg||"")+'</span></div>';
@@ -625,7 +626,7 @@ function sqPanel(){
 }
 function adminPanel(){
   if(scoped())return"";
-  return'<details class="card" id="adminbox" style="margin-top:14px"><summary style="cursor:pointer;font-weight:700;min-height:44px;display:flex;align-items:center">管理者用：商品マスタを更新する <span style="font-weight:500;font-size:13px">（登録先：'+esc(evName())+'）</span></summary><div class="muted" style="font-size:13px;margin:6px 0 12px;line-height:1.7">同じ商品（品番・カラー・サイズ）は上書きされ、新しい商品は追加されます。売上の入力履歴は消えません。<span style="opacity:.6">（読み取り機能 '+SEED_VER+'）</span></div>'+seedForm()+'</details>';
+  return'<details class="card" id="adminbox" style="margin-top:14px"><summary style="cursor:pointer;font-weight:700;min-height:44px;display:flex;align-items:center">商品マスタを更新する <span style="font-weight:500;font-size:13px">（登録先：'+esc(evName())+'）</span></summary><div class="muted" style="font-size:13px;margin:6px 0 12px;line-height:1.7">同じ商品（品番・カラー・サイズ）は上書きされ、新しい商品は追加されます。売上の入力履歴は消えません。<span style="opacity:.6">（読み取り機能 '+SEED_VER+'）</span></div>'+seedForm()+'</details>';
 }
 
 /* ---- 入力 ---- */
@@ -828,7 +829,7 @@ function vStock(){
     if(S.stockFilter==="still")return x.sold===0&&x.stock>0;
     if(S.stockFilter==="gap")return c&&c.n!=null&&c.n!==stockAsOf(s.id,c.date);
     return true});
-  if(!rows.length)return h+'<div class="empty"><b>該当する商品がありません</b>絞り込みを変えてください。</div>'+adminPanel()+eventPanel()+sqPanel();
+  if(!rows.length)return h+'<div class="empty"><b>該当する商品がありません</b>絞り込みを変えてください。</div>';
   h+='<div class="tablewrap" style="max-height:70vh"><table><thead><tr><th>商品（品番｜カラー｜サイズ）</th><th>投入</th><th>販売</th><th>返品<br>再販可</th><th>返品<br>再販不可</th><th>補充等<br>増減</th><th>理論<br>在庫</th><th>消化率</th><th>実数<br>（任意）</th><th>ズレ</th></tr></thead><tbody>';
   var last="";
   rows.forEach(function(s){
@@ -840,7 +841,11 @@ function vStock(){
      '<td style="width:96px"><input type="number" inputmode="numeric" id="c_'+s.id+'" data-count="'+s.id+'" value="'+esc(cv)+'" style="min-height:38px;width:84px;padding:4px 8px"'+(can?'':' readonly')+'></td>'+
      '<td class="num">'+(df==null?'<span class="muted">—</span>':(df===0?'<span class="pill ok">0</span>':'<span class="pill bad">'+(df>0?'+':'')+df+'</span>'))+'</td></tr>';
   });
-  return h+'</tbody></table></div>'+adminPanel()+eventPanel()+sqPanel();
+  return h+'</tbody></table></div>';
+}
+function vAdmin(){
+  if(scoped())return'<div class="card"><h2>管理者のみの画面です</h2><p class="muted" style="font-size:14px">この画面は、管理者コードを持つ管理者が使います。</p></div>';
+  return'<div class="card"><h2>管理者 <small>商品マスタ・イベント・売上の自動取り込み</small></h2><div class="muted" style="font-size:13px;line-height:1.7">登録・変更には、管理者コードが必要です。いま開いているイベント（'+esc(evName())+'）に対して行います。別のイベントの設定は、上の「イベント切替」で切り替えてから行ってください。</div></div>'+adminPanel()+eventPanel()+sqPanel();
 }
 
 /* ---- 確認 ---- */
