@@ -372,35 +372,6 @@ input[type=password]{min-height:52px;border-radius:16px;background:var(--surface
 .htbl table{min-width:0;width:100%}
 .htbl th,.htbl td{text-align:left!important;white-space:normal!important;position:static!important;font-variant-numeric:normal;line-height:1.6;vertical-align:top}
 .htbl td:first-child{min-width:7em;font-weight:700;background:none!important}
-.cnt h2{margin-bottom:10px}
-.cntbar{height:8px;border-radius:99px;background:var(--line);overflow:hidden;margin-bottom:12px}
-.cntbar i{display:block;height:100%;background:var(--accent);border-radius:99px}
-.cntkv{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:10px}
-.cntkv div{display:flex;flex-direction:column;gap:2px}
-.cntkv span{font-size:12px;color:var(--muted)}
-.cntkv b{font-size:20px}
-.cntkv small{font-size:12px;font-weight:600;color:var(--muted)}
-.cntkv .bad b{color:var(--bad)}
-.close summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-height:40px}
-.close summary::-webkit-details-marker{display:none}
-.close .ct{font-weight:800;font-size:16px}
-.close .ct::after{content:" ▼";font-size:11px;color:var(--muted)}
-.close[open] .ct::after{content:" ▲"}
-.cl{display:grid;gap:8px;margin-top:10px}
-.ci{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:12px;background:var(--surface2)}
-.ci .mk{flex:0 0 24px;height:24px;border-radius:50%;border:2px solid var(--line2);display:grid;place-items:center;font-size:13px;font-weight:800}
-.ci.ok{background:transparent}
-.ci.ok .mk{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
-.ci.ok .tx b{font-weight:500;color:var(--muted)}
-.ci .tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;font-size:14px;line-height:1.5}
-.ci .tx span{font-size:12px;color:var(--muted)}
-.ci .btn{flex:0 0 auto}
-pre.share{white-space:pre-wrap;word-break:break-word;font:13.5px/1.75 "Noto Sans JP",sans-serif;background:var(--surface2);border-radius:12px;padding:12px 14px;margin:10px 0}
-.chartwrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
-.chartwrap svg{display:block}
-.chartwrap .bar{cursor:pointer}
-.chartwrap .bar:hover path{opacity:.75}
-.chartwrap .bar.cur path{fill:var(--lime);stroke:var(--accent);stroke-width:1.5}
 </style>
 
 <div id="shell">
@@ -625,7 +596,7 @@ function header(){
   h+='</div><div class="muted note-sync" style="font-size:12.5px">変更はすぐに全員の画面へ反映され、「履歴」に名前つきで残ります。</div>';
   if(S.demo)h+='<div class="banner demo"><span>これは操作を試すための見本です。ここで入力した内容は保存されず、本番のデータには入りません。</span><button class="btn small" data-act="demo" data-v="off">本番データに戻る</button></div>';
   else if(S.canWrite===false)h+='<div class="banner ro">閲覧のみのアカウントです。入力・変更はできません。</div>';
-  if(S.tab!=="check"&&S.tab!=="log"&&S.tab!=="admin"&&S.tab!=="help"&&getSkus().length)h+=datebar();
+  if(S.tab!=="check"&&S.tab!=="stock"&&S.tab!=="log"&&S.tab!=="admin"&&S.tab!=="help"&&getSkus().length)h+=datebar();
   return h;
 }
 function datebar(){
@@ -782,8 +753,7 @@ function vHelp(){
    '<div class="muted" style="font-size:13.5px;line-height:1.8">レジの売上は、Squareはメールで送る、エアレジはファイルを読み込むだけで入ります。お店で入力するのは、<b>返品の判断・補充などの例外・日報</b>だけです。</div></div>';
   h+='<div class="card"><h2>毎日やること</h2>'+
    h3('お店を開けているあいだ')+ul(['商品の補充・店舗間の移動・破損・返送があったら、売上タブの一番下の「手入力」で入れる','返品の理由など伝えたいことは、日報タブの「連絡・依頼・トラブル・返品理由」に書く'])+
-   h3('閉店後')+ol(['レジを締めたら、その日の<b>売上を入れる</b>（下の「売上を入れる」）','返品があった日は、<b>再販できるかを選ぶ</b>（下の「返品があったとき」）','売上タブでその日の行を押し、<b>客数</b>を入れて、<b>レジの売上レポートの写真</b>を登録する','日報タブに、コメントと連絡事項を書く'+go("report","日報"),'確認タブを開いて、<b>赤い項目が残っていないか</b>見る'+go("check","確認")])+
-   '<p class="hp">売上タブの一番上の「<b>閉店後チェック</b>」に、その日に残っている作業が出ます。ボタンを押すと、入れる場所に移ります。</p>'+
+   h3('閉店後')+ol(['レジを締めたら、その日の<b>売上を入れる</b>（下の「売上を入れる」）','返品があった日は、<b>再販できるかを選ぶ</b>（下の「返品があったとき」）','売上タブでその日の行を押し、<b>客数</b>を入れて、<b>レジの売上レポートの写真</b>を登録する','日報タブに、天気・売れ筋・コメントを書く'+go("report","日報"),'確認タブを開いて、<b>赤い項目が残っていないか</b>見る'+go("check","確認")])+
    note('最初に、画面上の「入力者」に自分の名前を入れてください。だれが入れたかが履歴に残ります。前の日の分を入れるときは、画面上の日付を ◀ ▶ で変えてから入れます。')+'</div>';
   h+=sec("sales","売上を入れる","Squareはメールで送る／エアレジはファイルを読み込む",
    h3('Square')+ol(['Squareの管理画面で、その日の「売上レポート」を出す','<b>期間は1日だけ</b>、<b>「商品別売上」を含める</b>にする','<b>signup@ins.fm</b> に送る（Squareの送信機能か、ins.fm のアドレスから）','30分以内に売上タブに入る'])+
@@ -804,18 +774,13 @@ function vHelp(){
   h+=sec("check","確認タブの表示と対応","赤は対応が必要、黄は確認。押すと直す画面に移る",
    tbl(['表示','すること'],[['在庫マイナス','数量・商品の入力ミスか、補充の入れ忘れを確かめる'],['レジ報告と不一致','取り込み漏れ・二重入力・任意の金額・返品を確かめる'],['カウントのズレ','数え直すか、入力漏れを探す'],['返品の再販が未確認','手入力の一覧で「再販できる／できない」を押す'],['返品の商品が未入力','Squareの返品を手入力で商品として入れる'],['客数が未入力','売上タブのその日の詳細で入れる'],['レポート写真が未登録','写真を登録する'],['日報が未記入','日報タブで書く']])+go("check","確認"));
   h+=sec("other","日報・在庫・履歴","",
-   h3('日報')+'<p class="hp">日報（コメント）と、連絡・依頼・トラブル・返品理由（インス宛）を書きます。欄から離れると自動で保存されます。「上司・本部への共有用」を開くと、売上・累計・売れ筋・コメントをまとめた文章をコピーできます。下の「会期のまとめ」で、日別の売上グラフと売れ筋TOP10が見られます。</p>'+
-   h3('在庫')+'<p class="hp">商品ごとの理論在庫（投入数 − 販売 ＋ 返品（再販できる）＋ 補充など）を見ます。棚卸のやり方は下の「棚卸をする」を見てください。</p>'+
+   h3('日報')+'<p class="hp">天気・記入者・館のイベント・売れ筋・コメント・連絡（インス宛）を書きます。欄から離れると自動で保存されます。</p>'+
+   h3('在庫')+'<p class="hp">商品ごとの理論在庫（投入数 − 販売 ＋ 返品（再販できる）＋ 補充など）を見ます。棚卸で数えた点数を入れると、ズレが出ます。</p>'+
    h3('履歴')+'<p class="hp">だれが、いつ、何を入れた・取り消したかが新しい順に並びます。日付を押すとその日の画面に移ります。</p>');
-  h+=sec("count","棚卸をする","在庫タブの「実数」に数えた点数を入れる",
-   h3('数える前に')+ol(['その日の売上・返品の判断・補充などを入れ終える（Squareはメールを送ってから最大30分）','在庫タブの上の日付を、棚卸をする日に合わせる'])+
-   h3('数える')+ol(['在庫タブで品番・商品名で絞り込むか、バーコードリーダーで検索欄にJANを読む（その商品の欄に移る）','カラー・サイズごとに、数えた点数を「実数」に入れる。<b>1点もないときは「0」</b>（空欄は数えていない扱い）','Enterで次の商品の欄に進む。欄から離れると自動で保存される','「まだ数えていない」を押すと、数え残しだけが並ぶ'+go("stock","在庫")])+
-   h3('数えたあと')+ol(['「ズレあり」を押して、差がある商品を見る（確認タブにも出る）','補充・移動・破損の入れ忘れ、売上の取り込み漏れ、カラー・サイズ違いを探して直す','直したら数え直し、ズレが0になればOK','「在庫一覧をCSVで保存」で、棚卸の結果を残す'])+
-   note('理論在庫は、その日の閉店時点の数です。再販できない返品は売場の在庫に含まれないので、分けて数えます。実数は商品ごとに最新の1回分が残ります（前の数は履歴タブで見られます）。'));
   h+=sec("end","会期が終わったら","アラジン取込用ファイルを保存して、アラジンで読み込む",
    ol(['売上タブの「アラジン入力用リスト」で期間を確かめる（何もしなければ会期まとめて1件）','「<b>アラジン取込用ファイルを保存（.xlsx）</b>」を押す','出てきた画面で、今回の<b>担当者コード・得意先コード・出庫倉庫コード</b>（必須）などを入れて「この内容で保存」','アラジンの外部伝票取込でファイルを読み込み、数量・金額がリストの合計と合っているか確かめる','リストに戻り、受注NOを入れて「この期間を『出力済み』にする」'+go("sales","売上")])+
    note('明細備考1は半角10文字（全角5文字）まで。カラー・サイズのコードが分からない商品があると警告が出るので、その行だけExcelでコードを入れます。')+
-   '<p class="hp">返送の前に棚卸をして（上の「棚卸をする」）、ズレがないことを確かめます。</p>');
+   '<p class="hp">棚卸もこのときに行い、在庫タブに数えた点数を入れてズレを確かめます。</p>');
   h+=sec("trouble","困ったとき","",
    tbl(['こんなとき','どうする'],[['合言葉が通らない','全角・半角を確かめる。変わっているかもしれないので管理者に聞く'],['Squareの売上が入らない','signup@ins.fm に、1日分・商品別売上ありで送ったか確かめる。届いてから最大30分'],['エアレジのファイルが読めない','商品別は1日ずつ出す。読み込んだら日付が合っているか確かめる'],['売上が二重になった','手入力した方を「取消」する'],['返品が在庫に戻らない','「再販できる」を押したか確かめる'],['入れたものが見えない','画面上の日付とイベントを確かめる。履歴タブで探す'],['商品が一覧にない','商品マスタにない。管理者に登録を頼む'],['アラジンの取り込みでエラー','エラーログの「列名」と「内容」を管理者に伝える']])+
    '<p class="hp">解決しないときは、日報の「連絡・依頼・トラブル」に書くか、管理者に連絡してください。</p>');
@@ -827,98 +792,6 @@ function vHelp(){
    note('管理者コードは、販売代行さんや社外メンバーには伝えません。'));
   return h;
 }
-/* ============ 閉店後チェック ============ */
-function closeItems(date){
-  var C=calc(),d=C.days[date]||{lines:0},dd=getDays()[date]||{};
-  var tbd=getTx().filter(function(r){return r.date===date&&r.kind==="ret_tbd"}).reduce(function(a,r){return a+(+r.qty||0)},0);
-  var red=checks().filter(function(c){return c.lv==="red"}).length;
-  var it=[];
-  it.push({ok:d.lines>0,t:d.lines>0?"売上が入っています（販売 "+(d.pcsSale||0)+" 点）":"売上を入れる",s:d.lines>0?"":"Squareはレポートを signup@ins.fm に送る（最大30分）／エアレジはファイルを読み込む",a:"ar"});
-  it.push({ok:!tbd,t:tbd?"返品 "+tbd+" 点の再販を選ぶ":"判断待ちの返品はありません",s:tbd?"手入力の一覧で「再販できる／できない」を押す":"",a:"ret"});
-  it.push({ok:d.cust!=null,t:d.cust!=null?"客数 "+d.cust+" 人":"客数を入れる",s:"",a:"cust"});
-  if(!S.demo)it.push({ok:dayPhotos(date).length>0,t:dayPhotos(date).length?"レポートの写真を登録済み":"レジの売上レポートの写真を登録する",s:"",a:"photo"});
-  var rp=!!(dd.comment||dd.notice||dd.hot||dd.event);it.push({ok:rp,t:rp?"日報を記入済み":"日報を書く",s:"",a:"report"});
-  it.push({ok:!red,t:red?"確認タブの赤い項目 "+red+" 件":"確認タブの赤い項目なし",s:red?"在庫マイナス・レポートとの不一致など":"",a:"check"});
-  return it;
-}
-function closeCard(){
-  var date=S.date,rg=rangeDays();
-  if(rg.indexOf(date)<0||date>todayStr()||!writable())return"";
-  var it=closeItems(date),left=it.filter(function(x){return!x.ok}).length;
-  var h='<details class="card close" id="closebox"'+(S.closeOpen===false?'':' open')+'><summary><span class="ct">閉店後チェック '+mdw(date)+'</span>'+(left?'<span class="pill warn">あと '+left+' 件</span>':'<span class="pill ok">すべて完了</span>')+'</summary><div class="cl">';
-  it.forEach(function(x){h+='<div class="ci'+(x.ok?' ok':'')+'"><span class="mk" aria-hidden="true">'+(x.ok?'✓':'')+'</span><div class="tx"><b>'+esc(x.t)+'</b>'+(x.s&&!x.ok?'<span>'+esc(x.s)+'</span>':'')+'</div>'+(x.ok?'':'<button class="btn small" data-act="cl" data-v="'+x.a+'">'+({ar:"読み込む",ret:"選ぶ",cust:"入れる",photo:"登録する",report:"日報へ",check:"確認へ"})[x.a]+'</button>')+'</div>'});
-  return h+'</div></details>';
-}
-function clGo(v){
-  function to(el,focus){if(!el)return;el.scrollIntoView({block:"center",behavior:"smooth"});if(focus)setTimeout(function(){el.focus()},350)}
-  if(v==="report"||v==="check"){goTab(v);return}
-  if(v==="ret"){S.manOpen=true;render.force=true;render();to($("manbox"));return}
-  if(v==="cust"){to($("f_customers"),1);return}
-  if(v==="photo"){to(document.querySelector(".drop")||$("f_customers"));return}
-  if(v==="ar"){var b=$("arbox");if(b)to(b);else toast("売上ファイルの読み込みは管理者が行います。Squareはレポートを signup@ins.fm に送ってください")}
-}
-function copyText(txt,msg){
-  function fb(){var ta=document.createElement("textarea");ta.value=txt;ta.style.cssText="position:fixed;left:-9999px";document.body.appendChild(ta);ta.select();var ok=false;try{ok=document.execCommand("copy")}catch(e){}ta.remove();toast(ok?msg:"コピーできませんでした。下の文章を選んでコピーしてください",!ok)}
-  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(function(){toast(msg)},fb);else fb();
-}
-/* ============ 共有用の日報・会期のまとめ ============ */
-function shareText(date){
-  var C=calc(),d=C.days[date]||{lines:0},dd=getDays()[date]||{},rg=rangeDays(),i=rg.indexOf(date);
-  var L=[];
-  L.push("【"+[brandName(),evName()].filter(Boolean).join(" ")+"】"+mdw(date)+" 日報"+(i>=0?"（会期 "+(i+1)+"日目／"+rg.length+"日）":""));
-  L.push("");
-  L.push("■売上");
-  if(d.lines){
-    L.push("純売上（税抜） "+yen(d.net)+(d.ratio!=null?"　日予算比 "+pct(d.ratio):""));
-    L.push("合計（税込） "+yen(d.sum)+(d.cust!=null?"　客数 "+d.cust+"人"+(d.unit?"　客単価 "+yen(d.unit):""):""));
-    L.push("販売 "+d.pcsSale+"点"+(d.pcsRet?"（返品 "+d.pcsRet+"点）":""));
-  }else L.push("売上の入力はありません");
-  var cum=0,lastIdx=0;C.rows.forEach(function(r){if(r.inRange&&r.date<=date){cum+=r.net;lastIdx=r.idx}});
-  if(i>=0){
-    L.push("");L.push("■会期累計（"+md(date)+"まで）");
-    L.push("純売上（税抜） "+yen(cum)+"　会期予算 "+yen(S.cfg.budget));
-    L.push("達成率 "+pct(S.cfg.budget?cum/S.cfg.budget:null)+"　ペース（経過日数の予算比） "+pct(C.dayB&&lastIdx?cum/(C.dayB*lastIdx):null));
-  }
-  var tops=Object.keys(d.sold||{}).map(function(id){return[id,d.sold[id]]}).sort(function(a,b){return b[1]-a[1]}).slice(0,5);
-  if(tops.length){L.push("");L.push("■売れ筋");tops.forEach(function(t){var s=C.sm[t[0]];if(s)L.push("・"+s.hin+" "+s.name+" "+s.color+"/"+s.size+" ×"+t[1])})}
-  if(dd.hot){L.push("");L.push("■売れ筋（メモ）");L.push(String(dd.hot).trim())}
-  if(dd.event){L.push("");L.push("■館のイベント・混雑");L.push(String(dd.event).trim())}
-  if(dd.comment){L.push("");L.push("■コメント");L.push(String(dd.comment).trim())}
-  if(dd.notice){L.push("");L.push("■連絡・依頼・トラブル");L.push(String(dd.notice).trim())}
-  return L.join("\n");
-}
-function sumCard(){
-  var C=calc(),rows=C.rows.filter(function(d){return d.inRange}),today=todayStr();
-  if(!rows.length)return"";
-  var past=rows.filter(function(d){return d.date<=today||d.lines>0}),cum=0,cust=0,sumIn=0,pcs=0;
-  past.forEach(function(d){cum+=d.net;if(d.cust){cust+=d.cust;sumIn+=d.sum}pcs+=d.pcsNet||0});
-  var el=past.length,n=rows.length,pace=C.dayB&&el?cum/(C.dayB*el):null;
-  var base=0;Object.keys(C.st).forEach(function(id){base+=C.st[id].base+C.st[id].moves});
-  var h='<div class="card"><h2>会期のまとめ <small>'+md(S.cfg.start)+'〜'+md(S.cfg.end)+'（'+el+' / '+n+' 日経過）</small></h2>';
-  h+='<div class="cntkv"><div><span>累計 純売上（税抜）</span><b>'+yen(cum)+'</b></div><div><span>会期予算の達成率</span><b>'+pct(S.cfg.budget?cum/S.cfg.budget:null)+'</b></div><div'+(pace!=null&&pace<1?' class="bad"':'')+'><span>ペース（経過日数の予算比）</span><b>'+pct(pace)+'</b></div><div><span>純販売点数・消化率</span><b>'+pcs+'<small>点 ／ '+pct(base?pcs/base:null)+'</small></b></div><div><span>客数・客単価（税込）</span><b>'+(cust?cust+'<small>人 ／ '+yen(sumIn/cust)+'</small>':'—')+'</b></div></div>';
-  // chart: daily net sales vs daily budget
-  var W=Math.max(320,rows.length*30),H=170,pl=44,pr=8,pt=12,pb=26,iw=W-pl-pr,ih=H-pt-pb;
-  var mx=Math.max(C.dayB||0,Math.max.apply(null,rows.map(function(d){return d.net||0})))*1.12||1;
-  var step=Math.pow(10,Math.floor(Math.log10(mx/3))),nice=[1,2,5,10].map(function(m){return m*step}).filter(function(v){return mx/v<=5})[0]||step*10;
-  var y=function(v){return pt+ih-ih*Math.max(0,v)/mx},bw=iw/rows.length;
-  var svg='<svg viewBox="0 0 '+W+' '+H+'" width="'+W+'" height="'+H+'" role="img" aria-label="日別の純売上（税抜）と1日の予算">';
-  for(var g=0;g<=mx;g+=nice){svg+='<line x1="'+pl+'" x2="'+(W-pr)+'" y1="'+y(g)+'" y2="'+y(g)+'" stroke="var(--line)" stroke-width="1"/><text x="'+(pl-6)+'" y="'+(y(g)+4)+'" text-anchor="end" font-size="10" fill="var(--muted)">'+(g>=10000?(Math.round(g/1000)/10)+'万':g.toLocaleString('ja-JP'))+'</text>'}
-  rows.forEach(function(d,k){var x=pl+k*bw,w=Math.max(4,bw-6),hgt=Math.max(0,ih*Math.max(0,d.net)/mx),yy=pt+ih-hgt,r=Math.min(4,w/2,hgt);
-    var tip=mdw(d.date)+"　純売上 "+yen(d.net)+(d.ratio!=null&&d.lines?"（予算比 "+pct(d.ratio)+"）":"");
-    svg+='<g class="bar'+(d.date===S.date?' cur':'')+'" data-act="go" data-tab="sales" data-v="'+d.date+'"><title>'+esc(tip)+'</title><rect x="'+x+'" y="'+pt+'" width="'+bw+'" height="'+ih+'" fill="transparent"/>'+
-     (hgt>0?'<path d="M'+(x+3)+' '+(pt+ih)+'V'+(yy+r)+'Q'+(x+3)+' '+yy+' '+(x+3+r)+' '+yy+'H'+(x+3+w-r)+'Q'+(x+3+w)+' '+yy+' '+(x+3+w)+' '+(yy+r)+'V'+(pt+ih)+'Z" fill="var(--accent)"/>':'')+
-     ((k%(rows.length>16?2:1)===0)?'<text x="'+(x+bw/2)+'" y="'+(H-8)+'" text-anchor="middle" font-size="10" fill="var(--muted)">'+md(d.date)+'</text>':'')+'</g>'});
-  if(C.dayB){svg+='<line x1="'+pl+'" x2="'+(W-pr)+'" y1="'+y(C.dayB)+'" y2="'+y(C.dayB)+'" stroke="var(--ink)" stroke-width="1.5" stroke-dasharray="5 4"/>'}
-  svg+='</svg>';
-  h+='<div style="font-size:13px;font-weight:700;margin:6px 0 4px">日別の純売上（税抜）</div><div class="chartwrap">'+svg+'</div><div class="muted" style="font-size:12px">棒を押すとその日の売上を開きます。点線は1日の予算（'+yen(C.dayB)+'）です。</div>';
-  // best sellers by hin
-  var by={};getSkus().forEach(function(s){var x=C.st[s.id],b=by[s.hin]||(by[s.hin]={hin:s.hin,name:s.name,net:0,amt:0,base:0});b.net+=x.net;b.amt+=x.net*(+s.sale||0);b.base+=x.base+x.moves});
-  var list=Object.keys(by).map(function(k){return by[k]}).filter(function(b){return b.net>0}).sort(function(a,b){return b.net-a.net||b.amt-a.amt}).slice(0,10);
-  h+='<div style="font-size:13px;font-weight:700;margin:14px 0 4px">売れ筋 TOP'+list.length+'（品番ごと・純販売点数の多い順）</div>';
-  if(!list.length)h+='<div class="muted" style="font-size:13px">まだ売れた商品はありません</div>';
-  else h+='<div class="tablewrap"><table><thead><tr><th>品番・商品名</th><th>純販売<br>点数</th><th>金額<br>（税抜）</th><th>消化率</th></tr></thead><tbody>'+list.map(function(b,i){return'<tr><td><b>'+(i+1)+'.</b> '+esc(b.hin)+'<div class="muted" style="font-size:12px">'+esc(b.name)+'</div></td><td class="num">'+b.net+'</td><td class="num">'+yen(b.amt)+'</td><td class="num">'+pct(b.base?b.net/b.base:null)+'</td></tr>'}).join("")+'</tbody></table></div>';
-  return h+'</div>';
-}
 function vSales(){
   var C=calc(),rows=C.rows.filter(function(d){return d.inRange}),today=todayStr();
   var withData=rows.filter(function(d){return d.lines>0});
@@ -926,7 +799,7 @@ function vSales(){
   var cum=last?last.cum:0,pace=last?last.cumRatio:null;
   var tot={g:0,r:0,d:0,n:0,t:0,s:0,p:0,pr:0,pn:0,c:0};
   rows.forEach(function(d){tot.g+=d.total;tot.r+=d.ret;tot.d+=d.dis;tot.n+=d.net;tot.t+=d.tax;tot.s+=d.sum;tot.p+=d.pcsSale;tot.pr+=d.pcsRet;tot.pn+=d.pcsNet;tot.c+=d.cust||0});
-  var h=closeCard()+(writable()&&!S.demo?arPanel():'')+'<div class="kpis"><div class="kpi"><div class="l">累計 純売上高（税抜）</div><div class="v">'+yen(cum)+'</div><div class="n">会期予算 '+yen(S.cfg.budget)+'</div></div>'+
+  var h=(writable()&&!S.demo?arPanel():'')+'<div class="kpis"><div class="kpi"><div class="l">累計 純売上高（税抜）</div><div class="v">'+yen(cum)+'</div><div class="n">会期予算 '+yen(S.cfg.budget)+'</div></div>'+
    '<div class="kpi"><div class="l">会期予算に対する達成率</div><div class="v">'+pct(S.cfg.budget?cum/S.cfg.budget:null)+'</div><div class="n">残り '+yen(Math.max(0,S.cfg.budget-cum))+'</div></div>'+
    '<div class="kpi '+(pace!=null&&pace<1?'bad':'ok')+'"><div class="l">累計予算比（ペース）</div><div class="v">'+pct(pace)+'</div><div class="n">'+(last?mdw(last.date)+' 時点':'売上入力後に表示')+'</div></div>'+
    '<div class="kpi"><div class="l">累計 純販売点数</div><div class="v">'+tot.pn+'<small>点</small></div><div class="n">販売 '+tot.p+' ／ 返品 '+tot.pr+'</div></div></div>';
@@ -1197,9 +1070,6 @@ function vReport(){
    ta("comment","日報（コメント）","例：午前は静かで、午後から来店が増えた。接客で気づいたこと・お客様の様子・スタッフの動きなど、自由に書いてください",6)+
    ta("notice","連絡・依頼・トラブル・返品理由（インス宛）","例：Lサイズの追加をお願いしたい")+
    '</div><div class="muted" style="font-size:12.5px;margin-top:10px">入力欄から離れると自動で保存されます。</div></div>';
-  h+='<details class="card" id="sharebox"'+(S.shareOpen?' open':'')+'><summary style="cursor:pointer;min-height:44px;display:flex;align-items:center;gap:10px;flex-wrap:wrap"><b style="font-size:16px">上司・本部への共有用</b><span class="muted" style="font-size:13px">売上・累計・売れ筋・コメントを1つの文章にまとめます</span></summary>'+
-   '<pre class="share">'+esc(shareText(S.date))+'</pre><div class="row"><button class="btn primary" data-act="share">この文章をコピー</button></div><div class="muted" style="font-size:12px;margin-top:6px">コピーして、メールやチャットに貼り付けます。日報を書いてからコピーしてください。</div></details>';
-  h+=sumCard();
   var list=Object.keys(getDays()).filter(function(k){var x=getDays()[k];return x.reporter||x.event||x.hot||x.comment||x.notice||x.weather}).sort().reverse();
   h+='<div class="card"><h2>これまでの日報 <small>'+list.length+' 日分</small></h2>';
   if(!list.length)h+='<div class="empty"><b>まだ日報がありません</b>上の欄に書くと、ここに日付順で並びます。</div>';
@@ -1239,22 +1109,14 @@ function vStock(){
    '<div class="kpi"><div class="l">純販売点数</div><div class="v">'+tot.net+'<small>点</small></div><div class="n">消化率 '+pct((tot.base+tot.moves)?tot.net/(tot.base+tot.moves):null)+'</div></div>'+
    '<div class="kpi"><div class="l">売場の理論在庫</div><div class="v">'+tot.stock+'<small>点</small></div><div class="n">セール価格換算 '+yen(tot.saleStock)+'（税抜）</div></div>'+
    '<div class="kpi"><div class="l">別保管（再販不可）</div><div class="v">'+tot.hold+'<small>点</small></div></div></div>';
-  var cAll=sk.length,cDone=0,cGapS=0,cGap=0,cN=0,cTh=0;
-  sk.forEach(function(s){var c=cn[s.id];if(c&&c.n!=null&&c.date===S.date){cDone++;cN+=c.n;var th=stockAsOf(s.id,c.date);cTh+=th;if(c.n!==th){cGapS++;cGap+=c.n-th}}});
-  h+='<div class="card cnt"><h2>棚卸 '+mdw(S.date)+' <small>日付は上の ◀ ▶ で変えられます</small></h2>'+
-   '<div class="cntbar"><i style="width:'+(cAll?Math.round(cDone/cAll*100):0)+'%"></i></div>'+
-   '<div class="cntkv"><div><span>数えたSKU</span><b>'+cDone+' <small>/ '+cAll+'</small></b></div><div><span>数えた点数</span><b>'+cN+'<small>点</small></b></div><div><span>この日の理論在庫（数えたSKU）</span><b>'+cTh+'<small>点</small></b></div><div'+(cGapS?' class="bad"':'')+'><span>ズレがあるSKU</span><b>'+cGapS+(cGapS?' <small>（'+(cGap>0?'+':'')+cGap+'点）</small>':'')+'</b></div></div>'+
-   (can?'<div class="muted" style="font-size:12.5px;line-height:1.7">「実数」に数えた点数を入れます（0点も「0」）。Enterで次の商品に進みます。バーコードリーダーで上の検索欄にJANを読むと、その商品の欄に移ります。</div>':'')+
-   '<div class="row" style="margin-top:8px"><button class="btn small" data-act="csv" data-v="stock">在庫一覧をCSVで保存</button></div></div>';
-  var fl=[["all","すべて"],["todo","まだ数えていない"],["gap","ズレあり"],["low","残りわずか（1〜2点）"],["zero","売り切れ"],["moved","動いた商品"],["still","まだ売れていない"]];
+  var fl=[["all","すべて"],["low","残りわずか（1〜2点）"],["zero","売り切れ"],["moved","動いた商品"],["still","まだ売れていない"],["gap","ズレあり"]];
   h+='<div class="card"><h2>SKU別の在庫 <small>理論在庫 ＝ 投入数 − 販売 ＋ 返品（再販可）＋ 補充等の増減</small></h2>'+
-   '<div class="grid" style="gap:10px"><label class="f"><input type="search" id="q" placeholder="品番・商品名・カラー・JANで絞り込み" value="'+esc(S.q)+'" autocomplete="off"></label>'+
+   '<div class="grid" style="gap:10px"><label class="f"><input type="search" id="q" placeholder="品番・商品名・カラーで絞り込み" value="'+esc(S.q)+'" autocomplete="off"></label>'+
    '<div class="filters">'+fl.map(function(f){return'<button data-act="sf" data-v="'+f[0]+'" aria-pressed="'+(S.stockFilter===f[0])+'">'+f[1]+'</button>'}).join("")+'</div>'+
-   '<div class="muted" style="font-size:12.5px">「実数」は '+mdw(S.date)+' の閉店時点の理論在庫と比べます。その日の売上・返品・補充を入れ終えてから数えてください。</div></div></div>';
+   (can?'<div class="muted" style="font-size:12.5px">「実数」は棚卸で数えた点数です。入れると '+mdw(S.date)+' 時点の理論在庫と比べてズレを出します（任意）。日付は売上画面の日付と共通です。</div>':'')+'</div></div>';
   var rows=sk.filter(function(s){
     var x=C.st[s.id],c=cn[s.id];
-    if(q&&(s.hin+" "+s.name+" "+s.color+" "+s.size+" "+(s.jan||"")).toLowerCase().indexOf(q)<0)return false;
-    if(S.stockFilter==="todo")return!(c&&c.n!=null&&c.date===S.date);
+    if(q&&(s.hin+" "+s.name+" "+s.color+" "+s.size).toLowerCase().indexOf(q)<0)return false;
     if(S.stockFilter==="low")return x.stock>=1&&x.stock<=2;
     if(S.stockFilter==="zero")return x.stock<=0;
     if(S.stockFilter==="moved")return x.sold+x.retOk+x.retNg+Math.abs(x.moves)>0;
@@ -1262,17 +1124,16 @@ function vStock(){
     if(S.stockFilter==="gap")return c&&c.n!=null&&c.n!==stockAsOf(s.id,c.date);
     return true});
   if(!rows.length)return h+'<div class="empty"><b>該当する商品がありません</b>絞り込みを変えてください。</div>';
-  h+='<div class="tablewrap" style="max-height:70vh"><table><thead><tr><th>商品（品番｜カラー｜サイズ）</th><th>理論<br>在庫</th><th>実数<br>（棚卸）</th><th>ズレ</th><th>投入</th><th>販売</th><th>返品<br>再販可</th><th>返品<br>再販不可</th><th>補充等<br>増減</th><th>消化率</th></tr></thead><tbody>';
+  h+='<div class="tablewrap" style="max-height:70vh"><table><thead><tr><th>商品（品番｜カラー｜サイズ）</th><th>投入</th><th>販売</th><th>返品<br>再販可</th><th>返品<br>再販不可</th><th>補充等<br>増減</th><th>理論<br>在庫</th><th>消化率</th><th>実数<br>（任意）</th><th>ズレ</th></tr></thead><tbody>';
   var last="";
   rows.forEach(function(s){
     var x=C.st[s.id],c=cn[s.id],th=c?stockAsOf(s.id,c.date):null,df=c&&c.n!=null?c.n-th:null,cv=S.draft["c:"+s.id];if(cv===undefined)cv=c&&c.n!=null?c.n:"";
     var den=x.base+x.moves;
     if(s.hin!==last){last=s.hin;h+='<tr class="grp"><td colspan="10">'+esc(s.hin)+'　'+esc(s.name)+'　<span class="muted" style="font-weight:400">上代 '+yen(s.retail)+' ／ セール価格 '+yen(s.sale)+'（税抜）</span></td></tr>'}
-    var cTh='<td class="num'+(x.stock<0?' neg':'')+'"><b>'+x.stock+'</b></td>';
-    var cIn='<td style="width:96px"><input type="number" inputmode="numeric" id="c_'+s.id+'" data-count="'+s.id+'" value="'+esc(cv)+'" style="min-height:38px;width:76px;padding:4px 8px"'+(can?'':' readonly')+'></td>';
-    var cDf='<td class="num">'+(df==null?'<span class="muted">—</span>':(df===0?'<span class="pill ok">0</span>':'<span class="pill bad">'+(df>0?'+':'')+df+'</span>'))+(c&&c.n!=null&&c.date!==S.date?'<div class="muted" style="font-size:11px">'+md(c.date)+'時点</div>':'')+'</td>';
-    h+='<tr><td>'+esc(s.color)+'｜'+esc(s.size)+'</td>'+cTh+cIn+cDf+'<td class="num">'+x.base+'</td><td class="num">'+x.sold+'</td><td class="num">'+x.retOk+'</td><td class="num">'+x.retNg+'</td><td class="num">'+(x.moves>0?'+':'')+x.moves+'</td>'+
-     '<td><div class="bar"><i style="width:'+Math.max(0,Math.min(100,den?x.net/den*100:0))+'%"></i></div></td></tr>';
+    h+='<tr><td>'+esc(s.color)+'｜'+esc(s.size)+'</td><td class="num">'+x.base+'</td><td class="num">'+x.sold+'</td><td class="num">'+x.retOk+'</td><td class="num">'+x.retNg+'</td><td class="num">'+(x.moves>0?'+':'')+x.moves+'</td>'+
+     '<td class="num'+(x.stock<0?' neg':'')+'"><b>'+x.stock+'</b></td><td><div class="bar"><i style="width:'+Math.max(0,Math.min(100,den?x.net/den*100:0))+'%"></i></div></td>'+
+     '<td style="width:96px"><input type="number" inputmode="numeric" id="c_'+s.id+'" data-count="'+s.id+'" value="'+esc(cv)+'" style="min-height:38px;width:84px;padding:4px 8px"'+(can?'':' readonly')+'></td>'+
+     '<td class="num">'+(df==null?'<span class="muted">—</span>':(df===0?'<span class="pill ok">0</span>':'<span class="pill bad">'+(df>0?'+':'')+df+'</span>'))+'</td></tr>';
   });
   return h+'</tbody></table></div>';
 }
@@ -1332,8 +1193,6 @@ document.addEventListener("click",function(e){
     case"retok":setRetKind(v,"ret_ok");break;
     case"retng":setRetKind(v,"ret_ng");break;
     case"alcopy":alCopy();break;
-    case"cl":clGo(v);break;
-    case"share":copyText(shareText(S.date),"コピーしました。メールやチャットに貼り付けてください");break;
     case"alcsv":alCsv();break;
     case"alxsave":alxOpen();break;
     case"almark":alMark();break;
@@ -1352,11 +1211,6 @@ document.addEventListener("click",function(e){
 $("lb").addEventListener("click",function(){this.hidden=true});
 ["dragenter","dragover"].forEach(function(n){document.addEventListener(n,function(e){var z=e.target&&e.target.closest&&e.target.closest("#seeddrop");if(z)z.classList.add("over")})});
 ["dragleave","drop"].forEach(function(n){document.addEventListener(n,function(e){var z=e.target&&e.target.closest&&e.target.closest("#seeddrop");if(z)z.classList.remove("over")})});
-document.addEventListener("keydown",function(e){
-  var t=e.target;
-  if(e.key==="Enter"&&t&&t.dataset&&t.dataset.count){e.preventDefault();var all=[].slice.call(document.querySelectorAll("input[data-count]")),i=all.indexOf(t),nx=all[i+1];if(nx){nx.focus();nx.select&&nx.select()}else t.blur();return}
-  if(e.key==="Enter"&&t&&t.id==="q"&&S.tab==="stock"){var v=t.value.trim();if(v){var hit=getSkus().filter(function(s){return s.jan&&String(s.jan)===v})[0];if(hit){e.preventDefault();S.q=v;render.force=true;render();setTimeout(function(){var c=$("c_"+hit.id);if(c){c.focus();c.select&&c.select();c.scrollIntoView({block:"center"})}else toast("該当する商品がありません",1)},50)}else if(/^\d{8,14}$/.test(v)){e.preventDefault();toast("このJANの商品は登録されていません",1)}}return}
-});
 document.addEventListener("keydown",function(e){if(e.key==="Escape")$("lb").hidden=true;if(e.key==="Enter"&&e.target&&e.target.id==="code")doLogin()});
 document.addEventListener("input",function(e){
   var t=e.target,f=S.form;
@@ -1372,7 +1226,7 @@ document.addEventListener("input",function(e){
   else if(t.dataset&&t.dataset.count){S.draft["c:"+t.dataset.count]=t.value}
 });
 document.addEventListener("compositionstart",function(){S.comp=true});
-document.addEventListener("toggle",function(e){var t=e.target;if(t&&t.id==="manbox")S.manOpen=t.open;if(t&&t.id==="closebox")S.closeOpen=t.open;if(t&&t.id==="sharebox")S.shareOpen=t.open;if(t&&t.id==="alxbox")S.alxOpen=t.open;if(t&&t.id&&t.id.indexOf("help-")===0){S.helpOpen=S.helpOpen||{};S.helpOpen[t.id.slice(5)]=t.open}if(t&&t.id==="arhelp"){S.arHelpOpen=t.open;var mk=t.querySelector(".arhelp-mk");if(mk)mk.textContent=t.open?"説明を閉じる ▲":"説明 ▼"}},true);
+document.addEventListener("toggle",function(e){var t=e.target;if(t&&t.id==="manbox")S.manOpen=t.open;if(t&&t.id==="alxbox")S.alxOpen=t.open;if(t&&t.id&&t.id.indexOf("help-")===0){S.helpOpen=S.helpOpen||{};S.helpOpen[t.id.slice(5)]=t.open}if(t&&t.id==="arhelp"){S.arHelpOpen=t.open;var mk=t.querySelector(".arhelp-mk");if(mk)mk.textContent=t.open?"説明を閉じる ▲":"説明 ▼"}},true);
 document.addEventListener("compositionend",function(e){S.comp=false;var t=e.target;if(t&&t.id==="q"){S.q=t.value;var l=$("hinList");if(l)l.innerHTML=hinListHtml();else{render.force=true;render()}}});
 document.addEventListener("change",function(e){
   var t=e.target;
@@ -1421,10 +1275,6 @@ function doCsv(w){
     var r=[["日付","曜日","総売上高(税抜)","返品(税抜)","ディスカウント","純売上高(税抜)","税金","合計(税込)","予算比","累計純売上","累計予算比","客数","客単価(税込)","販売点数","返品点数","純販売点数","売れたSKU数","レポート合計(税込)","差"]];
     C.rows.filter(function(d){return d.inRange}).forEach(function(d){r.push([d.date,wd(d.date),d.total,d.ret,d.dis,d.net,d.tax,d.sum,d.ratio==null?"":Math.round(d.ratio*1000)/10+"%",d.cum||"",d.cumRatio==null?"":Math.round(d.cumRatio*1000)/10+"%",d.cust==null?"":d.cust,d.unit?Math.round(d.unit):"",d.pcsSale,d.pcsRet,d.pcsNet,d.skuCnt,d.rep==null?"":d.rep,d.diff==null?"":d.diff])});
     csvDl("売上明細_"+fnSafe(evName())+"_"+todayStr()+".csv",r);
-  }else if(w==="stock"){
-    var cn=getCounts(),r3=[["品番","商品名","カラー","サイズ","JAN","投入","販売","返品(再販可)","返品(再販不可)","返品(判断待ち)","補充等増減","理論在庫(現在)","実数","実数の日付","その日の理論在庫","ズレ"]];
-    getSkus().forEach(function(s){var x=C.st[s.id],c=cn[s.id],th=c&&c.n!=null?stockAsOf(s.id,c.date):"";r3.push([s.hin,s.name,s.color,s.size,s.jan||"",x.base,x.sold,x.retOk,x.retNg,x.retTbd||0,x.moves,x.stock,c&&c.n!=null?c.n:"",c&&c.n!=null?c.date:"",th,c&&c.n!=null?c.n-th:""])});
-    csvDl("在庫一覧_"+fnSafe(evName())+"_"+S.date+".csv",r3);
   }else{
     var r2=[["日付","区分","品番","カラー","サイズ","数量","実際の金額(税込)","メモ","入力者"]];
     getTx().slice().sort(function(a,b){return a.date<b.date?-1:a.date>b.date?1:(a.at||0)-(b.at||0)}).forEach(function(t){var s=C.sm[t.skuId];r2.push([t.date,(KMAP[t.kind]||{}).n||t.kind,s?s.hin:"",s?s.color:"",s?s.size:"",t.qty,t.amount==null?"":t.amount,t.memo||"",t.by||""])});
