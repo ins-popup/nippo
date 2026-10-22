@@ -199,7 +199,8 @@ function trash_(id) {
  *  - 同じメール・同じ日の再取り込みでも二重になりません（IDが日付＋拠点＋商品で決まるため）。
  *  - 初回だけ setupSquareTrigger を手動で1回実行（Gmailの許可が必要）。以後は30分ごとに自動で動きます。
  * ===================================================================== */
-var SQ_QUERY = 'from:noreply@messaging.squareup.com subject:(Square売上レポート) newer_than:14d';
+/* Square からは自動で届かないため、担当者が転送・送信したものも読む（送信元は MAIL_ALLOW で許可したものだけ反映） */
+var SQ_QUERY = 'subject:(Square売上レポート) newer_than:14d';
 
 function setupSquareTrigger() {
   ScriptApp.getProjectTriggers().forEach(function (t) { if (t.getHandlerFunction() === 'squareScan') ScriptApp.deleteTrigger(t); });
@@ -431,12 +432,13 @@ function squareScanCore_() {
   var docs = sqDocs_(), events = sqEvents_(docs), res = { done: 0, partial: 0, pending: 0, skipped: 0 }, threads = [];
   try { threads = GmailApp.search(SQ_QUERY, 0, 50); } catch (e) { return { ok: false, error: 'gmail:' + e }; }
   var msgs = [];
-  threads.forEach(function (t) { t.getMessages().forEach(function (m) { msgs.push({ id: m.getId(), subject: m.getSubject(), body: null, m: m }); }); });
+  threads.forEach(function (t) { t.getMessages().forEach(function (m) { msgs.push({ id: m.getId(), subject: m.getSubject(), from: m.getFrom(), body: null, m: m }); }); });
   msgs.sort(function (a, b) { return a.m.getDate() - b.m.getDate(); });
   msgs.forEach(function (x) {
     if (docs['sqseen/seen~' + x.id]) { res.skipped++; return; }
     if (String(x.subject).indexOf('Square売上レポート') < 0) return;
     x.body = x.m.getBody();
+    if (!mailAllowed_(x.from)) { sqPending_({ totals: {}, lines: [] }, x, '送信元（' + x.from + '）が許可されていません', [], docs); res.pending++; return; }
     try { var r = sqHandle_(x, docs, events); if (r) res[r.status === 'pending' ? 'pending' : r.status === 'partial' ? 'partial' : 'done']++; }
     catch (e) { Logger.log('square import failed ' + x.id + ': ' + e); }
   });
