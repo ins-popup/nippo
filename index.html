@@ -844,10 +844,14 @@ var AL_CS1={"ASSORT":"11000","BLACK":"02000","CAMO":"11221","CEMENT":"01006","GR
 var AL_CS2={"ASSORT":"00158","S":"00103","M":"00104","XS":"00102","L":"00105","11":"00129","F":"00116","XL":"00106","XXL":"00107","36":"00141","38":"00142","40":"00143"};
 
 var ALX_HEAD=["受注日付","指定納期","担当者コード","展示会コード","得意先コード","得意先略称","納品先コード","納品先略称","出庫倉庫コード","相手先NO","取引区分コード","手配区分","商品コード","ロットNO","商品名1","商品名2","JANコード","CS1コード","CS2コード","PLUコード","入数","ケース数","上代単価","PS区分コード","掛率","受注数量","受注単価","受注金額","明細備考1","明細備考2","明細メモ","注文NO","伝票備考","伝票メモ","拡張項目1","拡張項目2","拡張項目3","拡張項目4","拡張項目5","完了区分"];
-var ALX_FIELDS=[["tanto","担当者コード","例：000120",1],["tenji","展示会コード","例：WTFOLL",0],["tokui","得意先コード","例：107500",1],["tokuiName","得意先略称","例：現金売り",0],["nohin","納品先コード","",0],["soko","出庫倉庫コード","例：000001",1],["biko1","明細備考1","",0],["chumon","注文NO","",0],["denBiko","伝票備考","",0]];
+var ALX_FIELDS=[["tanto","担当者コード","例：000120",1],["tenji","展示会コード","例：WTFOLL",0],["tokui","得意先コード","例：107500",1],["tokuiName","得意先略称","例：現金売り",0],["nohin","納品先コード","",0],["soko","出庫倉庫コード","例：000001",1],["biko1","明細備考1","半角10文字（全角5文字）まで",0,10],["chumon","注文NO","",0],["denBiko","伝票備考","",0]];
 function alxKey(){var A=window.T8Data;return"t8alx:"+(A&&A.eventId?A.eventId():"t8")}
 function alxGet(){if(!S.alx){var o={};try{o=JSON.parse(localStorage.getItem(alxKey())||"{}")||{}}catch(e){}S.alx=o}return S.alx}
 function alxSet(k,v){var o=alxGet();o[k]=v;try{localStorage.setItem(alxKey(),JSON.stringify(o))}catch(e){}}
+/* アラジンの桁数（半角=1、全角=2）で数え、超えた分を切る */
+function alxW(t){var n=0;String(t||"").split("").forEach(function(ch){n+=/[\u0000-\u007f\uff61-\uff9f]/.test(ch)?1:2});return n}
+function alxCut(t,max){var o="",n=0;String(t||"").split("").some(function(ch){var w=/[\u0000-\u007f\uff61-\uff9f]/.test(ch)?1:2;if(n+w>max)return true;o+=ch;n+=w;return false});return o}
+function alxV(k){var o=alxGet(),f=ALX_FIELDS.filter(function(x){return x[0]===k})[0],v=String(o[k]||"").trim();return f&&f[4]?alxCut(v,f[4]):v}
 function alxYmd(d){return String(d||"").replace(/-/g,"")}
 function alxRows(b){
   var o=alxGet(),miss={},rows=[];
@@ -857,7 +861,7 @@ function alxRows(b){
       var s=l.s,c1=AL_CS1[String(s.color||"").trim().toUpperCase()]||"",c2=AL_CS2[String(s.size||"").trim().toUpperCase()]||"",rt=Math.round(+s.retail||0);
       if(!c1)miss["カラー「"+s.color+"」"]=1;if(!c2)miss["サイズ「"+s.size+"」"]=1;
       var rate=rt?Math.round(l.unit/rt*100):100,hin=String(s.hin||"");while(hin.length<13)hin+=" ";
-      rows.push([day,day,o.tanto||"",o.tenji||"",o.tokui||"",o.tokuiName||"",o.nohin||"","",o.soko||"","","01",0,hin,"","","","",c1,c2,"","","",rt,"0",(rate<100?" ":"")+(rate<10?" ":"")+rate,l.qty,l.unit,l.unit*l.qty,o.biko1||"","","",o.chumon||"",o.denBiko||"","","","","","","",""]);
+      rows.push([day,day,alxV("tanto"),alxV("tenji"),alxV("tokui"),alxV("tokuiName"),alxV("nohin"),"",alxV("soko"),"","01",0,hin,"","","","",c1,c2,"","","",rt,"0",(rate<100?" ":"")+(rate<10?" ":"")+rate,l.qty,l.unit,l.unit*l.qty,alxV("biko1"),"","",alxV("chumon"),alxV("denBiko"),"","","","","","",""]);
     });
   });
   return{rows:rows,miss:Object.keys(miss)};
@@ -918,7 +922,7 @@ function alxPanel(b){
    '<div class="muted" style="font-size:12.5px;line-height:1.7;margin:6px 0 8px">「受注データ外部伝票取込」の形式で保存します。受注日付は空欄なら期間の最後の日（日ごとに分けたときはその日）。入力した内容はこの端末に覚えておきます。</div>'+
    '<div class="row" style="flex-wrap:wrap;gap:10px">'+
    '<label class="f" style="flex:1 1 150px"><span>受注日付（空欄で自動）</span><input type="date" data-alx="date" value="'+esc(o.date||"")+'"></label>'+
-   ALX_FIELDS.map(function(f){return'<label class="f" style="flex:1 1 150px"><span>'+esc(f[1])+(f[3]?' <span style="color:var(--warn)">＊</span>':'')+'</span><input type="text" data-alx="'+f[0]+'" value="'+esc(o[f[0]]||"")+'" placeholder="'+esc(f[2])+'" autocomplete="off"></label>'}).join("")+
+   ALX_FIELDS.map(function(f){var v=String(o[f[0]]||""),over=f[4]&&alxW(v)>f[4];return'<label class="f" style="flex:1 1 150px"><span>'+esc(f[1])+(f[3]?' <span style="color:var(--warn)">＊</span>':'')+'</span><input type="text" data-alx="'+f[0]+'" value="'+esc(v)+'" placeholder="'+esc(f[2])+'" autocomplete="off"'+(over?' style="border-color:var(--warn)"':'')+'>'+(over?'<span class="h" style="color:var(--warn)">'+f[4]+'桁を超えた分は切って保存します（全角は2桁）：「'+esc(alxCut(v,f[4]))+'」</span>':'')+'</label>'}).join("")+
    '</div><div class="muted" style="font-size:12px;margin-top:6px">固定：取引区分 01（売上）／手配区分 0／PS区分 0。商品コード＝品番、CS1・CS2＝カラー・サイズのコード（アラジンの受注明細から作った表で変換）、掛率＝受注単価÷上代。</div></details>';
   if(r.miss.length)h+='<div class="pill warn" style="margin-top:8px;display:block;white-space:normal">アラジンのコードが分からない：'+esc(r.miss.join("、"))+'。保存したファイルのCS1・CS2コードを手で入れてください。</div>';
   return h;
