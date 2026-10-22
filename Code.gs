@@ -317,7 +317,7 @@ function sqDocs_() {
   var sh = sheet_(), n = sh.getLastRow(), m = {};
   if (n < 2) return m;
   sh.getRange(2, 1, n - 1, 4).getValues().forEach(function (r) {
-    if (!/^(skus|config|days|imports|sqseen)$/.test(r[1])) return;
+    if (!/^(skus|config|days|imports|sqseen|tx)$/.test(r[1])) return;
     try { m[r[0]] = JSON.parse(r[3]); } catch (e) {}
   });
   return m;
@@ -375,10 +375,15 @@ function sqApply_(rep, ev, msgId, docs) {
   var kind = rep.kind || 'sq', label = rep.label || 'Square', srcName = kind === 'ar' ? 'airregi' : kind === 'sc' ? 'squarecsv' : 'square';
   var ops = [], matched = [], unmatched = [], i = 0, pre = kind === 'ar' ? P + 'ar-' + rep.date + '-' : P + kind + '-' + rep.date + '-' + L + '-', day = P + rep.date;
   Object.keys(docs).forEach(function (k) { if (k.indexOf('tx/' + pre) === 0) ops.push({ op: 'delete', collection: 'tx', id: k.slice(3) }); });
-  var at0 = Date.parse(rep.date + 'T23:30:00+09:00') || Date.now(), acc = {};
+  var at0 = Date.parse(rep.date + 'T23:30:00+09:00') || Date.now(), acc = {}, racc = {};
   rep.lines.forEach(function (l) {
     var id = sqMatch_(ix, l);
-    if (l.qty <= 0 || l.amount == null || l.amount < 0) { unmatched.push({ name: l.name, variant: l.variant, qty: l.qty, amount: l.amount, why: '返品・マイナス（手入力してください）' }); return; }
+    if (l.qty < 0) {
+      if (!id) { unmatched.push({ name: l.name, variant: l.variant, qty: l.qty, amount: l.amount, why: '返品（商品マスタに見つかりません）' }); return; }
+      var r = racc[id] = racc[id] || { qty: 0, amount: 0 }; r.qty += -l.qty; if (l.amount != null) r.amount += Math.abs(l.incl ? l.amount / (1 + tax) : l.amount);
+      return;
+    }
+    if (l.qty === 0 || l.amount == null || l.amount < 0) { unmatched.push({ name: l.name, variant: l.variant, qty: l.qty, amount: l.amount, why: '金額がマイナス（手入力してください）' }); return; }
     if (!id) { unmatched.push({ name: l.name, variant: l.variant, qty: l.qty, amount: l.amount, why: l.name === '任意の金額' ? '金額だけの入力（商品なし）' : '商品マスタに見つかりません' }); return; }
     var a = acc[id] = acc[id] || { qty: 0, amount: 0 }; a.qty += l.qty; a.amount += (l.incl ? l.amount / (1 + tax) : l.amount);
   });
@@ -388,16 +393,25 @@ function sqApply_(rep, ev, msgId, docs) {
     ops.push({ op: 'set', collection: 'tx', id: pre + id, data: rec });
     matched.push({ id: id, qty: a.qty, amount: a.amount });
   });
+  /* 返品：再販できるかは担当者が画面で選ぶので「判断待ち」で入れる（選んだあとに読み直しても、選んだ区分は残す） */
+  var rets = 0;
+  Object.keys(racc).forEach(function (id) {
+    var sku = docs['skus/' + P + id] || {}, a = racc[id], prev = docs['tx/' + pre + 'r-' + id] || {}, std = (sku.sale != null ? Number(sku.sale) : 0) * a.qty;
+    var rec = { date: rep.date, skuId: id, kind: (prev.kind === 'ret_ok' || prev.kind === 'ret_ng') ? prev.kind : 'ret_tbd', qty: a.qty, at: at0 + 500 + (i++), by: label + '自動', memo: label + '自動取込（返品）', src: srcName };
+    if (a.amount && Math.abs(std - a.amount) > a.qty) rec.amount = Math.round(a.amount * (1 + tax));
+    ops.push({ op: 'set', collection: 'tx', id: pre + 'r-' + id, data: rec });
+    rets += a.qty;
+  });
   if (rep.totals && rep.totals.total != null) {
-    var cur = docs['days/' + day] || {}, reps = {}, tot = 0, cust = 0, disc = 0;
+    var cur = docs['days/' + day] || {}, reps = {}, tot = 0, cust = 0, disc = 0, retA = 0;
     Object.keys(cur.sqReports || {}).forEach(function (k) { reps[k] = cur.sqReports[k]; });
-    reps[L] = { total: rep.totals.total, cust: rep.totals.customers, disc: Math.round(Math.abs(rep.totals.disc || 0) * (1 + tax)), msg: msgId };
-    Object.keys(reps).forEach(function (k) { tot += reps[k].total || 0; cust += reps[k].cust || 0; disc += reps[k].disc || 0; });
+    reps[L] = { total: rep.totals.total, cust: rep.totals.customers, disc: Math.round(Math.abs(rep.totals.disc || 0) * (1 + tax)), ret: Math.round(Math.abs(rep.totals.ret || 0) * (1 + tax)), msg: msgId };
+    Object.keys(reps).forEach(function (k) { tot += reps[k].total || 0; cust += reps[k].cust || 0; disc += reps[k].disc || 0; retA += reps[k].ret || 0; });
     var dd = {}; Object.keys(cur).forEach(function (k) { dd[k] = cur[k]; });
-    dd.sqReports = reps; dd.reportTotal = tot; dd.disc = disc; if (cust > 0) dd.customers = cust;
+    dd.sqReports = reps; dd.reportTotal = tot; dd.disc = disc; dd.retAmt = retA; if (cust > 0) dd.customers = cust;
     ops.push({ op: 'set', collection: 'days', id: day, data: dd });
   }
-  var log = { msgId: msgId, loc: rep.loc, date: rep.date, event: ev.id, status: unmatched.length ? 'partial' : 'done', matched: matched.length, pcs: matched.reduce(function (s, x) { return s + x.qty; }, 0), unmatched: unmatched, totals: rep.totals || {}, label: label, at: Date.now() };
+  var log = { msgId: msgId, loc: rep.loc, date: rep.date, event: ev.id, status: unmatched.length ? 'partial' : 'done', matched: matched.length, pcs: matched.reduce(function (s, x) { return s + x.qty; }, 0), rets: rets, unmatched: unmatched, totals: rep.totals || {}, label: label, at: Date.now() };
   ops.push({ op: 'set', collection: 'imports', id: P + msgId, data: log });
   ops.push({ op: 'delete', collection: 'imports', id: 'pending~' + msgId });
   ops.push({ op: 'set', collection: 'sqseen', id: 'seen~' + msgId, data: { at: Date.now(), event: ev.id } });
@@ -519,8 +533,8 @@ function csvParse_(name, text) {
       var vr = cell(r, cV); if (SQ_PLAIN_VARIANT.test(vr)) vr = '';
       var loc = cell(r, cL), ev = cell(r, cE), isRet = q < 0 || net < 0 || /refund|返金|返品|払い戻し/i.test(ev);
       var key = [d, loc, nm, vr].join('\u0001'), a = agg[key];
-      if (!a) { a = agg[key] = { date: d, loc: loc, name: nm, variant: vr, amount: 0, sold: 0, ret: 0 }; list.push(a); }
-      if (isRet) a.ret += Math.abs(q); else { a.sold += q; a.amount += net; }
+      if (!a) { a = agg[key] = { date: d, loc: loc, name: nm, variant: vr, amount: 0, sold: 0, ret: 0, retAmt: 0 }; list.push(a); }
+      if (isRet) { a.ret += Math.abs(q); a.retAmt += Math.abs(net); } else { a.sold += q; a.amount += net; }
     });
     return { kind: 'sq_items', items: list };
   }
@@ -545,7 +559,7 @@ function csvReps_(name, parsed) {
       var k = it.date + '\u0001' + it.loc, r = by[k];
       if (!r) { r = by[k] = { ok: true, kind: 'sc', label: 'Square', loc: it.loc, date: it.date, totals: {}, lines: [] }; order.push(k); }
       if (it.sold > 0) r.lines.push({ name: it.name, variant: it.variant, qty: it.sold, amount: it.amount });
-      if (it.ret > 0) r.lines.push({ name: it.name, variant: it.variant, qty: -it.ret, amount: null });
+      if (it.ret > 0) r.lines.push({ name: it.name, variant: it.variant, qty: -it.ret, amount: it.retAmt || null });
     });
     order.forEach(function (k) { reps.push(by[k]); });
   }
