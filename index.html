@@ -825,7 +825,8 @@ function alCard(){
   h+='<dl class="kv" style="margin-top:12px"><dt>数量の合計</dt><dd>'+b.tot.qty+' 点</dd><dt>上代の合計（税抜）</dt><dd>'+yen(b.tot.retail)+'</dd><dt>金額の合計（税抜）</dt><dd class="big">'+yen(b.tot.amt)+'</dd><dt>（参考）税込</dt><dd>'+yen(b.tot.incl)+'</dd></dl>';
   var df=b.tot.amt-b.site;
   h+='<div class="muted" style="font-size:12.5px;line-height:1.7;margin-top:6px">アラジンに入れたあと、画面下の「数量／上代計」「金額」がこの合計と合っているか確認してください。売上タブの純売上高（税抜）との差：'+(df===0?'<span class="pill ok">なし</span>':'<span class="pill warn">'+(df>0?'+':'')+numf(df)+' 円</span>（割引や端数の丸めによる差の場合があります）')+'</div>';
-  h+='<div class="row" style="margin-top:12px"><button class="btn primary" data-act="alcopy">表をコピー（Excelに貼り付け）</button><button class="btn" data-act="alcsv">CSVで保存</button></div>';
+  h+='<div class="row" style="margin-top:12px"><button class="btn primary" data-act="alxsave">アラジン取込用ファイルを保存（.xlsx）</button><button class="btn" data-act="alcopy">表をコピー</button><button class="btn" data-act="alcsv">CSVで保存</button></div>';
+  h+=alxPanel(b);
   if(can)h+='<div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line)"><div style="font-size:13px;font-weight:700;margin-bottom:6px">アラジンに入力し終えたら</div><div class="row" style="align-items:flex-end"><label class="f" style="flex:1 1 180px"><span>受注NO（任意・メモ）</span><input type="text" id="al_no" value="'+esc(st.no)+'" placeholder="例：00017015" autocomplete="off"></label><button class="btn" data-act="almark">この期間を「出力済み」にする</button></div><div class="muted" style="font-size:12.5px;margin-top:6px">日付ごとに印が付きます。あとで入力が増えたり減ったりした日は「出力後に変更あり」と出るので、差分だけ入れ直せます。</div></div>';
   return h+'</div>';
 }
@@ -837,6 +838,90 @@ function alCopy(){
 function alCsv(){
   var b=alBuild();if(!b.groups.length){toast("この期間に売れた商品はありません",true);return}
   csvDl("アラジン入力用_"+evName()+"_"+b.from+(b.from===b.to?"":"-"+b.to)+".csv",alRowsOut(b));
+}
+/* ---- アラジン「受注データ外部伝票取込」用のExcel（.xlsx）を作る ---- */
+var AL_CS1={"ASSORT":"11000","BLACK":"02000","CAMO":"11221","CEMENT":"01006","GREY":"02002","CHILI.P":"03075","MUSTARD":"05001","SAPPHIRE":"07274","EMERALD":"06133","ONYX":"02297","D.NAVY":"07074","GREEN":"06000","KHAKI":"06004","TURQUOISE":"07011","LIME":"06002","BRICK":"04002","WHITE":"01000","YELLOW":"05000","NAVY":"07001","O.D":"06061","DESERT":"10018","BLUE":"07000","OFF":"01032","BROWN":"10000","F.GREY":"02069","CHARCOAL":"02004","BLUE GREY":"07019","BASIL":"06258","DARK BLUE":"07024","RED CLAY":"03104","SAND":"10004","DUSTY BLUE":"07033","DUSTY GRN":"06259","DUSTY RED":"03018","GRAY":"02001","TAUPE":"10035","RED":"03000","CLIMB BLK":"02324","CLIMBEROFF":"01165","R.CAMO BEI":"11786","R.CAMO OLV":"11787","LYNX BLACK":"02326","LYNX BEIGE":"10232","F.GRAY":"02310","BURLWOOD":"10988","GREEN SEED":"06242","SLATE BLUE":"07065","VERMILION":"04032","SLATE GRN":"06136","HYDROID":"11785","CLIMBER BK":"11343","GLITCH OXI":"11784","NATURAL":"01003","BLUE GRAY":"07309","OCHER":"05013","WINE":"03001","GREIGE":"01011","LEAF":"06005","FOG BLUE":"07320","OLIVE":"06001","WOODLAND.C":"11328","TIGER CAMO":"11322","CHOCO CHIP":"11782","GLITCH ONY":"11783","V.PURPLE":"08067","DUSTY GRAY":"02325"};
+var AL_CS2={"ASSORT":"00158","S":"00103","M":"00104","XS":"00102","L":"00105","11":"00129","F":"00116","XL":"00106","XXL":"00107","36":"00141","38":"00142","40":"00143"};
+
+var ALX_HEAD=["受注日付","指定納期","担当者コード","展示会コード","得意先コード","得意先略称","納品先コード","納品先略称","出庫倉庫コード","相手先NO","取引区分コード","手配区分","商品コード","ロットNO","商品名1","商品名2","JANコード","CS1コード","CS2コード","PLUコード","入数","ケース数","上代単価","PS区分コード","掛率","受注数量","受注単価","受注金額","明細備考1","明細備考2","明細メモ","注文NO","伝票備考","伝票メモ","拡張項目1","拡張項目2","拡張項目3","拡張項目4","拡張項目5","完了区分"];
+var ALX_FIELDS=[["tanto","担当者コード","例：000120",1],["tenji","展示会コード","例：WTFOLL",0],["tokui","得意先コード","例：107500",1],["tokuiName","得意先略称","例：現金売り",0],["nohin","納品先コード","",0],["soko","出庫倉庫コード","例：000001",1],["biko1","明細備考1","",0],["chumon","注文NO","",0],["denBiko","伝票備考","",0]];
+function alxKey(){var A=window.T8Data;return"t8alx:"+(A&&A.eventId?A.eventId():"t8")}
+function alxGet(){if(!S.alx){var o={};try{o=JSON.parse(localStorage.getItem(alxKey())||"{}")||{}}catch(e){}S.alx=o}return S.alx}
+function alxSet(k,v){var o=alxGet();o[k]=v;try{localStorage.setItem(alxKey(),JSON.stringify(o))}catch(e){}}
+function alxYmd(d){return String(d||"").replace(/-/g,"")}
+function alxRows(b){
+  var o=alxGet(),miss={},rows=[];
+  b.groups.forEach(function(g){
+    var day=alxYmd(o.date||g.date||b.to);
+    g.lines.forEach(function(l){
+      var s=l.s,c1=AL_CS1[String(s.color||"").trim().toUpperCase()]||"",c2=AL_CS2[String(s.size||"").trim().toUpperCase()]||"",rt=Math.round(+s.retail||0);
+      if(!c1)miss["カラー「"+s.color+"」"]=1;if(!c2)miss["サイズ「"+s.size+"」"]=1;
+      var rate=rt?Math.round(l.unit/rt*100):100,hin=String(s.hin||"");while(hin.length<13)hin+=" ";
+      rows.push([day,day,o.tanto||"",o.tenji||"",o.tokui||"",o.tokuiName||"",o.nohin||"","",o.soko||"","","01",0,hin,"","","","",c1,c2,"","","",rt,"0",(rate<100?" ":"")+(rate<10?" ":"")+rate,l.qty,l.unit,l.unit*l.qty,o.biko1||"","","",o.chumon||"",o.denBiko||"","","","","","","",""]);
+    });
+  });
+  return{rows:rows,miss:Object.keys(miss)};
+}
+function alxCol(i){var s="";i++;while(i>0){var m=(i-1)%26;s=String.fromCharCode(65+m)+s;i=Math.floor((i-1)/26)}return s}
+function alxXml(t){return String(t).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function alxSheet(rows){
+  var x='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>';
+  rows.forEach(function(r,ri){
+    x+='<row r="'+(ri+1)+'">';
+    r.forEach(function(v,ci){
+      if(v===""||v==null)return;var ref=alxCol(ci)+(ri+1);
+      if(typeof v==="number")x+='<c r="'+ref+'"><v>'+v+'</v></c>';
+      else x+='<c r="'+ref+'" t="inlineStr"'+(ri>0&&ci===10?' s="1"':'')+'><is><t xml:space="preserve">'+alxXml(v)+'</t></is></c>';
+    });
+    x+='</row>';
+  });
+  return x+'</sheetData></worksheet>';
+}
+function alxCrc(b){var t=alxCrc.t;if(!t){t=alxCrc.t=[];for(var n=0;n<256;n++){var c=n;for(var k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}}var crc=-1;for(var i=0;i<b.length;i++)crc=(crc>>>8)^t[(crc^b[i])&255];return(crc^-1)>>>0}
+function alxZip(files){
+  var enc=new TextEncoder(),parts=[],cen=[],off=0;
+  function u16(n){return[n&255,(n>>>8)&255]}function u32(n){return[n&255,(n>>>8)&255,(n>>>16)&255,(n>>>24)&255]}
+  files.forEach(function(f){
+    var name=enc.encode(f[0]),data=enc.encode(f[1]),crc=alxCrc(data);
+    var h=[].concat(u32(0x04034b50),u16(20),u16(0x0800),u16(0),u16(0),u16(0x21),u32(crc),u32(data.length),u32(data.length),u16(name.length),u16(0));
+    parts.push(new Uint8Array(h),name,data);
+    cen.push([[].concat(u32(0x02014b50),u16(20),u16(20),u16(0x0800),u16(0),u16(0),u16(0x21),u32(crc),u32(data.length),u32(data.length),u16(name.length),u16(0),u16(0),u16(0),u16(0),u32(0),u32(off)),name]);
+    off+=h.length+name.length+data.length;
+  });
+  var cs=0,start=off;cen.forEach(function(c){parts.push(new Uint8Array(c[0]),c[1]);cs+=c[0].length+c[1].length});
+  parts.push(new Uint8Array([].concat(u32(0x06054b50),u16(0),u16(0),u16(files.length),u16(files.length),u32(cs),u32(start),u16(0))));
+  return new Blob(parts,{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+}
+function alxXlsx(rows){
+  return alxZip([
+    ["[Content_Types].xml",'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>'],
+    ["_rels/.rels",'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>'],
+    ["xl/workbook.xml",'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Sheet1" sheetId="1" r:id="rId1"/></sheets></workbook>'],
+    ["xl/_rels/workbook.xml.rels",'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>'],
+    ["xl/styles.xml",'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="1"><font><sz val="11"/><name val="Calibri"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="49" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>'],
+    ["xl/worksheets/sheet1.xml",alxSheet(rows)]
+  ]);
+}
+function alxSave(){
+  var b=alBuild();if(!b.groups.length){toast("この期間に売れた商品はありません",true);return}
+  var r=alxRows(b),o=alxGet(),need=ALX_FIELDS.filter(function(f){return f[3]&&!String(o[f[0]]||"").trim()}).map(function(f){return f[1]});
+  if(need.length&&!confirm("未入力の項目があります："+need.join("、")+"\nこのまま保存しますか？（アラジンで取り込むときにエラーになる可能性があります）"))return;
+  var blob=alxXlsx([ALX_HEAD].concat(r.rows)),a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);a.download="受注データ外部伝票取込_"+evName()+"_"+b.from+(b.from===b.to?"":"-"+b.to)+".xlsx";
+  document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},800);
+  toast(r.rows.length+" 行のファイルを保存しました"+(r.miss.length?"（コードが分からない色・サイズがあります）":""),!!r.miss.length);
+  logEv("売上","アラジン取込用ファイルを保存："+md(b.from)+(b.from===b.to?"":"〜"+md(b.to))+"（"+r.rows.length+" 行）");
+}
+function alxPanel(b){
+  var o=alxGet(),r=alxRows(b);
+  var h='<details id="alxbox" style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line)"'+(S.alxOpen?' open':'')+'><summary style="cursor:pointer;font-size:13px;font-weight:700;min-height:32px;display:flex;align-items:center">アラジン取込用の設定（得意先・担当者・倉庫など）</summary>'+
+   '<div class="muted" style="font-size:12.5px;line-height:1.7;margin:6px 0 8px">「受注データ外部伝票取込」の形式で保存します。受注日付は空欄なら期間の最後の日（日ごとに分けたときはその日）。入力した内容はこの端末に覚えておきます。</div>'+
+   '<div class="row" style="flex-wrap:wrap;gap:10px">'+
+   '<label class="f" style="flex:1 1 150px"><span>受注日付（空欄で自動）</span><input type="date" data-alx="date" value="'+esc(o.date||"")+'"></label>'+
+   ALX_FIELDS.map(function(f){return'<label class="f" style="flex:1 1 150px"><span>'+esc(f[1])+(f[3]?' <span style="color:var(--warn)">＊</span>':'')+'</span><input type="text" data-alx="'+f[0]+'" value="'+esc(o[f[0]]||"")+'" placeholder="'+esc(f[2])+'" autocomplete="off"></label>'}).join("")+
+   '</div><div class="muted" style="font-size:12px;margin-top:6px">固定：取引区分 01（売上）／手配区分 0／PS区分 0。商品コード＝品番、CS1・CS2＝カラー・サイズのコード（アラジンの受注明細から作った表で変換）、掛率＝受注単価÷上代。</div></details>';
+  if(r.miss.length)h+='<div class="pill warn" style="margin-top:8px;display:block;white-space:normal">アラジンのコードが分からない：'+esc(r.miss.join("、"))+'。保存したファイルのCS1・CS2コードを手で入れてください。</div>';
+  return h;
 }
 async function alMark(){
   var b=alBuild(),A=window.T8Data,who=(S.who||"").trim();
@@ -1011,6 +1096,7 @@ document.addEventListener("click",function(e){
     case"retng":setRetKind(v,"ret_ng");break;
     case"alcopy":alCopy();break;
     case"alcsv":alCsv();break;
+    case"alxsave":alxSave();break;
     case"almark":alMark();break;
     case"arclear":S.ar=null;render.force=true;render();break;
     case"sqassign":doSq("assign",v);break;
@@ -1035,13 +1121,14 @@ document.addEventListener("input",function(e){
   else if(t.id==="amount"){f.amount=t.value}
   else if(t.id==="sq_admin"){S.sqAdmin=t.value}
   else if(t.id==="al_no"){alState();S.al.no=t.value}
+  else if(t.dataset&&t.dataset.alx){alxSet(t.dataset.alx,t.value)}
   else if(t.id==="memo"){f.memo=t.value}
   else if(t.id==="who"){S.who=t.value;try{localStorage.setItem("t8who",t.value)}catch(e){}}
   else if(t.dataset&&t.dataset.day){S.draft[S.date+":"+t.dataset.day]=t.value}
   else if(t.dataset&&t.dataset.count){S.draft["c:"+t.dataset.count]=t.value}
 });
 document.addEventListener("compositionstart",function(){S.comp=true});
-document.addEventListener("toggle",function(e){var t=e.target;if(t&&t.id==="manbox")S.manOpen=t.open;if(t&&t.id==="arhelp"){S.arHelpOpen=t.open;var mk=t.querySelector(".arhelp-mk");if(mk)mk.textContent=t.open?"説明を閉じる ▲":"説明 ▼"}},true);
+document.addEventListener("toggle",function(e){var t=e.target;if(t&&t.id==="manbox")S.manOpen=t.open;if(t&&t.id==="alxbox")S.alxOpen=t.open;if(t&&t.id==="arhelp"){S.arHelpOpen=t.open;var mk=t.querySelector(".arhelp-mk");if(mk)mk.textContent=t.open?"説明を閉じる ▲":"説明 ▼"}},true);
 document.addEventListener("compositionend",function(e){S.comp=false;var t=e.target;if(t&&t.id==="q"){S.q=t.value;var l=$("hinList");if(l)l.innerHTML=hinListHtml();else{render.force=true;render()}}});
 document.addEventListener("change",function(e){
   var t=e.target;
