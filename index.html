@@ -1412,7 +1412,7 @@ function arParse(name,text){
       var d=arDate(cell(r,cD)),nm=cell(r,cI);if(!d||!nm)return;
       var q=arNum(cell(r,cQ)),gross=cG>=0?arMoney(cell(r,cG)):0,disc=cX>=0?Math.abs(arMoney(cell(r,cX))):0;
       var net=cN>=0?arMoney(cell(r,cN)):gross-disc;
-      var vr=cell(r,cV);if(/^(regular|レギュラー|通常|標準)$/i.test(vr))vr="";
+      var vr=cell(r,cV);if(/^(regular|レギュラー|通常|定価|標準|詳細なし)$/i.test(vr))vr="";
       var parts=vr.split("/").map(function(x){return x.trim()}).filter(Boolean),loc=cell(r,cL),ev=cell(r,cE);
       var isRet=q<0||net<0||/refund|返金|返品|払い戻し/i.test(ev);
       var key=[d,loc,nm,vr].join("\u0001"),a=agg[key];

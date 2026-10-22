@@ -293,9 +293,11 @@ function sqSkuIndex_(docs, P) {
   });
   return ix;
 }
+/* Square で「バリエーションなし」を表す名前（色・サイズとしては使わない） */
+var SQ_PLAIN_VARIANT = /^(通常|定価|標準|レギュラー|regular|詳細なし)$/i;
 function sqUniq_(a) { var u = {}, o = []; a.forEach(function (x) { if (!u[x.id]) { u[x.id] = 1; o.push(x); } }); return o; }
 function sqMatch_(ix, line) {
-  var nm = sqKey_(line.name), v = String(line.variant || '').split('/').map(function (x) { return x.trim(); }).filter(Boolean), cand, id;
+  var nm = sqKey_(line.name), v = String(line.variant || '').split('/').map(function (x) { return x.trim(); }).filter(function (x) { return x && !SQ_PLAIN_VARIANT.test(x); }), cand, id;
   if (v.length >= 2) {
     var last = sqKey_(v[v.length - 1]), rest = sqKey_(v.slice(0, v.length - 1).join('/')), first = sqKey_(v[0]), rest2 = sqKey_(v.slice(1).join('/'));
     id = ix.full[nm + '|' + rest + '|' + last] || ix.full[nm + '|' + first + '|' + rest2];
@@ -432,7 +434,7 @@ function squareScanCore_() {
   var docs = sqDocs_(), events = sqEvents_(docs), res = { done: 0, partial: 0, pending: 0, skipped: 0 }, threads = [];
   try { threads = GmailApp.search(SQ_QUERY, 0, 50); } catch (e) { return { ok: false, error: 'gmail:' + e }; }
   var msgs = [];
-  threads.forEach(function (t) { t.getMessages().forEach(function (m) { msgs.push({ id: m.getId(), subject: m.getSubject(), from: m.getFrom(), body: null, m: m }); }); });
+  threads.forEach(function (t) { t.getMessages().forEach(function (m) { msgs.push({ id: m.getId(), subject: m.getSubject(), from: senderOf_(m), body: null, m: m }); }); });
   msgs.sort(function (a, b) { return a.m.getDate() - b.m.getDate(); });
   msgs.forEach(function (x) {
     if (docs['sqseen/seen~' + x.id]) { res.skipped++; return; }
@@ -464,6 +466,12 @@ function arMoney_(x) {
   return neg ? -n : n;
 }
 function arDate_(v) { var m = /(\d{4})\D+(\d{1,2})\D+(\d{1,2})/.exec(String(v || '')); return m ? m[1] + '-' + sqPad_(+m[2]) + '-' + sqPad_(+m[3]) : ''; }
+/* Google グループ経由のメールは From が signup@ins.fm に書き換わるので、元の送信元を見る */
+function senderOf_(m) {
+  var h = '';
+  try { h = m.getHeader('X-Original-From') || m.getHeader('X-Original-Sender') || ''; } catch (e) {}
+  return h || m.getFrom();
+}
 function mailAllowed_(from) {
   var props = PropertiesService.getScriptProperties(), list = String(props.getProperty('MAIL_ALLOW') || 'ins.fm,squareup.com').toLowerCase().split(/[,\s;]+/).filter(Boolean);
   var m = /<([^>]+)>/.exec(String(from || '')), addr = (m ? m[1] : String(from || '')).trim().toLowerCase(), dom = addr.indexOf('@') >= 0 ? addr.split('@').pop() : '';
@@ -508,7 +516,7 @@ function csvParse_(name, text) {
       var d = arDate_(cell(r, cD)), nm = cell(r, cI); if (!d || !nm) return;
       var q = arNum_(cell(r, cQ)), gross = cG >= 0 ? arMoney_(cell(r, cG)) : 0, disc = cX >= 0 ? Math.abs(arMoney_(cell(r, cX))) : 0;
       var net = cN >= 0 ? arMoney_(cell(r, cN)) : gross - disc;
-      var vr = cell(r, cV); if (/^(regular|レギュラー|通常|標準)$/i.test(vr)) vr = '';
+      var vr = cell(r, cV); if (SQ_PLAIN_VARIANT.test(vr)) vr = '';
       var loc = cell(r, cL), ev = cell(r, cE), isRet = q < 0 || net < 0 || /refund|返金|返品|払い戻し/i.test(ev);
       var key = [d, loc, nm, vr].join('\u0001'), a = agg[key];
       if (!a) { a = agg[key] = { date: d, loc: loc, name: nm, variant: vr, amount: 0, sold: 0, ret: 0 }; list.push(a); }
@@ -582,7 +590,7 @@ function csvMailScan_(docs, events, res) {
     try { atts = m.getAttachments(); } catch (e) { return; }
     var csvs = atts.filter(function (a) { return /\.csv$/i.test(String(a.getName())); });
     if (!csvs.length) return;
-    var allowed = mailAllowed_(m.getFrom()), recognized = 0;
+    var from = senderOf_(m), allowed = mailAllowed_(from), recognized = 0;
     csvs.forEach(function (a, i) {
       var name = String(a.getName()), parsed = null;
       try { parsed = csvParse_(name, csvText_(a)); } catch (e) { Logger.log('csv parse failed ' + name + ': ' + e); }
@@ -591,14 +599,14 @@ function csvMailScan_(docs, events, res) {
       var pm = { id: mid + '#' + i, subject: name };
       if (parsed.kind === 'air_sum') {
         if (!parsed.days.length) { sqPending_({ loc: '', date: '', totals: {}, lines: [], kind: 'air_sum', label: 'エアレジ', days: [] }, pm, '日別の行がありません', [], docs); res.pending++; return; }
-        if (!allowed) { sqPending_({ loc: '', date: parsed.days[0].date, totals: {}, lines: [], kind: 'air_sum', label: 'エアレジ', days: parsed.days }, pm, '送信元（' + m.getFrom() + '）が許可されていません', [], docs); res.pending++; return; }
+        if (!allowed) { sqPending_({ loc: '', date: parsed.days[0].date, totals: {}, lines: [], kind: 'air_sum', label: 'エアレジ', days: parsed.days }, pm, '送信元（' + from + '）が許可されていません', [], docs); res.pending++; return; }
         var r0 = arSumHandle_(parsed, pm, docs, events); res.done += r0.done ? 1 : 0; res.pending += r0.pending; return;
       }
       var cr = csvReps_(name, parsed);
       if (!cr.reps.length) { sqPending_({ loc: '', date: parsed.from ? parsed.from.slice(0, 4) + '-' + parsed.from.slice(4, 6) + '-' + parsed.from.slice(6, 8) : '', totals: {}, lines: [], kind: 'ar', label: 'エアレジ' }, pm, cr.notes.join(' / ') || '読み取れませんでした', [], docs); res.pending++; return; }
       cr.reps.forEach(function (rep, j) {
         var rm = { id: mid + '#' + i + '.' + j, subject: name };
-        if (!allowed) { sqPending_(rep, rm, '送信元（' + m.getFrom() + '）が許可されていません', [], docs); res.pending++; return; }
+        if (!allowed) { sqPending_(rep, rm, '送信元（' + from + '）が許可されていません', [], docs); res.pending++; return; }
         var r = sqHandleRep_(rep, rm, docs, events);
         res[r.status === 'pending' ? 'pending' : r.status === 'partial' ? 'partial' : 'done']++;
       });
