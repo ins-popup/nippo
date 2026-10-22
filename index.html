@@ -909,7 +909,6 @@ function alxXlsx(rows){
 function alxSave(){
   var b=alBuild();if(!b.groups.length){toast("この期間に売れた商品はありません",true);return}
   var r=alxRows(b),o=alxGet(),need=ALX_FIELDS.filter(function(f){return f[3]&&!String(o[f[0]]||"").trim()}).map(function(f){return f[1]});
-  if(need.length&&!confirm("未入力の項目があります："+need.join("、")+"\nこのまま保存しますか？（アラジンで取り込むときにエラーになる可能性があります）"))return;
   var blob=alxXlsx([ALX_HEAD].concat(r.rows)),a=document.createElement("a");
   a.href=URL.createObjectURL(blob);a.download="受注データ外部伝票取込_"+evName()+"_"+b.from+(b.from===b.to?"":"-"+b.to)+".xlsx";
   document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},800);
@@ -917,15 +916,41 @@ function alxSave(){
   logEv("売上","アラジン取込用ファイルを保存："+md(b.from)+(b.from===b.to?"":"〜"+md(b.to))+"（"+r.rows.length+" 行）");
 }
 function alxPanel(b){
-  var o=alxGet(),r=alxRows(b);
-  var h='<details id="alxbox" style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line)"'+(S.alxOpen?' open':'')+'><summary style="cursor:pointer;font-size:13px;font-weight:700;min-height:32px;display:flex;align-items:center">アラジン取込用の設定（得意先・担当者・倉庫など）</summary>'+
-   '<div class="muted" style="font-size:12.5px;line-height:1.7;margin:6px 0 8px">「受注データ外部伝票取込」の形式で保存します。受注日付は空欄なら期間の最後の日（日ごとに分けたときはその日）。入力した内容はこの端末に覚えておきます。</div>'+
+  var r=alxRows(b);
+  return r.miss.length?'<div class="pill warn" style="margin-top:8px;display:block;white-space:normal">アラジンのコードが分からない：'+esc(r.miss.join("、"))+'。保存したファイルのCS1・CS2コードを手で入れてください。</div>':'';
+}
+/* 保存のたびに、担当者・得意先・倉庫などを確認・入力する画面 */
+function alxOpen(){
+  var b=alBuild();if(!b.groups.length){toast("この期間に売れた商品はありません",true);return}
+  var o=alxGet(),old=$("alxdlg");if(old)old.remove();
+  var lines=0;b.groups.forEach(function(g){lines+=g.lines.length});
+  var auto=b.groups.length>1?"日ごとにその日":md(b.groups[0].date||b.to);
+  var el=document.createElement("div");el.id="alxdlg";
+  el.style.cssText="position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.45);display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow:auto";
+  el.innerHTML='<div class="card" role="dialog" aria-modal="true" aria-label="アラジン取込用ファイルの保存" style="max-width:560px;width:100%;margin:auto;background:var(--surface);backdrop-filter:none">'+
+   '<h2>アラジン取込用ファイルを保存</h2>'+
+   '<div class="muted" style="font-size:13px;line-height:1.7;margin-bottom:10px">'+md(b.from)+(b.from===b.to?'':'〜'+md(b.to))+'　'+lines+' 行／'+b.tot.qty+' 点／'+yen(b.tot.amt)+'（税抜）<br>今回の値を入れてください（前回の値が入っています）。</div>'+
    '<div class="row" style="flex-wrap:wrap;gap:10px">'+
-   '<label class="f" style="flex:1 1 150px"><span>受注日付（空欄で自動）</span><input type="date" data-alx="date" value="'+esc(o.date||"")+'"></label>'+
-   ALX_FIELDS.map(function(f){var v=String(o[f[0]]||""),over=f[4]&&alxW(v)>f[4];return'<label class="f" style="flex:1 1 150px"><span>'+esc(f[1])+(f[3]?' <span style="color:var(--warn)">＊</span>':'')+'</span><input type="text" data-alx="'+f[0]+'" value="'+esc(v)+'" placeholder="'+esc(f[2])+'" autocomplete="off"'+(over?' style="border-color:var(--warn)"':'')+'>'+(over?'<span class="h" style="color:var(--warn)">'+f[4]+'桁を超えた分は切って保存します（全角は2桁）：「'+esc(alxCut(v,f[4]))+'」</span>':'')+'</label>'}).join("")+
-   '</div><div class="muted" style="font-size:12px;margin-top:6px">固定：取引区分 01（売上）／手配区分 0／PS区分 0。商品コード＝品番、CS1・CS2＝カラー・サイズのコード（アラジンの受注明細から作った表で変換）、掛率＝受注単価÷上代。</div></details>';
-  if(r.miss.length)h+='<div class="pill warn" style="margin-top:8px;display:block;white-space:normal">アラジンのコードが分からない：'+esc(r.miss.join("、"))+'。保存したファイルのCS1・CS2コードを手で入れてください。</div>';
-  return h;
+   '<label class="f" style="flex:1 1 200px"><span>受注日付</span><input type="date" id="alxd_date" value="'+esc(o.date||"")+'"><span class="h">空欄なら'+esc(auto)+'</span></label>'+
+   ALX_FIELDS.map(function(f){return'<label class="f" style="flex:1 1 200px"><span>'+esc(f[1])+(f[3]?' <span style="color:var(--warn)">＊必須</span>':'')+'</span><input type="text" id="alxd_'+f[0]+'" value="'+esc(o[f[0]]||"")+'" placeholder="'+esc(f[2])+'" autocomplete="off"'+(f[4]?' data-max="'+f[4]+'"':'')+'><span class="h" id="alxdh_'+f[0]+'"></span></label>'}).join("")+
+   '</div><div id="alxd_err" style="color:var(--bad);font-size:13px;margin-top:8px"></div>'+
+   '<div class="row" style="margin-top:12px"><button class="btn primary" type="button" id="alxd_ok">この内容で保存</button><button class="btn" type="button" id="alxd_cancel">やめる</button></div></div>';
+  document.body.appendChild(el);
+  function close(){el.remove();document.removeEventListener("keydown",esc1)}
+  function esc1(e){if(e.key==="Escape")close()}
+  document.addEventListener("keydown",esc1);
+  el.addEventListener("click",function(e){if(e.target===el)close()});
+  function hint(){ALX_FIELDS.forEach(function(f){if(!f[4])return;var v=$("alxd_"+f[0]).value,h=$("alxdh_"+f[0]);h.textContent=alxW(v)>f[4]?f[4]+"桁を超えた分は切って保存します（全角は2桁）："+alxCut(v,f[4]):(f[2]||"");h.style.color=alxW(v)>f[4]?"var(--warn)":""})}
+  el.addEventListener("input",function(e){if(e.target&&e.target.style)e.target.style.borderColor="";var er=$("alxd_err");if(er)er.textContent="";hint()});hint();
+  $("alxd_cancel").onclick=close;
+  $("alxd_ok").onclick=function(){
+    var need=[];
+    ALX_FIELDS.forEach(function(f){var inp=$("alxd_"+f[0]),v=inp.value.trim();if(f[3]&&!v){need.push(f[1]);inp.style.borderColor="var(--bad)"}else inp.style.borderColor=""});
+    if(need.length){$("alxd_err").textContent="入力してください："+need.join("、");return}
+    alxSet("date",$("alxd_date").value);ALX_FIELDS.forEach(function(f){alxSet(f[0],$("alxd_"+f[0]).value.trim())});
+    close();alxSave();
+  };
+  var first=ALX_FIELDS.filter(function(f){return f[3]})[0];setTimeout(function(){var x=$("alxd_"+first[0]);if(x)x.focus()},50);
 }
 async function alMark(){
   var b=alBuild(),A=window.T8Data,who=(S.who||"").trim();
@@ -1100,7 +1125,7 @@ document.addEventListener("click",function(e){
     case"retng":setRetKind(v,"ret_ng");break;
     case"alcopy":alCopy();break;
     case"alcsv":alCsv();break;
-    case"alxsave":alxSave();break;
+    case"alxsave":alxOpen();break;
     case"almark":alMark();break;
     case"arclear":S.ar=null;render.force=true;render();break;
     case"sqassign":doSq("assign",v);break;
