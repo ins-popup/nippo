@@ -3,7 +3,7 @@
 (function () {
   "use strict";
   var cfg = window.T8_CONFIG || {};
-  var COLS = ["skus", "tx", "days", "counts", "photos", "log", "config", "imports", "sup"];
+  var COLS = ["skus", "tx", "days", "counts", "photos", "log", "config", "imports", "sup", "eq"];
   var store = {}, subs = [], code = "", inflight = 0, timer = null, scope = { role: "all", event: "" };
   /* イベント切替：イベントごとに、ドキュメントIDの先頭に「ev~イベントID~」を付けて同じ保存先に分けて入れる。
      最初のイベント（京都T8＝t8）は付けない（これまでのデータをそのまま使うため） */
@@ -142,6 +142,11 @@
     setCode: function (c) { code = c; },
     scope: function () { return scope; },
     /* Square自動取り込み：管理者用（未振り分けと取り込み履歴は、イベントに関係なく生のIDのまま返す） */
+    /* 全イベント分を生のIDのまま返す（管理者の「全店舗の備品」用。イベント限定の合言葉では自分のイベント分しか届かない） */
+    rawAll: function (name) { var o = store[name] || {}; return Object.keys(o).map(function (k) { return { id: k, data: o[k] }; }); },
+    /* イベントの接頭辞を付けずに書く（全店舗共通の設定用） */
+    supNotifyNow: function (admin) { return post({ action: "supnotify", admin: admin }).then(function (j) { return refresh().then(function () { return j; }); }); },
+    rawSet: function (name, id, data) { store[name] = store[name] || {}; if (data == null) delete store[name][id]; else store[name][id] = clone(data); notify(name); return send([data == null ? { op: "delete", collection: name, id: id } : { op: "set", collection: name, id: id, data: data }]); },
     rawImports: function () { var o = store.imports || {}; return Object.keys(o).map(function (k) { return { id: k, data: o[k] }; }); },
     squareNow: function (admin) { return post({ action: "squarenow", admin: admin }).then(function (j) { return refresh().then(function () { return j; }); }); },
     squareAssign: function (admin, id, ev) { return post({ action: "squareassign", admin: admin, id: id, event: ev }).then(function (j) { return refresh().then(function () { return j; }); }); },
