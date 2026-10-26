@@ -372,7 +372,8 @@ input[type=password]{min-height:52px;border-radius:16px;background:var(--surface
 .htbl table{min-width:0;width:100%}
 .htbl th,.htbl td{text-align:left!important;white-space:normal!important;position:static!important;font-variant-numeric:normal;line-height:1.6;vertical-align:top}
 .htbl td:first-child{min-width:7em;font-weight:700;background:none!important}
-.sup .supl{display:grid;gap:10px}
+.sup .supl{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(min(100%,340px),1fr))}
+#supadm th:nth-child(2){text-align:left}
 .sup .si{border:1px solid var(--line);border-radius:14px;padding:12px 14px;background:var(--surface)}
 .sup .si.red{border-color:var(--bad);box-shadow:inset 4px 0 0 var(--bad)}
 .sup .si.yel{box-shadow:inset 4px 0 0 var(--warn)}
@@ -1425,7 +1426,7 @@ function startDemo(on){
     S.dDays[d]=o});
   S.dCounts[sk[0].id]={id:sk[0].id,date:dates[4],n:stockAsOfRaw(sk[0].id,dates[4])};
   S.dCounts[sk[1].id]={id:sk[1].id,date:dates[4],n:stockAsOfRaw(sk[1].id,dates[4])+1};
-  S.dSup={"i-d1":{name:"ショッパー（小）",unit:"枚",mode:"cust",per:0.7,alert:30,init:120,order:0,at:1},"i-d2":{name:"ショッパー（大）",unit:"枚",mode:"cust",per:0.3,alert:15,init:30,order:1,at:2},"i-d3":{name:"ラッピング袋",unit:"枚",mode:"wrap",per:1,alert:10,init:40,order:2,at:3},"i-d4":{name:"リボン",unit:"本",mode:"wrap",per:1,alert:10,init:30,order:3,at:4}};
+  S.dSup={"i-d1":{name:"ショッパー（小）",unit:"枚",mode:"cust",per:0.7,alert:30,init:120,order:0,at:1},"i-d2":{name:"ショッパー（大）",unit:"枚",mode:"cust",per:0.3,alert:15,init:30,order:1,at:2},"i-d3":{name:"ラッピング袋",unit:"枚",mode:"wrap",per:1,alert:10,init:40,order:2,at:3},"i-d4":{name:"リボン",unit:"本",mode:"wrap",per:1,alert:10,init:18,order:3,at:4}};
   dates.forEach(function(d,di){if(S.dDays[d]&&S.dDays[d].customers!=null)S.dDays[d].wraps=[1,3,0,2,1,0,2][di]});
   S.dSup["e-d1"]={item:"i-d1",kind:"count",n:110,date:dates[3],at:pd(dates[3])+12*3600000,by:"田中"};
   S.dSup["e-d2"]={item:"i-d2",kind:"add",n:20,date:dates[4],at:pd(dates[4])+2*3600000,by:"大西"};
