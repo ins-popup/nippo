@@ -1,0 +1,262 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>備品管理システム（試作）｜POPUP</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#e3e3e4">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%276%27 fill=%27%231d1f17%27/%3E%3Crect x=%277%27 y=%2711%27 width=%2718%27 height=%2713%27 rx=%272%27 fill=%27%23d8ff1a%27/%3E%3Crect x=%2711%27 y=%277%27 width=%2710%27 height=%275%27 rx=%271.5%27 fill=%27none%27 stroke=%27%23d8ff1a%27 stroke-width=%272%27/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Noto+Sans+JP:wght@400;500;700&display=swap">
+<style>
+/* 備品管理システム（試作）：消耗品を本部倉庫と全店舗まとめて管理する。日報サイトと同じ合言葉・同じ保存先（データは別） */
+:root{
+  --bg:#e3e5e8; --surface:#f3f3f1; --surface2:#e8e8e6; --ink:#1b1c15; --muted:#6f7068;
+  --line:rgba(27,28,21,.12); --line2:rgba(27,28,21,.22); --accent:#1d1f17; --accent-ink:#ffffff; --accent-soft:#e9f7a0;
+  --ok:#3d7a1d; --ok-soft:#dcf3b4; --warn:#97680a; --warn-soft:#ffeaaa; --bad:#c2372b; --bad-soft:#ffd9d1; --lime:#d8ff1a;
+}
+*{box-sizing:border-box}
+html{color-scheme:light;background:#e3e3e4}
+body{margin:0;font-family:"Plus Jakarta Sans","Noto Sans JP","Hiragino Sans",system-ui,sans-serif;font-weight:500;font-size:16px;line-height:1.65;color:var(--ink);min-height:100vh;
+  background:radial-gradient(ellipse 520px 380px at -10% 8%,rgba(216,255,26,.20),transparent 70%),linear-gradient(180deg,#d6dfe5 0%,#e3e3e4 48%,#ecdccf 100%);background-attachment:fixed}
+main{max-width:1180px;margin:0 auto;padding:24px 16px 80px}
+.top{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;justify-content:space-between;margin-bottom:16px}
+.brand small{display:block;font-size:12px;letter-spacing:.14em;font-weight:700;color:var(--muted)}
+.brand b{display:block;font-size:30px;font-weight:800;letter-spacing:-.02em;line-height:1.15}
+.brand span{font-size:13px;color:var(--muted)}
+.card{background:rgba(255,255,255,.55);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.7);border-radius:22px;padding:18px;margin:0 0 14px;box-shadow:0 10px 30px rgba(27,28,21,.06)}
+h2{font-size:18px;margin:0 0 10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+h2::before{content:"";width:12px;height:12px;border-radius:50%;background:var(--lime);border:2px solid var(--ink)}
+h2 small{font-size:12.5px;font-weight:500;color:var(--muted)}
+.muted{color:var(--muted)}
+.btn{font:inherit;font-size:14.5px;font-weight:700;border:1px solid var(--line2);background:#fff;color:var(--ink);border-radius:999px;padding:9px 18px;min-height:44px;cursor:pointer}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.small{min-height:36px;padding:6px 14px;font-size:13px}
+.btn.danger{color:var(--bad);border-color:rgba(194,55,43,.4)}
+.btn:disabled{opacity:.5;cursor:default}
+.f{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:700}
+.f span{color:var(--ink)}
+input,select,textarea{font:inherit;font-size:16px;font-weight:500;border:1px solid var(--line2);border-radius:14px;padding:10px 12px;min-height:46px;background:#fff;color:var(--ink);width:100%}
+.grid{display:grid;gap:10px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.pill{display:inline-flex;align-items:center;font-size:12px;font-weight:700;border-radius:999px;padding:2px 10px;background:var(--surface2)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}.pill.bad{background:var(--bad-soft);color:var(--bad)}.pill.ok{background:var(--ok-soft);color:var(--ok)}
+.tablewrap{overflow-x:auto;border-radius:14px;border:1px solid var(--line);background:var(--surface)}
+table{border-collapse:separate;border-spacing:0;width:100%;font-size:14px}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th{background:var(--surface2);font-size:12px;color:var(--muted);position:sticky;top:0}
+th:first-child,td:first-child{text-align:left;position:sticky;left:0;background:var(--surface);white-space:normal;min-width:140px;border-right:1px solid var(--line)}
+th:first-child{background:var(--surface2)}
+td.z{color:rgba(27,28,21,.25)}
+td .code{display:block;font-size:11.5px;color:var(--muted)}
+.loc{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:10px}
+.lc{border:1px solid var(--line);border-radius:16px;padding:12px 14px;background:var(--surface)}
+.lc h3{margin:0 0 6px;font-size:15px;display:flex;justify-content:space-between;gap:8px}
+.lc .it{display:flex;justify-content:space-between;gap:8px;font-size:14px;padding:4px 0;border-top:1px dashed var(--line)}
+.lc.alert{border-color:rgba(194,55,43,.35)}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.tabs button{font:inherit;font-size:14px;font-weight:700;border:1px solid var(--line2);background:rgba(255,255,255,.6);border-radius:999px;padding:8px 16px;min-height:42px;cursor:pointer}
+.tabs button[aria-pressed="true"]{background:var(--accent);color:#fff;border-color:var(--accent)}
+.hist .h{display:grid;grid-template-columns:52px 1fr auto;gap:8px;align-items:center;font-size:13.5px;padding:8px 0;border-bottom:1px solid var(--line)}
+.hist .h .t{min-width:0}
+.hist .h small{display:block;color:var(--muted);font-size:12px}
+.note{background:var(--warn-soft);border-radius:12px;padding:10px 14px;font-size:13px;line-height:1.7;margin:10px 0}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--accent);color:var(--lime);font-weight:700;font-size:14px;border-radius:999px;padding:10px 20px;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,.2)}
+#toast.err{background:var(--bad);color:#fff}
+.gate{max-width:440px;margin:12vh auto 0}
+.trial{background:var(--accent-soft);border:1px solid rgba(29,31,23,.15);border-radius:14px;padding:8px 14px;font-size:13px;margin-bottom:12px}
+.tabs .cnt{display:inline-grid;place-items:center;min-width:20px;height:20px;border-radius:10px;background:var(--bad);color:#fff;font-size:11.5px;margin-left:4px;padding:0 5px}
+td small{display:block;font-size:10.5px;color:var(--muted);font-weight:500}
+td.bad{background:var(--bad-soft)!important;color:var(--bad)}td.warn{background:var(--warn-soft)!important}
+.legend{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:12px;margin-top:8px}.legend .sw{display:inline-block;width:14px;height:14px;border-radius:4px;vertical-align:-2px;margin-right:2px}.legend .sw.bad{background:var(--bad-soft);border:1px solid var(--bad)}.legend .sw.warn{background:var(--warn-soft);border:1px solid var(--warn)}
+.alertline{background:var(--bad-soft);color:var(--bad);border-radius:12px;padding:8px 12px;font-size:13.5px;font-weight:700;margin-bottom:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.okline{background:var(--ok-soft);color:var(--ok);border-radius:12px;padding:10px 14px;font-size:14px;font-weight:700}
+.seg{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.seg button{font:inherit;font-size:13.5px;font-weight:700;border:1px solid var(--line2);background:#fff;border-radius:12px;padding:8px 12px;min-height:42px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent);color:#fff;border-color:var(--accent)}
+.inlist{display:grid;gap:8px;margin-top:12px;grid-template-columns:repeat(auto-fill,minmax(min(100%,320px),1fr))}
+.inrow{display:grid;grid-template-columns:1fr 110px 28px;gap:8px;align-items:center;border:1px solid var(--line);border-radius:14px;padding:8px 10px;background:var(--surface)}
+.inrow .nm{display:flex;flex-direction:column;min-width:0}.inrow .nm small{font-size:12px;color:var(--muted)}
+.inrow input{min-height:44px;text-align:right}.inrow .u{font-size:13px;color:var(--muted)}
+.olist{display:grid;gap:8px}
+.orow{display:flex;justify-content:space-between;align-items:center;gap:10px;border:1px solid rgba(194,55,43,.35);background:#fff;border-radius:14px;padding:10px 12px}
+.orow.done{border-color:var(--line);background:var(--surface)}
+.orow small{display:block;font-size:12.5px;color:var(--muted)}.orow small.ok{color:var(--ok);font-weight:700}
+a{color:inherit}
+@media (max-width:640px){.brand b{font-size:24px}main{padding:16px 16px 80px}}
+</style>
+<main id="main"><div class="card">読み込み中です…</div></main>
+<div id="toast" hidden></div>
+<script src="config.js"></script>
+<script src="data.js"></script>
+<script>
+(function(){
+"use strict";
+/* 備品管理システム（試作）：ショッパー・ラッピング資材などの消耗品を、本部倉庫と全店舗まとめて管理する。
+   日報サイトの「備品」タブ（客数から自動で減らす方式）と見比べるための、別の作り（数えて入れる方式＋本部から送る＋発注一覧）。
+   保存先：bh コレクション（全店舗共通。IDは global~ で始める）。日報サイトの備品データとは別。 */
+var S={gate:"login",err:"",tab:"all",place:"",confirm:null,who:"",it:{},mvKind:"count"};
+var HQ="本部倉庫";
+var KIND={count:"数えた残数",in:"入荷（業者から届いた）",send:"本部から店舗へ送った",use:"使った・ロス"};
+function $(id){return document.getElementById(id)}
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+function today(){var d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+function md(s){var a=String(s||"").split("-");return a.length===3?(+a[1])+"/"+(+a[2]):s}
+function rid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+var tt;function toast(m,err){var t=$("toast");t.textContent=m;t.className=err?"err":"";t.hidden=false;clearTimeout(tt);tt=setTimeout(function(){t.hidden=true},3400)}
+try{S.who=localStorage.getItem("t8who")||"";S.place=localStorage.getItem("bh_place")||""}catch(e){}
+function docs(){var o={};(window.T8Data.rawAll("bh")||[]).forEach(function(r){if(r.id.indexOf("global~")===0)o[r.id.slice(7)]=r.data});return o}
+function items(){var o=docs();return Object.keys(o).filter(function(k){return k.indexOf("i-")===0}).map(function(k){return Object.assign({id:k},o[k])}).sort(function(a,b){return(a.order||0)-(b.order||0)||(a.at||0)-(b.at||0)})}
+function recs(){var o=docs();return Object.keys(o).filter(function(k){return k.indexOf("r-")===0}).map(function(k){return Object.assign({id:k},o[k])}).sort(function(a,b){return a.date<b.date?-1:a.date>b.date?1:(a.at||0)-(b.at||0)})}
+function conf(){return docs().conf||{}}
+function put(id,data){return window.T8Data.rawSet("bh","global~"+id,data)}
+/* 店舗＝日報サイトのイベント（会期中・これからのもの）＋これまでに記録のある場所 */
+function stores(){
+  var A=window.T8Data,set={},out=[],td=today();
+  (A.events()||[]).forEach(function(e){var n=e.name||e.id;if(!n||set[n])return;if(e.end&&e.end<td&&!recs().some(function(r){return r.place===n}))return;set[n]=1;out.push(n)});
+  recs().forEach(function(r){[r.place,r.to].forEach(function(p){if(p&&p!==HQ&&!set[p]){set[p]=1;out.push(p)}})});
+  (conf().extra||[]).forEach(function(p){if(p&&!set[p]&&p!==HQ){set[p]=1;out.push(p)}});
+  return out;
+}
+function places(){return[HQ].concat(stores())}
+/* 残数：その場所の最後の「数えた残数」から、その後の入荷・受け取り・使用を足し引き */
+function stockOf(itemId,place){
+  var rs=recs().filter(function(r){return r.item===itemId&&(r.place===place||(r.kind==="send"&&r.to===place))}),last=null;
+  rs.forEach(function(r){if(r.kind==="count"&&r.place===place)last=r});
+  var n=last?+last.n:0,started=!!last;
+  rs.forEach(function(r){if(last&&(r.date<last.date||(r.date===last.date&&(r.at||0)<=(last.at||0))))return;var q=+r.n||0;
+    if(r.kind==="in"&&r.place===place){n+=q;started=true}else if(r.kind==="use"&&r.place===place){n-=q;started=true}else if(r.kind==="send"){if(r.place===place){n-=q;started=true}if(r.to===place){n+=q;started=true}}});
+  return{n:n,has:started,last:last};
+}
+function lineOf(it,place){return place===HQ?(+it.hqAlert||0):(+it.alert||0)}
+function lowList(){var out=[];items().forEach(function(it){places().forEach(function(p){var s=stockOf(it.id,p),al=lineOf(it,p);if(s.has&&al>0&&s.n<=al)out.push({it:it,place:p,n:s.n,al:al})})});return out}
+function ordered(it,place){var o=(conf().ordered||{})[it.id+"|"+place];return o||null}
+
+function render(){
+  var a=document.activeElement,fid=a&&a.id,sy=window.scrollY;
+  if(S.gate){$("main").innerHTML=gateHtml();return}
+  if(a&&fid&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)&&!render.force){S.pending=true;return}
+  render.force=false;S.pending=false;
+  var low=lowList().filter(function(x){return!ordered(x.it,x.place)}).length;
+  var h='<div class="top"><div class="brand"><small>POPUP ｜ SUPPLIES ・ 試作</small><b>備品管理システム</b><span>ショッパー・ラッピング資材などを、本部倉庫と全店舗まとめて管理</span></div><div class="row"><label class="f" style="flex-direction:row;align-items:center;gap:8px"><span style="white-space:nowrap">入力者</span><input type="text" id="who" value="'+esc(S.who)+'" placeholder="あなたの名前" style="max-width:180px"></label><a class="btn small" href="./" style="text-decoration:none;display:inline-flex;align-items:center">日報サイトへ</a></div></div>';
+  h+='<div class="trial">試作です。日報サイトの「備品」タブとは別のデータで動いています。見比べて、使いやすい方を残します。</div>';
+  h+='<div class="tabs">'+[["all","全体の一覧"],["input","店舗で入力"],["order","発注"+(low?' <b class="cnt">'+low+'</b>':'')],["hist","記録"],["set","品目・設定"]].map(function(t){return'<button data-act="tab" data-v="'+t[0]+'" aria-pressed="'+(S.tab===t[0])+'">'+t[1]+'</button>'}).join("")+'</div>';
+  h+=({all:vAll,input:vInput,order:vOrder,hist:vHist,set:vSet})[S.tab]();
+  $("main").innerHTML=h;
+  if(fid){var el=$(fid);if(el)el.focus()}window.scrollTo(0,sy);
+}
+function gateHtml(){
+  var h='<div class="gate"><div class="brand" style="margin-bottom:18px"><small>POPUP ｜ SUPPLIES ・ 試作</small><b>備品管理システム</b><span>日報サイトと同じ合言葉で入れます</span></div><div class="card">';
+  if(S.gate==="loading")return h+'<h2>読み込み中です</h2></div></div>';
+  if(S.gate==="noaccess")return h+'<h2>このページは使えません</h2><p class="muted" style="font-size:14px">イベント限定の合言葉では入れません。社内スタッフ用の合言葉で入ってください。</p><button class="btn" data-act="logout">合言葉を入れ直す</button></div></div>';
+  return h+'<h2>合言葉を入力してください</h2>'+(S.err?'<p style="color:var(--bad);font-size:14px;margin:0 0 8px">'+esc(S.err)+'</p>':'')+'<label class="f"><span>合言葉</span><input type="password" id="code" autocomplete="current-password"></label><div style="margin-top:12px"><button class="btn primary" style="width:100%;min-height:52px" data-act="login">入る</button></div></div></div>';
+}
+function noItems(){return'<div class="card"><h2>まだ品目がありません</h2><p class="muted" style="font-size:14px;margin:0 0 10px">「品目・設定」で、ショッパー・ラッピング資材などの品目と通知ラインを登録してください。</p><button class="btn primary" data-act="tab" data-v="set">品目を登録する</button></div>'}
+function cell(it,p){var s=stockOf(it.id,p),al=lineOf(it,p);if(!s.has)return'<td class="z">—</td>';var lv=al>0&&s.n<=al?"bad":(al>0&&s.n<=al*1.5?"warn":"");return'<td class="'+lv+'"><b>'+s.n+'</b>'+(s.last?'<small>'+md(s.last.date)+'</small>':'')+'</td>'}
+function vAll(){
+  var it=items(),pl=places();if(!it.length)return noItems();
+  var low=lowList();
+  var h='<div class="card"><h2>全体の一覧 <small>品目 × 場所。数字は残数、下の小さな日付は最後に数えた日</small></h2>';
+  if(low.length)h+='<div class="alertline">通知ライン以下：'+low.map(function(x){return esc(x.place)+'の'+esc(x.it.name)+'（'+x.n+esc(x.it.unit||"")+'）'}).join("、")+' <button class="btn small" data-act="tab" data-v="order">発注へ</button></div>';
+  h+='<div class="tablewrap"><table><thead><tr><th>品目</th>'+pl.map(function(p){return'<th>'+esc(p)+'</th>'}).join("")+'<th>合計</th></tr></thead><tbody>';
+  it.forEach(function(x){var t=0;pl.forEach(function(p){var s=stockOf(x.id,p);if(s.has)t+=s.n});h+='<tr><td><b>'+esc(x.name)+'</b><span class="code">'+esc(x.unit||"")+' ・ 店舗の通知ライン '+esc(x.alert||0)+' ／ 本部 '+esc(x.hqAlert||0)+'</span></td>'+pl.map(function(p){return cell(x,p)}).join("")+'<td><b>'+t+'</b></td></tr>'});
+  h+='</tbody></table></div><div class="legend"><span class="sw bad"></span>通知ライン以下 <span class="sw warn"></span>通知ラインの1.5倍以下 <span class="muted">—＝まだ数えていない</span></div></div>';
+  return h;
+}
+function vInput(){
+  var it=items(),pl=places();if(!it.length)return noItems();
+  var p=S.place&&pl.indexOf(S.place)>=0?S.place:"";
+  var h='<div class="card"><h2>店舗で入力 <small>場所を選んで、数えた残数などを入れます</small></h2><div class="grid g2"><label class="f"><span>場所</span><select id="in_place"><option value="">選んでください</option>'+pl.map(function(x){return'<option'+(x===p?' selected':'')+'>'+esc(x)+'</option>'}).join("")+'</select></label><label class="f"><span>日付</span><input type="date" id="in_date" value="'+esc(S.date||today())+'"></label></div>';
+  if(!p)return h+'<div class="muted" style="font-size:13.5px;margin-top:10px">場所を選ぶと、品目ごとの入力欄が出ます。</div></div>';
+  var kinds=p===HQ?["count","in","send","use"]:["count","in","use"];
+  if(kinds.indexOf(S.mvKind)<0)S.mvKind="count";
+  h+='<div class="seg">'+kinds.map(function(k){return'<button data-act="kind" data-v="'+k+'" aria-pressed="'+(S.mvKind===k)+'">'+KIND[k]+'</button>'}).join("")+'</div>';
+  if(S.mvKind==="send")h+='<label class="f" style="margin-top:8px"><span>送り先の店舗</span><select id="in_to"><option value="">選んでください</option>'+stores().map(function(x){return'<option'+(x===S.to?' selected':'')+'>'+esc(x)+'</option>'}).join("")+'</select></label>';
+  h+='<div class="inlist">'+it.map(function(x){var s=stockOf(x.id,p);return'<label class="inrow"><span class="nm"><b>'+esc(x.name)+'</b><small>いま '+(s.has?s.n+esc(x.unit||""):"未入力")+'</small></span><input type="number" inputmode="numeric" min="0" data-q="'+x.id+'" placeholder="'+(S.mvKind==="count"?"残数":"数")+'"><span class="u">'+esc(x.unit||"")+'</span></label>'}).join("")+'</div>';
+  h+='<div class="muted" style="font-size:12.5px;margin:6px 0 10px">'+({count:"数えた残数を入れると、その場所の残数がこの数になります。空欄の品目は変わりません。",in:"業者から届いた数を入れます。残数に足されます。",send:"本部倉庫から店舗へ送った数を入れます。本部から引いて、送り先に足します。",use:"使った・なくした数を入れます（ふだんは「数えた残数」だけで大丈夫です）。"})[S.mvKind]+'</div>';
+  h+='<button class="btn primary" data-act="save">まとめて保存</button></div>';
+  return h;
+}
+function vOrder(){
+  var it=items();if(!it.length)return noItems();
+  var low=lowList(),c=conf();
+  var h='<div class="card"><h2>発注 <small>通知ライン以下の品目</small></h2>';
+  if(!low.length)h+='<div class="okline">いま発注が必要な品目はありません。</div>';
+  else h+='<div class="olist">'+low.map(function(x){var o=ordered(x.it,x.place),k=x.it.id+"|"+x.place;return'<div class="orow'+(o?' done':'')+'"><div><b>'+esc(x.place)+'　'+esc(x.it.name)+'</b><small>残り '+x.n+esc(x.it.unit||"")+'（通知ライン '+x.al+'）'+(x.it.lot?'・発注単位 '+esc(x.it.lot):'')+(x.it.vendor?'・発注先 '+esc(x.it.vendor):'')+'</small>'+(o?'<small class="ok">発注済み '+md(o.date)+(o.by?'・'+esc(o.by):'')+'</small>':'')+'</div>'+(o?'<button class="btn small" data-act="unorder" data-v="'+esc(k)+'">発注済みを外す</button>':'<button class="btn small primary" data-act="order" data-v="'+esc(k)+'">発注した</button>')+'</div>'}).join("")+'</div>';
+  var pend=low.filter(function(x){return!ordered(x.it,x.place)});
+  h+='<div style="margin-top:14px"><div style="font-size:13.5px;font-weight:700;margin-bottom:6px">発注担当への連絡</div><label class="f"><span>発注担当のメールアドレス（複数のときは「,」で区切る）</span><input type="text" id="ord_to" value="'+esc(c.to||"")+'" placeholder="例：order@ins.fm"></label><div class="row" style="margin-top:8px"><button class="btn" data-act="saveto">保存</button>'+(pend.length&&c.to?'<a class="btn primary" style="text-decoration:none;display:inline-flex;align-items:center" href="'+mailto(pend,c.to)+'">発注のお願いメールを作る（'+pend.length+'件）</a>':'')+'</div><div class="muted" style="font-size:12px;margin-top:6px">試作では、押すとメールの下書きが開きます（自動送信は、この形に決まったら付けます）。「発注した」を押すと、その品目は一覧で「発注済み」になり、入荷や数え直しで通知ラインを上回ると外れます。</div></div>';
+  return h+'</div>';
+}
+function mailto(list,to){var body="発注担当者さま\n\n備品の残りが少なくなっています。発注をお願いします。\n\n"+list.map(function(x){return"・"+x.place+"　"+x.it.name+"　残り "+x.n+(x.it.unit||"")+"（通知ライン "+x.al+"）"+(x.it.lot?"　発注単位 "+x.it.lot:"")}).join("\n")+"\n\n"+(S.who?S.who:"");return"mailto:"+encodeURIComponent(to).replace(/%2C/g,",")+"?subject="+encodeURIComponent("【備品】発注のお願い（"+list.length+"件）")+"&body="+encodeURIComponent(body)}
+function vHist(){
+  var it={},rs=recs().slice().reverse();items().forEach(function(x){it[x.id]=x});
+  var h='<div class="card hist"><h2>記録 <small>新しい順・'+rs.length+' 件</small></h2>';
+  if(!rs.length)return h+'<div class="muted" style="font-size:14px">まだ記録がありません。</div></div>';
+  rs.slice(0,300).forEach(function(r){var x=it[r.item]||{name:"（削除した品目）"},u=esc(x.unit||"");
+    var t=r.kind==="count"?esc(r.place)+'：数えた残数 '+r.n+u:r.kind==="in"?esc(r.place)+'：入荷 ＋'+r.n+u:r.kind==="send"?esc(r.place)+' → '+esc(r.to)+'：'+r.n+u:esc(r.place)+'：使った・ロス −'+r.n+u;
+    h+='<div class="h"><b>'+md(r.date)+'</b><div class="t">'+esc(x.name)+'　'+t+'<small>'+esc(r.by||"")+'</small></div><button class="btn small danger" data-act="del" data-v="'+r.id+'">'+(S.confirm==="r:"+r.id?'もう一度押すと取消':'取消')+'</button></div>'});
+  return h+'</div>';
+}
+function vSet(){
+  var it=items(),f=S.it,c=conf();
+  var h='<div class="card"><h2>品目 <small>管理する消耗品</small></h2>';
+  if(it.length)h+='<div class="tablewrap"><table><thead><tr><th>品目</th><th>単位</th><th>店舗の通知ライン</th><th>本部の通知ライン</th><th>発注単位</th><th>発注先</th><th></th></tr></thead><tbody>'+it.map(function(x){return'<tr><td><b>'+esc(x.name)+'</b></td><td>'+esc(x.unit||"")+'</td><td>'+esc(x.alert||0)+'</td><td>'+esc(x.hqAlert||0)+'</td><td>'+esc(x.lot||"")+'</td><td>'+esc(x.vendor||"")+'</td><td><button class="btn small" data-act="edit" data-v="'+x.id+'">変更</button></td></tr>'}).join("")+'</tbody></table></div>';
+  h+='<div class="grid g2" style="margin-top:12px">'+
+   '<label class="f"><span>品目名</span><input type="text" id="it_name" value="'+esc(f.name||"")+'" placeholder="例：ショッパー（大）"></label>'+
+   '<label class="f"><span>単位</span><input type="text" id="it_unit" value="'+esc(f.unit||"")+'" placeholder="例：枚"></label>'+
+   '<label class="f"><span>店舗の通知ライン（この数以下で発注へ）</span><input type="number" inputmode="numeric" min="0" id="it_alert" value="'+esc(f.alert==null?"":f.alert)+'" placeholder="例：30"></label>'+
+   '<label class="f"><span>本部倉庫の通知ライン</span><input type="number" inputmode="numeric" min="0" id="it_hq" value="'+esc(f.hqAlert==null?"":f.hqAlert)+'" placeholder="例：200"></label>'+
+   '<label class="f"><span>発注単位（任意）</span><input type="text" id="it_lot" value="'+esc(f.lot||"")+'" placeholder="例：500枚／箱"></label>'+
+   '<label class="f"><span>発注先（任意）</span><input type="text" id="it_vendor" value="'+esc(f.vendor||"")+'" placeholder="例：〇〇紙器"></label></div>'+
+   '<div class="row" style="margin-top:12px"><button class="btn primary" data-act="itsave">'+(f.id?'この内容で変更':'品目を追加')+'</button>'+(f.id?'<button class="btn" data-act="itnew">やめる</button><button class="btn danger" data-act="itdel" data-v="'+f.id+'">'+(S.confirm==="i:"+f.id?'もう一度押すと削除':'この品目を削除')+'</button>':'')+'</div></div>';
+  h+='<div class="card"><h2>場所 <small>本部倉庫＋日報サイトのイベント（会期中・これから）</small></h2><div class="muted" style="font-size:13.5px;margin-bottom:8px">'+places().map(esc).join("／")+'</div><div class="row"><input type="text" id="pl_new" placeholder="ほかの場所を足す（例：大阪事務所）" style="max-width:320px"><button class="btn" data-act="pladd">足す</button></div></div>';
+  return h;
+}
+function val(id){var e=$(id);return e?String(e.value).trim():""}
+function err(e){console.error(e);toast("保存できませんでした："+(e&&e.message||"通信を確認してください"),1)}
+function setConf(patch){return put("conf",Object.assign({},conf(),patch))}
+function act(a,v){
+  render.force=true;
+  if(a==="login")return login();
+  if(a==="logout"){try{localStorage.removeItem("t8code")}catch(e){}S.gate="login";return render()}
+  if(a==="tab"){S.tab=v;S.confirm=null;return render()}
+  if(a==="kind"){S.mvKind=v;return render()}
+  if(a==="save"){
+    var p=val("in_place"),d=val("in_date")||today(),k=S.mvKind,to=val("in_to");if(!p)return toast("場所を選んでください",1);
+    if(k==="send"&&!to)return toast("送り先の店舗を選んでください",1);
+    var ops=[],t0=Date.now();[].forEach.call(document.querySelectorAll("input[data-q]"),function(e,i){if(e.value==="")return;var n=Math.round(+e.value);if(isNaN(n)||n<0)return;if(k!=="count"&&n===0)return;var r={item:e.dataset.q,kind:k,n:n,place:p,date:d,by:S.who,at:t0+i};if(k==="send")r.to=to;ops.push(r)});
+    if(!ops.length)return toast("数を1つ以上入れてください",1);
+    var pr=Promise.resolve();ops.forEach(function(r){pr=pr.then(function(){return put("r-"+rid(),r)})});
+    pr.then(function(){clearOrdered(ops);toast(ops.length+" 品目を保存しました");render.force=true;render()},err);return;
+  }
+  if(a==="order"||a==="unorder"){var o=Object.assign({},conf().ordered||{});if(a==="order")o[v]={date:today(),by:S.who};else delete o[v];setConf({ordered:o}).then(function(){toast(a==="order"?"発注済みにしました":"発注済みを外しました");render.force=true;render()},err);return}
+  if(a==="saveto"){var to2=val("ord_to");setConf({to:to2}).then(function(){toast("保存しました");render.force=true;render()},err);return}
+  if(a==="edit"){var x=docs()[v];if(!x)return;S.it=Object.assign({id:v},x);return render()}
+  if(a==="itnew"){S.it={};S.confirm=null;return render()}
+  if(a==="itsave"){var nm=val("it_name");if(!nm)return toast("品目名を入れてください",1);var f=S.it;
+    var d2={name:nm,unit:val("it_unit"),alert:Math.round(+val("it_alert")||0),hqAlert:Math.round(+val("it_hq")||0),lot:val("it_lot"),vendor:val("it_vendor"),order:f.order!=null?f.order:items().length,at:f.at||Date.now()};
+    put(f.id||("i-"+rid()),d2).then(function(){toast(f.id?"品目を変更しました":"品目を追加しました");S.it={};render.force=true;render()},err);return}
+  if(a==="itdel"){if(S.confirm!=="i:"+v){S.confirm="i:"+v;return render()}S.confirm=null;var ps=[put(v,null)];recs().filter(function(r){return r.item===v}).forEach(function(r){ps.push(put(r.id,null))});Promise.all(ps).then(function(){toast("品目を削除しました");S.it={};render.force=true;render()},err);return}
+  if(a==="del"){if(S.confirm!=="r:"+v){S.confirm="r:"+v;return render()}S.confirm=null;put(v,null).then(function(){toast("取り消しました");render.force=true;render()},err);return}
+  if(a==="pladd"){var np=val("pl_new");if(!np)return;var ex=(conf().extra||[]).slice();if(ex.indexOf(np)<0&&places().indexOf(np)<0)ex.push(np);setConf({extra:ex}).then(function(){toast("場所を足しました");render.force=true;render()},err);return}
+}
+/* 入荷・数え直しで通知ラインを上回ったら「発注済み」を外す */
+function clearOrdered(ops){var o=Object.assign({},conf().ordered||{}),ch=false;ops.forEach(function(r){[r.place,r.to].forEach(function(p){if(!p)return;var k=r.item+"|"+p,it=docs()[r.item];if(o[k]&&it){var s=stockOf(r.item,p);if(s.n>lineOf(it,p)){delete o[k];ch=true}}})});if(ch)setConf({ordered:o}).catch(function(){})}
+document.addEventListener("click",function(e){var el=e.target.closest&&e.target.closest("[data-act]");if(!el)return;if(el.tagName!=="A")e.preventDefault();act(el.dataset.act,el.dataset.v)});
+document.addEventListener("keydown",function(e){if(e.key==="Enter"&&e.target&&e.target.id==="code")login();if(e.key==="Enter"&&e.target&&e.target.dataset&&e.target.dataset.q){e.preventDefault();var all=[].slice.call(document.querySelectorAll("input[data-q]")),i=all.indexOf(e.target);if(all[i+1])all[i+1].focus()}});
+document.addEventListener("input",function(e){var t=e.target;if(t.id==="who"){S.who=t.value;try{localStorage.setItem("t8who",t.value)}catch(x){}}});
+document.addEventListener("change",function(e){var t=e.target;if(t.id==="in_place"){S.place=t.value;try{localStorage.setItem("bh_place",t.value)}catch(x){}render.force=true;render()}if(t.id==="in_date")S.date=t.value;if(t.id==="in_to")S.to=t.value});
+document.addEventListener("focusout",function(){setTimeout(function(){if(S.pending){var a=document.activeElement;if(!(a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)))render()}},60)});
+async function login(code){
+  var A=window.T8Data,c=code||val("code");if(!c)return;
+  if(!A||!A.configured()){S.err="設定（config.js）がありません";S.gate="login";return render()}
+  A.setCode(c);S.gate="loading";render();
+  try{await A.connect();try{localStorage.setItem("t8code",c)}catch(x){}
+    if(A.scope().role==="event"){S.gate="noaccess";return render()}
+    S.gate=null;A.db.collection("bh").onSnapshot(function(){render()});A.db.collection("config").onSnapshot(function(){render()});render.force=true;render();
+  }catch(e){S.gate="login";S.err=e&&e.code==="unauthorized"?"合言葉が違います。":"データを読み込めませんでした。通信を確認してください。";render.force=true;render()}
+}
+var saved="";try{saved=localStorage.getItem("t8code")||""}catch(e){}
+if(saved)login(saved);else render();
+})();
+</script>

@@ -3,7 +3,7 @@
 (function () {
   "use strict";
   var cfg = window.T8_CONFIG || {};
-  var COLS = ["skus", "tx", "days", "counts", "photos", "log", "config", "imports", "sup", "eq"];
+  var COLS = ["skus", "tx", "days", "counts", "photos", "log", "config", "imports", "sup", "eq", "bh"];
   var store = {}, subs = [], code = "", inflight = 0, timer = null, scope = { role: "all", event: "" };
   /* イベント切替：イベントごとに、ドキュメントIDの先頭に「ev~イベントID~」を付けて同じ保存先に分けて入れる。
      最初のイベント（京都T8＝t8）は付けない（これまでのデータをそのまま使うため） */
