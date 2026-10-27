@@ -385,6 +385,21 @@ input[type=password]{min-height:52px;border-radius:16px;background:var(--surface
 .sup .sm{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;font-size:12.5px;color:var(--muted);margin-top:6px}
 .sup .sb,.sup .sf{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;align-items:flex-end}
 .sup .sf .f{flex:1 1 160px}
+.suphd{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.suphd h2{margin:0}
+.supsum{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;font-size:13px;color:var(--muted);margin:10px 0 4px}
+.supsub{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:18px 0 8px;padding-top:12px;border-top:1px solid var(--line)}.supsub b{font-size:15px}.supsub span{font-size:12.5px;color:var(--muted)}
+.supt{display:flex;flex-direction:column}
+.supr{display:grid;grid-template-columns:minmax(0,1fr) 88px 110px 200px;gap:6px 12px;align-items:center;padding:8px 4px;border-bottom:1px solid var(--line);font-size:14.5px}
+.supr.hd{font-size:12px;color:var(--muted);padding-top:0;padding-bottom:6px}
+.supr .n{font-weight:700;min-width:0;overflow-wrap:anywhere}.supr .v{text-align:right;white-space:nowrap}.supr .v b{font-size:17px}.supr .v small{font-size:12px;color:var(--muted);margin-left:2px}
+.supr .d{font-size:13px;color:var(--ink);text-align:center}.supr .b{display:flex;gap:6px;justify-content:flex-end}.supr .b .btn{min-height:36px;padding:0 12px;font-size:13px}
+.supr .e{grid-column:1/-1}.supr.on{background:var(--surface2);border-radius:10px}.supr .e .sf{margin-top:2px}
+.btn.ghost{background:transparent}
+.supbk{margin-top:8px}.supbr{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:8px 2px;border-bottom:1px solid var(--line);cursor:text}
+.supbr .n{display:flex;flex-direction:column;min-width:0}.supbr .n b{font-size:14.5px;overflow-wrap:anywhere}.supbr .n small{font-size:12px;color:var(--muted)}
+.supbr .i{display:flex;align-items:center;gap:6px;flex:none}.supbr input{width:96px;min-height:42px;text-align:right;font-size:16px}.supbr .i small{width:1.6em;font-size:12.5px;color:var(--muted)}
+@media (min-width:900px){.supt{display:grid;grid-template-columns:1fr 1fr;column-gap:32px}.supr{grid-template-columns:minmax(0,1fr) 76px 92px auto}.supr.hd{display:none}.supr .d{font-size:12px;color:var(--muted)}.supr .d::before{content:"数えた日 "}}
+@media (max-width:560px){.supr{grid-template-columns:minmax(0,1fr) auto auto;gap:0 10px;padding:7px 2px}.supr.hd{display:none}.supr .n{grid-column:1;grid-row:1;font-size:14px}.supr .d{grid-column:1;grid-row:2;text-align:left;font-size:11.5px;color:var(--muted)}.supr .d::before{content:"数えた日 "}.supr .v{grid-column:2;grid-row:1/3}.supr .b{grid-column:3;grid-row:1/3;gap:4px}.supr .b .btn{min-height:36px;padding:0 10px;font-size:12.5px}.supr .e{grid-row:3;margin-top:6px}}
 .suph{margin-top:10px}.suph summary{cursor:pointer;font-size:13px;font-weight:700;min-height:36px;display:flex;align-items:center}
 .suph .sr{display:grid;grid-template-columns:48px 1fr auto auto auto;gap:8px;align-items:center;font-size:13px;padding:6px 0;border-bottom:1px solid var(--line)}
 .postbar{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;justify-content:space-between;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
@@ -808,7 +823,7 @@ function vHelp(){
    h3('在庫')+'<p class="hp">商品ごとの理論在庫（投入数 − 販売 ＋ 返品（再販できる）＋ 補充など）を見ます。棚卸で数えた点数を入れると、ズレが出ます。備品（ショッパー・ラッピング資材）は「備品」タブで見ます。</p>'+
    h3('履歴')+'<p class="hp">だれが、いつ、何を入れた・取り消したかが新しい順に並びます。日付を押すとその日の画面に移ります。</p>');
   h+=sec("sup","備品（ショッパー・ラッピング資材）","備品タブ。残りは客数・ラッピング件数から自動で減る",
-   ol(['閉店後、売上タブのその日の詳細で<b>客数</b>と<b>ラッピング件数</b>を入れる（ここから使った数を自動で計算します）','補充が届いたら、備品タブで「<b>＋ 補充が届いた</b>」を押して、届いた数を入れる','閉店後や週1回、残りを数えて「<b>数えた残数を入れる</b>」。目安が実際の数に戻ります'+go("sup","備品")])+
+   ol(['閉店後、売上タブのその日の詳細で<b>客数</b>と<b>ラッピング件数</b>を入れる（ここから使った数を自動で計算します）','補充が届いたら、備品タブで「<b>＋ 補充が届いた</b>」を押して、届いた数を入れる','閉店後や週1回、残りを数えて「<b>まとめて数える</b>」で、数えた品目の残数を入れて保存（1品目だけなら、その品目の「数えた残数を入れる」／「数えた」）。目安が実際の数に戻ります'+go("sup","備品")])+
    tbl(['表示','意味'],[['十分','通知ラインより多い'],['少なめ','通知ラインの1.5倍以下'],['要発注','通知ライン以下。確認タブにも出ます。管理者が送り先を設定していれば、毎朝、発注担当にメールが届きます']])+
    note('残数は「目安」です。会計1件でショッパーを2枚使ったときなどはズレるので、ときどき数えて合わせてください。日付は画面上の日付で記録されます。'));
   h+=sec("coupon","クーポンを使ったとき","枚数と金額を、その日の詳細に入れる",
@@ -825,7 +840,7 @@ function vHelp(){
    h3('商品マスタを更新する')+ol(['管理者タブ「商品マスタを更新する」で、登録先のイベント名を確かめる','管理者コードを入れ、商品マスタのExcelを選んで「登録する」','在庫タブで合計の点数と商品数を確かめる'])+
    note('同じ品番・カラー・サイズは上書き、新しい商品は追加。売上の履歴は消えません。')+
    h3('イベントの設定・追加')+'<p class="hp">会期・予算・税率・「Squareの拠点名」・社外メンバー用の合言葉を設定します。追加するとそのイベントに切り替わるので、続けて商品マスタを登録します。</p>'+
-   h3('備品の品目・通知')+ul(['「備品の品目」：品目名・単位・減り方（会計1件ごと／ラッピング1件ごと／自動では減らさない）・1件あたりの数・通知ライン・会期はじめの数を登録。イベントごとに登録します','ショッパーに大・小があるときは、1件あたりの数を割合で（例：小 0.7、大 0.3）','「全店舗の備品」：すべてのイベントの残数をまとめて見られます。ここで発注担当への通知メールの送り先を設定します'])+h3('レジ・ドロアーなどの保管備品')+'<p class="hp">機材や什器は、別のページ「<a href="kizai.html">保管備品の管理</a>」で、どこに何台あるかを管理します。品目を登録し、店舗へ送った・戻ってきた・修理に出したときに「移動」を記録すると、置き場所ごとの数が出ます。</p>'+h3('メールの取り込み（Square）')+ul(['「今すぐ取り込む」：30分を待たずに読み取る','「未振り分け」：イベントが決まらないもの・許可していない送信元のもの。イベントを選んで取り込むか、破棄する','自動で反映するのは ins.fm と squareup.com からのメールだけ'])+go("admin","管理者")+
+   h3('備品の品目・通知')+ul(['「備品の品目」：品目名・単位・減り方（会計1件ごと／ラッピング1件ごと／自動では減らさない）・1件あたりの数・通知ライン・会期はじめの数を登録。イベントごとに登録します','ショッパーに大・小があるときは、1件あたりの数を割合で（例：小 0.7、大 0.3）','「全店舗の備品」：すべてのイベントの残数をまとめて見られます。ここで発注担当への通知メールの送り先を設定します'])+h3('レジ・ドロアーなどの保管備品')+'<p class="hp">機材や什器は、備品管理ページの「<a href="bihin.html#eq">保管備品</a>」で、どこに何台あるかを管理します。<b>管理者コードで入ったときだけ</b>使えます（スタッフの合言葉では見えず、変更もできません）。品目を登録し、店舗へ送った・戻ってきた・修理に出したときに「移動」を記録すると、置き場所ごとの数が出ます。</p>'+h3('メールの取り込み（Square）')+ul(['「今すぐ取り込む」：30分を待たずに読み取る','「未振り分け」：イベントが決まらないもの・許可していない送信元のもの。イベントを選んで取り込むか、破棄する','自動で反映するのは ins.fm と squareup.com からのメールだけ'])+go("admin","管理者")+
    note('管理者コードは、販売代行さんや社外メンバーには伝えません。'));
   return h;
 }
@@ -847,7 +862,7 @@ function supCalcRaw(it,ev,days,start){
   var al=+it.alert||0,lv=al<=0?"ok":(est<=al?"red":(est<=al*1.5?"yel":"ok")); /* 通知ライン0＝通知しない品目 */
   var gap=null;if(last){var prev=null;ev.forEach(function(e){if(e.kind==="count"&&e!==last)prev=e});var pb=prev?+prev.n:(+it.init||0),pf=prev?prev.date:addDays(start,-1),pa=prev?(prev.at||0):0,a2=0,u2=0;
     ev.forEach(function(e){if(e.kind==="add"&&(e.date>pf||(e.date===pf&&(e.at||0)>pa))&&(e.date<last.date||(e.date===last.date&&(e.at||0)<(last.at||0))))a2+=+e.n||0});
-    Object.keys(days).forEach(function(d){if(d>pf&&d<=last.date)u2+=supUseRaw(it,days[d])});gap=+last.n-Math.round(pb+a2-u2)}
+    Object.keys(days).forEach(function(d){if(d>pf&&d<=last.date)u2+=supUseRaw(it,days[d])});if(prev||+it.init>0)gap=+last.n-Math.round(pb+a2-u2)}
   return{est:est,last:last,avg:avg,left:avg>0?Math.floor(Math.max(0,est)/avg):null,lv:lv,gap:gap,ev:ev};
 }
 function supCalc(it){return supCalcRaw(it,supEvs(it.id),getDays(),S.cfg.start)}
@@ -886,23 +901,41 @@ async function putSup(id,data){
   try{var ref=S.db.doc("sup/"+id);if(data==null)await ref.delete();else await ref.set(data);return true}catch(e){dbErr(e);return false}
 }
 function supRid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+function supAuto(x){return x.mode==="cust"||x.mode==="wrap"||+x.alert>0}
+function supPill(x,c){return!(+x.alert>0)?'':c.lv==="red"?'<span class="pill bad">要発注</span>':c.lv==="yel"?'<span class="pill warn">少なめ</span>':'<span class="pill ok">十分</span>'}
+function supEditForm(x,c,ed){return'<div class="sf"><label class="f"><span>'+(ed.kind==="add"?'届いた数':'数えた残数')+'（'+mdw(S.date)+'）</span><input type="number" inputmode="numeric" id="supn" min="0" placeholder="'+(ed.kind==="add"?'例：100':'例：'+Math.max(0,c.est))+'"></label><button class="btn primary" data-act="supsave">保存</button><button class="btn" data-act="supx">やめる</button></div>'}
 function supCard(){
   var it=supItems(),can=writable();
   if(!it.length){if(S.demo)return"";return'<div class="card"><h2>備品 <small>ショッパー・ラッピング資材</small></h2><div class="muted" style="font-size:13.5px;line-height:1.7">まだ品目が登録されていません。'+(scoped()?'管理者に登録を頼んでください。':'管理者タブの「備品の品目」で登録すると、ここに残数が出ます。')+'</div></div>'}
-  var h='<div class="card sup"><h2>備品 <small>ショッパー・ラッピング資材の残数（目安）</small></h2><div class="supl">';
-  it.forEach(function(x){var c=supCalc(x),ed=S.supEdit&&S.supEdit.id===x.id?S.supEdit:null;
-    h+='<div class="si '+c.lv+'"><div class="sh"><div class="sn"><b>'+esc(x.name)+'</b><span>'+esc(SUP_MODE[x.mode]||"")+((x.mode==="cust"||x.mode==="wrap")&&+x.per!==1?'（1件 '+esc(x.per)+esc(x.unit||"")+'）':'')+'</span></div>'+
-      '<div class="sv"><b class="num">'+c.est+'</b><small>'+esc(x.unit||"")+'</small></div></div>'+
-      '<div class="sm">'+(!(+x.alert>0)?'<span class="pill">通知なし</span>':c.lv==="red"?'<span class="pill bad">要発注</span>':c.lv==="yel"?'<span class="pill warn">少なめ</span>':'<span class="pill ok">十分</span>')+
-      (c.left!=null?'<span>あと約 '+c.left+' 日分（1日 約'+(Math.round(c.avg*10)/10)+esc(x.unit||"")+'）</span>':'')+
-      (+x.alert>0?'<span>通知ライン '+esc(x.alert)+esc(x.unit||"")+'</span>':'')+
-      (c.last?'<span>最後に数えた日 '+md(c.last.date)+'（'+c.last.n+esc(x.unit||"")+(c.gap?'・目安との差 '+(c.gap>0?'+':'')+c.gap:'')+'）</span>':'<span>まだ数えていません</span>')+'</div>';
-    if(can){
-      if(ed)h+='<div class="sf"><label class="f"><span>'+(ed.kind==="add"?'届いた数':'数えた残数')+'（'+mdw(S.date)+'）</span><input type="number" inputmode="numeric" id="supn" min="0" placeholder="'+(ed.kind==="add"?'例：100':'例：'+Math.max(0,c.est))+'"></label><button class="btn primary" data-act="supsave">保存</button><button class="btn" data-act="supx">やめる</button></div>';
-      else h+='<div class="sb"><button class="btn small" data-act="supadd" data-v="'+x.id+'">＋ 補充が届いた</button><button class="btn small" data-act="supcnt" data-v="'+x.id+'">数えた残数を入れる</button></div>';
-    }
-    h+='</div>'});
-  h+='</div><div class="muted" style="font-size:12px;line-height:1.7;margin-top:8px">残数（目安）＝ 最後に数えた残数 ＋ その後に届いた数 − その後に使った目安。使った目安は、売上タブの「客数」「ラッピング件数」から計算します。数えた残数を入れると、実際の数に戻ります。日付は上の日付です。</div>';
+  var auto=it.filter(supAuto),other=it.filter(function(x){return!supAuto(x)}),cs={};it.forEach(function(x){cs[x.id]=supCalc(x)});
+  var nRed=it.filter(function(x){return cs[x.id].lv==="red"}).length,nYel=it.filter(function(x){return cs[x.id].lv==="yel"}).length;
+  var lastD="";it.forEach(function(x){var l=cs[x.id].last;if(l&&l.date>lastD)lastD=l.date});
+  var h='<div class="card sup"><div class="suphd"><h2>備品 <small>残数は目安です</small></h2>'+(can&&!S.supBulk?'<button class="btn small" data-act="supbulk">まとめて数える</button>':'')+'</div>';
+  h+='<div class="supsum">'+(nRed?'<span class="pill bad">要発注 '+nRed+'</span>':'')+(nYel?'<span class="pill warn">少なめ '+nYel+'</span>':'')+(!nRed&&!nYel?'<span class="pill ok">発注が必要な備品はありません</span>':'')+'<span>最後に数えた日 '+(lastD?md(lastD):'まだ数えていません')+'</span></div>';
+  if(S.supBulk){
+    h+='<div class="supbk"><div class="muted" style="font-size:13px;line-height:1.7;margin-bottom:6px">数えた品目だけ、残数を入れてください（空欄の品目はそのまま）。'+esc(mdw(S.date))+'の記録になります。</div>';
+    h+=it.map(function(x){var c=cs[x.id];return'<label class="supbr"><span class="n"><b>'+esc(x.name)+'</b><small>目安 '+c.est+esc(x.unit||"")+'</small></span><span class="i"><input type="number" inputmode="numeric" min="0" data-supb="'+x.id+'" value="'+esc((S.supBD||{})[x.id]||"")+'" placeholder=""><small>'+esc(x.unit||"")+'</small></span></label>'}).join("");
+    h+='<div class="row" style="margin-top:12px"><button class="btn primary" data-act="supbsave">入れた分を保存</button><button class="btn" data-act="supbx">やめる</button></div></div>';
+    return h+'</div>';
+  }
+  if(auto.length){
+    h+='<div class="supsub"><b>自動で減る備品</b><span>客数・ラッピング件数から計算</span></div><div class="supl">';
+    auto.forEach(function(x){var c=cs[x.id],ed=S.supEdit&&S.supEdit.id===x.id?S.supEdit:null;
+      h+='<div class="si '+c.lv+'"><div class="sh"><div class="sn"><b>'+esc(x.name)+'</b><span>'+esc(SUP_MODE[x.mode]||"")+((x.mode==="cust"||x.mode==="wrap")&&+x.per!==1?'（1件 '+esc(x.per)+esc(x.unit||"")+'）':'')+'</span></div>'+
+        '<div class="sv"><b class="num">'+c.est+'</b><small>'+esc(x.unit||"")+'</small></div></div>'+
+        '<div class="sm">'+supPill(x,c)+(c.left!=null?'<span>あと約 '+c.left+' 日分</span>':'')+(+x.alert>0?'<span>通知ライン '+esc(x.alert)+esc(x.unit||"")+'</span>':'')+
+        '<span>'+(c.last?'最後に数えた日 '+md(c.last.date)+'（'+c.last.n+esc(x.unit||"")+(c.gap?'・差 '+(c.gap>0?'+':'')+c.gap:'')+'）':'まだ数えていません')+'</span></div>';
+      if(can)h+=ed?supEditForm(x,c,ed):'<div class="sb"><button class="btn small" data-act="supadd" data-v="'+x.id+'">＋ 補充が届いた</button><button class="btn small" data-act="supcnt" data-v="'+x.id+'">数えた残数を入れる</button></div>';
+      h+='</div>'});
+    h+='</div>';
+  }
+  if(other.length){
+    h+='<div class="supsub"><b>そのほかの備品</b><span>自動では減りません。数えたときに入れます</span></div><div class="supt"><div class="supr hd"><span>品目</span><span>数</span><span>最後に数えた日</span><span></span></div>';
+    other.forEach(function(x){var c=cs[x.id],ed=S.supEdit&&S.supEdit.id===x.id?S.supEdit:null;
+      h+='<div class="supr'+(ed?' on':'')+'"><span class="n">'+esc(x.name)+'</span><span class="v num">'+(c.last||c.est?'<b>'+c.est+'</b><small>'+esc(x.unit||"")+'</small>':'<span class="muted">—</span>')+'</span><span class="d">'+(c.last?md(c.last.date):'<span class="muted">まだ</span>')+'</span><span class="b">'+(can&&!ed?'<button class="btn small" data-act="supcnt" data-v="'+x.id+'">数えた</button><button class="btn small ghost" data-act="supadd" data-v="'+x.id+'" aria-label="'+esc(x.name)+'の補充">＋補充</button>':'')+'</span>'+(ed?'<div class="e">'+supEditForm(x,c,ed)+'</div>':'')+'</div>'});
+    h+='</div>';
+  }
+  h+='<div class="muted" style="font-size:12px;line-height:1.7;margin-top:10px">残数（目安）＝ 最後に数えた残数 ＋ その後に届いた数 − その後に使った目安（売上タブの「客数」「ラッピング件数」から計算）。週1回など、ときどき「まとめて数える」で実際の数に合わせてください。日付は上の日付で記録されます。</div>';
   var rec=[];it.forEach(function(x){supEvs(x.id).forEach(function(e){rec.push([x,e])})});
   rec.sort(function(a,b){return(b[1].at||0)-(a[1].at||0)});
   if(rec.length)h+='<details class="suph"'+(S.supHist?' open':'')+' id="suphist"><summary>最近の記録（'+rec.length+' 件）</summary>'+rec.slice(0,15).map(function(r){var e=r[1];return'<div class="sr"><span class="num">'+md(e.date)+'</span><span>'+esc(r[0].name)+'</span><span>'+(e.kind==="add"?'補充 ＋'+e.n:'数えた '+e.n)+esc(r[0].unit||"")+'</span><span class="muted">'+esc(e.by||"")+'</span>'+(can?'<button class="btn small danger" data-act="supdel" data-v="'+e.id+'">取消</button>':'')+'</div>'}).join("")+'</details>';
@@ -912,7 +945,6 @@ function supCard(){
 function vSup(){
   var h=supCard();
   if(!supItems().length&&!S.demo&&!scoped())h+='<div class="card"><h2>はじめに</h2><ol class="hs" style="margin:0"><li>管理者タブの「<b>備品の品目</b>」で、ショッパー・ラッピング資材などの品目と通知ラインを登録します</li><li>管理者タブの「<b>全店舗の備品</b>」で、発注担当のメールアドレスを登録すると、残りが少なくなったときに毎朝メールが届きます</li><li>閉店後に売上タブで<b>客数</b>と<b>ラッピング件数</b>を入れると、残りが自動で減ります</li></ol><div class="row" style="margin-top:10px"><button class="btn primary" data-act="tab" data-v="admin">管理者タブへ</button><button class="btn" data-act="supdemo">見本データで試す</button></div></div>';
-  if(!scoped())h+='<div class="card"><h2>保管備品の管理 <small>レジ・ドロアー・什器など</small></h2><div class="muted" style="font-size:13.5px;line-height:1.7;margin-bottom:10px">機材や什器が、本部倉庫・どの店舗・修理中などのどこに何台あるかを管理する別のページです。同じ合言葉で入れます。</div><a class="btn" href="kizai.html" style="text-decoration:none;display:inline-flex;align-items:center">保管備品の管理を開く →</a></div>';
   return h;
 }
 function supAdmin(){
@@ -1298,7 +1330,7 @@ function vStock(){
 }
 function vAdmin(){
   if(scoped())return'<div class="card"><h2>管理者のみの画面です</h2><p class="muted" style="font-size:14px">この画面は、管理者コードを持つ管理者が使います。</p></div>';
-  return'<div class="card"><h2>管理者 <small>商品マスタ・イベント・売上の自動取り込み</small></h2><div class="muted" style="font-size:13px;line-height:1.7">登録・変更には、管理者コードが必要です。いま開いているイベント（'+esc(evName())+'）に対して行います。別のイベントの設定は、上の「イベント切替」で切り替えてから行ってください。</div></div>'+adminPanel()+supAdmin()+supAllCard()+'<div class="card"><h2>保管備品の管理 <small>レジ・ドロアー・什器など</small></h2><div class="muted" style="font-size:13px;line-height:1.7;margin-bottom:10px">機材や什器が、本部倉庫・どの店舗・修理中などのどこに何台あるかを管理する別のページです。同じ合言葉で入れます。</div><a class="btn" href="kizai.html" style="text-decoration:none;display:inline-flex;align-items:center">保管備品の管理を開く →</a></div>'+eventPanel()+sqPanel();
+  return'<div class="card"><h2>管理者 <small>商品マスタ・イベント・売上の自動取り込み</small></h2><div class="muted" style="font-size:13px;line-height:1.7">登録・変更には、管理者コードが必要です。いま開いているイベント（'+esc(evName())+'）に対して行います。別のイベントの設定は、上の「イベント切替」で切り替えてから行ってください。</div></div>'+adminPanel()+supAdmin()+supAllCard()+'<div class="card"><h2>保管備品の管理 <small>レジ・ドロアー・什器など（管理者のみ）</small></h2><div class="muted" style="font-size:13px;line-height:1.7;margin-bottom:10px">機材や什器が、本部倉庫・どの店舗・修理中などのどこに何台あるかを管理するページです。<b>管理者コード</b>で入ったときだけ使えます（スタッフの合言葉では見えません）。</div><a class="btn" href="bihin.html#eq" style="text-decoration:none;display:inline-flex;align-items:center">保管備品の管理を開く →</a></div>'+eventPanel()+sqPanel();
 }
 
 /* ---- 確認 ---- */
@@ -1355,6 +1387,13 @@ document.addEventListener("click",function(e){
     case"post":if(Date.now()-(S.postPD||0)<2000)break;doPost();break;
     case"supadd":case"supcnt":S.supEdit={id:v,kind:a==="supadd"?"add":"count"};render();setTimeout(function(){var i=$("supn");if(i)i.focus()},30);break;
     case"supx":S.supEdit=null;render();break;
+    case"supbulk":S.supBulk=true;S.supBD={};S.supEdit=null;render.force=true;render();setTimeout(function(){var i=document.querySelector("[data-supb]");if(i)i.focus()},30);break;
+    case"supbx":S.supBulk=false;S.supBD={};render.force=true;render();break;
+    case"supbsave":(function(){if(S.busy)return;var ins=[].slice.call(document.querySelectorAll("[data-supb]")),list=[],bad=false;ins.forEach(function(i){if(i.value==="")return;var n=Math.round(+i.value);if(isNaN(n)||n<0){bad=true;return}list.push({id:i.getAttribute("data-supb"),n:n})});
+      if(bad){toast("0以上の数を入れてください",1);return}if(!list.length){toast("数えた品目の残数を入れてください",1);return}
+      var d1=S.date,by=(S.who||"").trim(),names=[],m=getSup(),t0=Date.now();S.busy=true;toast("保存しています…");
+      (async function(){var ok=0;for(var k=0;k<list.length;k++){var x=list[k];if(await putSup("e-"+supRid(),{item:x.id,kind:"count",n:x.n,date:d1,at:t0+k,by:by})){ok++;names.push((m[x.id]||{}).name+" "+x.n+((m[x.id]||{}).unit||""))}else break}
+        S.busy=false;if(ok){logEv("備品","まとめて数えた（"+ok+"品目）："+names.join("、"),d1);toast(ok+" 品目の残数を保存しました");if(ok===list.length){S.supBulk=false;S.supBD={}}}render.force=true;render()})();})();break;
     case"supsave":(function(){var ed=S.supEdit,i=$("supn"),n=i&&i.value!==""?Math.round(+i.value):null;if(!ed||n==null||n<0||isNaN(n)){toast("数を入れてください",1);return}var x=supItems().filter(function(y){return y.id===ed.id})[0];if(!x)return;
       var d1=S.date;putSup("e-"+supRid(),{item:ed.id,kind:ed.kind,n:n,date:d1,at:Date.now(),by:(S.who||"").trim()}).then(function(ok){if(ok){S.supEdit=null;toast(ed.kind==="add"?"補充を記録しました":"残数を記録しました");logEv("備品",x.name+"："+(ed.kind==="add"?"補充 ＋"+n:"数えた残数 "+n)+(x.unit||""),d1);render.force=true;render()}})})();break;
     case"supdel":(function(){var e=getSup()[v];if(!e)return;var x=getSup()[e.item]||{};putSup(v,null).then(function(ok){if(ok){toast("取り消しました");logEv("備品","取消："+(x.name||"")+" "+(e.kind==="add"?"補充 ＋":"数えた ")+e.n,e.date)}})})();break;
@@ -1388,6 +1427,7 @@ $("lb").addEventListener("click",function(){this.hidden=true});
 ["dragleave","drop"].forEach(function(n){document.addEventListener(n,function(e){var z=e.target&&e.target.closest&&e.target.closest("#seeddrop");if(z)z.classList.remove("over")})});
 document.addEventListener("keydown",function(e){if(e.key==="Escape")$("lb").hidden=true;if(e.key==="Enter"&&e.target&&e.target.id==="code")doLogin()});
 document.addEventListener("input",function(e){
+  if(e.target&&e.target.getAttribute&&e.target.getAttribute("data-supb")){S.supBD=S.supBD||{};S.supBD[e.target.getAttribute("data-supb")]=e.target.value;return}
   var t=e.target,f=S.form;
   if(t.id==="q"){S.q=t.value;if(S.comp)return;var l=$("hinList");if(l)l.innerHTML=hinListHtml();else{render.force=true;render()}}
   else if(t.id==="qty"){var n=parseInt(t.value,10);f.qty=n>0?n:1;var p=$("preview");if(p)p.innerHTML=previewHtml()}
@@ -1563,7 +1603,7 @@ function gateHtml(){
   return h+'</div></div>';
 }
 /* 新しい版の確認：ブラウザが古いページを覚えていても、新しい版が出たら「最新にする」を出す（5分ごと・画面に戻ったとき） */
-var APP_VER="2026-10-27b";
+var APP_VER="2026-10-27c";
 function checkUpdate(){
   if(location.protocol==="file:")return;
   fetch(location.pathname.replace(/[^\/]*$/,"")+"index.html?v="+Date.now(),{cache:"no-store"}).then(function(r){return r.ok?r.text():""}).then(function(t){var m=/var APP_VER="([^"]+)"/.exec(t);if(m&&m[1]!==APP_VER){var u=$("upd");if(u)u.hidden=false}}).catch(function(){});

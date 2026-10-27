@@ -92,6 +92,8 @@ td.bad{background:var(--bad-soft)!important;color:var(--bad)}td.warn{background:
 .pw .eye[aria-pressed=true]{background:var(--accent);color:var(--lime);border-color:var(--accent)}
 a{color:inherit}
 @media (max-width:640px){.brand b{font-size:24px}main{padding:16px 16px 80px}}
+.lock{display:inline-block;font-size:11px;font-weight:700;padding:1px 8px;border-radius:99px;background:var(--lime);color:#1b1c15;margin-left:6px;vertical-align:2px}
+.admbar{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:space-between;font-size:13px;margin:0 0 10px}
 </style>
 <main id="main"><div class="card">読み込み中です…</div></main>
 <div id="toast" hidden></div>
@@ -270,8 +272,11 @@ function render(){
   var low=lowList().filter(function(x){return!ordered(x.it,x.place)}).length;
   var h='<div class="top"><div class="brand"><small>POPUP ｜ SUPPLIES ・ 試作</small><b>備品管理</b><span>消耗品（ショッパー・ラッピング資材など）と、保管備品（レジ・ドロアー・什器など）</span></div><div class="row"><label class="f" style="flex-direction:row;align-items:center;gap:8px"><span style="white-space:nowrap">入力者</span><input type="text" id="who" value="'+esc(S.who)+'" placeholder="あなたの名前" style="max-width:180px"></label><a class="btn small" href="./" style="text-decoration:none;display:inline-flex;align-items:center">日報サイトへ</a></div></div>';
   h+='<div class="trial">試作です。消耗品は、日報サイトの「備品」タブ・スプレッドシートとは別のデータで動いています。見比べて、使いやすい方を残します。</div>';
-  h+='<div class="modes"><button data-act="mode" data-v="sup" aria-pressed="'+(S.mode==="sup")+'"><b>消耗品</b><small>ショッパー・ラッピング資材など'+(low?'　要発注 '+low:'')+'</small></button><button data-act="mode" data-v="eq" aria-pressed="'+(S.mode==="eq")+'"><b>保管備品</b><small>レジ・ドロアー・什器など</small></button></div>';
-  if(S.mode==="eq"){
+  h+='<div class="modes"><button data-act="mode" data-v="sup" aria-pressed="'+(S.mode==="sup")+'"><b>消耗品</b><small>ショッパー・ラッピング資材など'+(low?'　要発注 '+low:'')+'</small></button><button data-act="mode" data-v="eq" aria-pressed="'+(S.mode==="eq")+'"><b>保管備品'+(isAdm()?'':' <span class="lock">管理者のみ</span>')+'</b><small>レジ・ドロアー・什器など</small></button></div>';
+  if(S.mode==="eq"&&!isAdm()){
+    h+=admGate();
+  }else if(S.mode==="eq"){
+    h+='<div class="admbar"><span><b>管理者</b>として入っています</span><button class="btn small" data-act="logout">管理者をやめる（合言葉を入れ直す）</button></div>';
     h+='<div class="tabs">'+EQ.tabs.map(function(t){return'<button data-act="k_tab" data-v="'+t[0]+'" aria-pressed="'+(S.k.tab===t[0])+'">'+t[1]+'</button>'}).join("")+'</div>'+EQ.view();
   }else{
     h+='<div class="tabs">'+[["all","全体の一覧"],["input","店舗で入力"],["order","発注"+(low?' <b class="cnt">'+low+'</b>':'')],["hist","記録"],["set","品目・設定"]].map(function(t){return'<button data-act="tab" data-v="'+t[0]+'" aria-pressed="'+(S.tab===t[0])+'">'+t[1]+'</button>'}).join("")+'</div>';
@@ -279,6 +284,17 @@ function render(){
   }
   $("main").innerHTML=h;
   if(fid){var el=$(fid);if(el)el.focus()}window.scrollTo(0,sy);
+}
+function isAdm(){var A=window.T8Data;return!!(A&&A.scope&&A.scope().role==="admin")}
+function admGate(){return'<div class="card"><h2>保管備品は管理者だけが使えます</h2><p class="muted" style="font-size:14px;line-height:1.7;margin:0 0 12px">レジ・ドロアー・什器などの台数や置き場所は、管理者だけが見て変更できます。スタッフの合言葉では使えません。管理者の方は、管理者コードを入れてください。</p>'+(S.admErr?'<p style="color:var(--bad);font-size:14px;margin:0 0 8px">'+esc(S.admErr)+'</p>':'')+'<div class="row" style="align-items:flex-end"><label class="f" style="flex:1 1 220px"><span>管理者コード</span><span class="pw"><input type="password" id="admcode" autocomplete="off"><button type="button" class="eye" data-eye="1" aria-label="表示する" aria-pressed="false">表示</button></span></label><button class="btn primary" data-act="admlogin"'+(S.admBusy?' disabled':'')+'>'+(S.admBusy?'確認しています…':'管理者として入る')+'</button></div><p class="muted" style="font-size:12px;line-height:1.7;margin:10px 0 0">入ると、この端末では管理者として入ったままになります。店舗の共用端末では使わないか、終わったら「管理者をやめる」を押してください。</p></div>'}
+async function admLogin(){
+  var A=window.T8Data,c=val("admcode");if(!c){S.admErr="管理者コードを入れてください";render.force=true;return render()}
+  var old="";try{old=localStorage.getItem("t8code")||""}catch(e){}
+  S.admBusy=true;S.admErr="";render.force=true;render();
+  var ok=false;A.setCode(c);try{await A.connect();ok=A.scope().role==="admin"}catch(e){}
+  if(!ok){A.setCode(old);try{await A.connect()}catch(e){}S.admErr="管理者コードが違います"}
+  else{try{localStorage.setItem("t8code",c)}catch(x){}}
+  S.admBusy=false;render.force=true;render();
 }
 function gateHtml(){
   var h='<div class="gate"><div class="brand" style="margin-bottom:18px"><small>POPUP ｜ SUPPLIES ・ 試作</small><b>備品管理</b><span>日報サイトと同じ合言葉で入れます</span></div><div class="card">';
@@ -353,6 +369,7 @@ function setConf(patch){return put("conf",Object.assign({},conf(),patch))}
 function act(a,v){
   render.force=true;
   if(a==="login")return login();
+  if(a==="admlogin")return admLogin();
   if(a==="logout"){try{localStorage.removeItem("t8code")}catch(e){}S.gate="login";return render()}
   if(a==="tab"){S.tab=v;S.confirm=null;return render()}
   if(a==="mode"){S.mode=v;try{localStorage.setItem("bh_mode",v);history.replaceState(null,"",v==="eq"?"#eq":location.pathname)}catch(e){}window.scrollTo(0,0);return render()}
@@ -380,7 +397,7 @@ function act(a,v){
 /* 入荷・数え直しで通知ラインを上回ったら「発注済み」を外す */
 function clearOrdered(ops){var o=Object.assign({},conf().ordered||{}),ch=false;ops.forEach(function(r){[r.place,r.to].forEach(function(p){if(!p)return;var k=r.item+"|"+p,it=docs()[r.item];if(o[k]&&it){var s=stockOf(r.item,p);if(s.n>lineOf(it,p)){delete o[k];ch=true}}})});if(ch)setConf({ordered:o}).catch(function(){})}
 document.addEventListener("click",function(e){var eye=e.target.closest&&e.target.closest("[data-eye]");if(eye){var inp=eye.parentNode.querySelector("input"),on=inp.type==="password";inp.type=on?"text":"password";eye.textContent=on?"隠す":"表示";eye.setAttribute("aria-pressed",on?"true":"false");eye.setAttribute("aria-label",on?"隠す":"表示する");inp.focus();return}var el=e.target.closest&&e.target.closest("[data-act]");if(!el)return;if(el.tagName!=="A")e.preventDefault();act(el.dataset.act,el.dataset.v)});
-document.addEventListener("keydown",function(e){if(e.key==="Enter"&&e.target&&e.target.id==="code")login();if(e.key==="Enter"&&e.target&&e.target.dataset&&e.target.dataset.q){e.preventDefault();var all=[].slice.call(document.querySelectorAll("input[data-q]")),i=all.indexOf(e.target);if(all[i+1])all[i+1].focus()}});
+document.addEventListener("keydown",function(e){if(e.key==="Enter"&&e.target&&e.target.id==="code")login();if(e.key==="Enter"&&e.target&&e.target.id==="admcode")admLogin();if(e.key==="Enter"&&e.target&&e.target.dataset&&e.target.dataset.q){e.preventDefault();var all=[].slice.call(document.querySelectorAll("input[data-q]")),i=all.indexOf(e.target);if(all[i+1])all[i+1].focus()}});
 document.addEventListener("input",function(e){var t=e.target;if(S.mode==="eq"&&EQ.input(t))return;if(t.id==="who"){S.who=t.value;try{localStorage.setItem("t8who",t.value)}catch(x){}}});
 document.addEventListener("change",function(e){var t=e.target;if(S.mode==="eq"&&EQ.change(t))return;if(t.id==="in_place"){S.place=t.value;try{localStorage.setItem("bh_place",t.value)}catch(x){}render.force=true;render()}if(t.id==="in_date")S.date=t.value;if(t.id==="in_to")S.to=t.value});
 document.addEventListener("focusout",function(){setTimeout(function(){if(S.pending){var a=document.activeElement;if(!(a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)))render()}},60)});
