@@ -86,6 +86,10 @@ td.bad{background:var(--bad-soft)!important;color:var(--bad)}td.warn{background:
 .modes button{font:inherit;text-align:left;border:1px solid var(--line2);background:rgba(255,255,255,.6);border-radius:16px;padding:10px 14px;cursor:pointer;display:flex;flex-direction:column;gap:2px;min-height:56px}
 .modes button b{font-size:16px}.modes button small{font-size:12px;color:var(--muted)}
 .modes button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}.modes button[aria-pressed="true"] small{color:var(--lime)}
+.pw{position:relative;display:block}
+.pw input{width:100%;padding-right:78px}
+.pw .eye{position:absolute;right:8px;top:50%;transform:translateY(-50%);min-height:36px;padding:0 14px;border-radius:999px;border:1px solid rgba(29,31,23,.25);background:#fff;color:var(--ink);font:700 13px/1 inherit;cursor:pointer}
+.pw .eye[aria-pressed=true]{background:var(--accent);color:var(--lime);border-color:var(--accent)}
 a{color:inherit}
 @media (max-width:640px){.brand b{font-size:24px}main{padding:16px 16px 80px}}
 </style>
@@ -280,7 +284,7 @@ function gateHtml(){
   var h='<div class="gate"><div class="brand" style="margin-bottom:18px"><small>POPUP ｜ SUPPLIES ・ 試作</small><b>備品管理</b><span>日報サイトと同じ合言葉で入れます</span></div><div class="card">';
   if(S.gate==="loading")return h+'<h2>読み込み中です</h2></div></div>';
   if(S.gate==="noaccess")return h+'<h2>このページは使えません</h2><p class="muted" style="font-size:14px">イベント限定の合言葉では入れません。社内スタッフ用の合言葉で入ってください。</p><button class="btn" data-act="logout">合言葉を入れ直す</button></div></div>';
-  return h+'<h2>合言葉を入力してください</h2>'+(S.err?'<p style="color:var(--bad);font-size:14px;margin:0 0 8px">'+esc(S.err)+'</p>':'')+'<label class="f"><span>合言葉</span><input type="password" id="code" autocomplete="current-password"></label><div style="margin-top:12px"><button class="btn primary" style="width:100%;min-height:52px" data-act="login">入る</button></div></div></div>';
+  return h+'<h2>合言葉を入力してください</h2>'+(S.err?'<p style="color:var(--bad);font-size:14px;margin:0 0 8px">'+esc(S.err)+'</p>':'')+'<label class="f"><span>合言葉</span><span class="pw"><input type="password" id="code" autocomplete="current-password"><button type="button" class="eye" data-eye="1" aria-label="表示する" aria-pressed="false">表示</button></span></label><div style="margin-top:12px"><button class="btn primary" style="width:100%;min-height:52px" data-act="login">入る</button></div></div></div>';
 }
 function noItems(){return'<div class="card"><h2>まだ品目がありません</h2><p class="muted" style="font-size:14px;margin:0 0 10px">「品目・設定」で、ショッパー・ラッピング資材などの品目と通知ラインを登録してください。</p><button class="btn primary" data-act="tab" data-v="set">品目を登録する</button></div>'}
 function cell(it,p){var s=stockOf(it.id,p),al=lineOf(it,p);if(!s.has)return'<td class="z">—</td>';var lv=al>0&&s.n<=al?"bad":(al>0&&s.n<=al*1.5?"warn":"");return'<td class="'+lv+'"><b>'+s.n+'</b>'+(s.last?'<small>'+md(s.last.date)+'</small>':'')+'</td>'}
@@ -375,7 +379,7 @@ function act(a,v){
 }
 /* 入荷・数え直しで通知ラインを上回ったら「発注済み」を外す */
 function clearOrdered(ops){var o=Object.assign({},conf().ordered||{}),ch=false;ops.forEach(function(r){[r.place,r.to].forEach(function(p){if(!p)return;var k=r.item+"|"+p,it=docs()[r.item];if(o[k]&&it){var s=stockOf(r.item,p);if(s.n>lineOf(it,p)){delete o[k];ch=true}}})});if(ch)setConf({ordered:o}).catch(function(){})}
-document.addEventListener("click",function(e){var el=e.target.closest&&e.target.closest("[data-act]");if(!el)return;if(el.tagName!=="A")e.preventDefault();act(el.dataset.act,el.dataset.v)});
+document.addEventListener("click",function(e){var eye=e.target.closest&&e.target.closest("[data-eye]");if(eye){var inp=eye.parentNode.querySelector("input"),on=inp.type==="password";inp.type=on?"text":"password";eye.textContent=on?"隠す":"表示";eye.setAttribute("aria-pressed",on?"true":"false");eye.setAttribute("aria-label",on?"隠す":"表示する");inp.focus();return}var el=e.target.closest&&e.target.closest("[data-act]");if(!el)return;if(el.tagName!=="A")e.preventDefault();act(el.dataset.act,el.dataset.v)});
 document.addEventListener("keydown",function(e){if(e.key==="Enter"&&e.target&&e.target.id==="code")login();if(e.key==="Enter"&&e.target&&e.target.dataset&&e.target.dataset.q){e.preventDefault();var all=[].slice.call(document.querySelectorAll("input[data-q]")),i=all.indexOf(e.target);if(all[i+1])all[i+1].focus()}});
 document.addEventListener("input",function(e){var t=e.target;if(S.mode==="eq"&&EQ.input(t))return;if(t.id==="who"){S.who=t.value;try{localStorage.setItem("t8who",t.value)}catch(x){}}});
 document.addEventListener("change",function(e){var t=e.target;if(S.mode==="eq"&&EQ.change(t))return;if(t.id==="in_place"){S.place=t.value;try{localStorage.setItem("bh_place",t.value)}catch(x){}render.force=true;render()}if(t.id==="in_date")S.date=t.value;if(t.id==="in_to")S.to=t.value});
