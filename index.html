@@ -397,6 +397,9 @@ input[type=password]{min-height:52px;border-radius:16px;background:var(--surface
 .cpn .cpt{font-size:13px;font-weight:700;margin-bottom:6px}.cpn .cpt span{font-weight:400;color:var(--muted);font-size:12px}
 .cpsum{font-size:13.5px;margin:6px 0 2px}.cpsum b{margin-right:6px}
 @media (max-width:420px){nav button .t{font-size:13px}nav button .s{font-size:7.5px;letter-spacing:.04em}nav button{padding-left:0;padding-right:0}}
+#upd{position:fixed;left:50%;top:12px;transform:translateX(-50%);z-index:60;display:flex;align-items:center;gap:10px;background:var(--char);color:#fff;border-radius:999px;padding:8px 8px 8px 18px;font-size:14px;font-weight:700;box-shadow:0 10px 30px rgba(0,0,0,.25);max-width:calc(100% - 24px)}
+#upd button{font:inherit;font-size:13.5px;font-weight:800;border:0;border-radius:999px;background:var(--lime);color:var(--char);padding:8px 14px;cursor:pointer;white-space:nowrap}
+#upd[hidden]{display:none}
 </style>
 
 <div id="shell">
@@ -404,6 +407,7 @@ input[type=password]{min-height:52px;border-radius:16px;background:var(--surface
   <main id="main"><div class="empty"><b>読み込み中です</b>保存されたデータを取得しています。</div></main>
 </div>
 <div id="toast" hidden></div>
+<div id="upd" hidden><span>サイトが新しくなりました。</span><button type="button" onclick="location.reload()">最新にする</button></div>
 <div id="lb" class="lightbox" hidden></div>
 
 <script src="config.js"></script>
@@ -1558,6 +1562,15 @@ function gateHtml(){
   else h+='<h2>合言葉を入力してください</h2>'+(S.gateErr?'<p class="warnline">'+esc(S.gateErr)+'</p>':'')+'<label class="f"><span>合言葉</span><span class="pw"><input type="password" id="code" autocomplete="current-password"><button type="button" class="eye" data-eye="1" aria-label="表示する" aria-pressed="false">表示</button></span></label><div style="margin-top:12px"><button class="btn primary" style="width:100%;min-height:52px" data-act="login">入る</button></div>';
   return h+'</div></div>';
 }
+/* 新しい版の確認：ブラウザが古いページを覚えていても、新しい版が出たら「最新にする」を出す（5分ごと・画面に戻ったとき） */
+var APP_VER="2026-10-27a";
+function checkUpdate(){
+  if(location.protocol==="file:")return;
+  fetch(location.pathname.replace(/[^\/]*$/,"")+"index.html?v="+Date.now(),{cache:"no-store"}).then(function(r){return r.ok?r.text():""}).then(function(t){var m=/var APP_VER="([^"]+)"/.exec(t);if(m&&m[1]!==APP_VER){var u=$("upd");if(u)u.hidden=false}}).catch(function(){});
+}
+setInterval(function(){if(!document.hidden)checkUpdate()},300000);
+document.addEventListener("visibilitychange",function(){if(!document.hidden)checkUpdate()});
+setTimeout(checkUpdate,5000);
 function startSubs(){
   var db=S.db;
   var done=function(k){S.loaded[k]=1;memo=null;S._ver=(S._ver||0)+1;S.date=S.date||defaultDate();render()};
