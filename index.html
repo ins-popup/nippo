@@ -396,6 +396,7 @@ input[type=password]{min-height:52px;border-radius:16px;background:var(--surface
 .cpn{border:1px dashed var(--line2);border-radius:12px;padding:10px 12px}
 .cpn .cpt{font-size:13px;font-weight:700;margin-bottom:6px}.cpn .cpt span{font-weight:400;color:var(--muted);font-size:12px}
 .cpsum{font-size:13.5px;margin:6px 0 2px}.cpsum b{margin-right:6px}
+@media (max-width:420px){nav button .t{font-size:13px}nav button .s{font-size:7.5px;letter-spacing:.04em}nav button{padding-left:0;padding-right:0}}
 </style>
 
 <div id="shell">
@@ -531,7 +532,7 @@ function checks(){
       }
     }
   });
-  supItems().forEach(function(x){var c=supCalc(x);if(c.lv!=="ok")out.push({lv:c.lv==="red"?"red":"yel",tag:c.lv==="red"?"備品が要発注":"備品が少なめ",txt:x.name+"：残り 約"+c.est+(x.unit||"")+"（通知ライン "+(x.alert||0)+(x.unit||"")+"）",sub:c.left!=null?"あと約"+c.left+"日分です。発注担当に連絡してください":"発注担当に連絡してください",go:{tab:"stock"}})});
+  supItems().forEach(function(x){var c=supCalc(x);if(c.lv!=="ok")out.push({lv:c.lv==="red"?"red":"yel",tag:c.lv==="red"?"備品が要発注":"備品が少なめ",txt:x.name+"：残り 約"+c.est+(x.unit||"")+"（通知ライン "+(x.alert||0)+(x.unit||"")+"）",sub:c.left!=null?"あと約"+c.left+"日分です。発注担当に連絡してください":"発注担当に連絡してください",go:{tab:"sup"}})});
   out.sort(function(a,b){return(a.lv==="red"?0:1)-(b.lv==="red"?0:1)});
   return out;
 }
@@ -587,8 +588,8 @@ function render(){
   var allLoaded=S.demo||(S.loaded.skus&&S.loaded.tx&&S.loaded.days&&S.loaded.cfg);
   var html=header();
   if(!allLoaded&&!S.demo)html+='<div class="empty"><b>読み込み中です</b>保存されたデータを取得しています。</div>';
-  else if(!getSkus().length&&S.tab!=="admin"&&S.tab!=="help")html+=emptySku();
-  else html+=({sales:vSales,report:vReport,stock:vStock,check:vCheck,log:vLog,admin:vAdmin,help:vHelp})[S.tab]();
+  else if(!getSkus().length&&S.tab!=="admin"&&S.tab!=="help"&&S.tab!=="sup")html+=emptySku();
+  else html+=({sales:vSales,report:vReport,stock:vStock,sup:vSup,check:vCheck,log:vLog,admin:vAdmin,help:vHelp})[S.tab]();
   $("main").innerHTML=html;
   renderNav();
   if(fid){var el=$(fid);if(el){el.focus();try{if(ss!=null)el.setSelectionRange(ss,se)}catch(e){}}}
@@ -596,7 +597,7 @@ function render(){
 }
 function renderNav(){
   var n=checks(),red=n.filter(function(c){return c.lv==="red"}).length;
-  var tabs=[["sales","売上","SALES"],["report","日報","REPORT"],["stock","在庫","STOCK"],["check","確認","CHECK"],["log","履歴","HISTORY"]];
+  var tabs=[["sales","売上","SALES"],["report","日報","REPORT"],["stock","在庫","STOCK"],["sup","備品","SUPPLY"],["check","確認","CHECK"],["log","履歴","HISTORY"]];
   if(!scoped()&&!S.demo)tabs.push(["admin","管理者","ADMIN"]);
   tabs.push(["help","使い方","HELP"]);
   $("nav").innerHTML=tabs.map(function(t){
@@ -800,10 +801,10 @@ function vHelp(){
    tbl(['表示','すること'],[['在庫マイナス','数量・商品の入力ミスか、補充の入れ忘れを確かめる'],['レジ報告と不一致','取り込み漏れ・二重入力・任意の金額・返品を確かめる'],['カウントのズレ','数え直すか、入力漏れを探す'],['返品の再販が未確認','手入力の一覧で「再販できる／できない」を押す'],['返品の商品が未入力','Squareの返品を手入力で商品として入れる'],['客数が未入力','売上タブのその日の詳細で入れる'],['レポート写真が未登録','写真を登録する'],['日報が未記入','日報タブで書く']])+go("check","確認"));
   h+=sec("other","日報・在庫・履歴","",
    h3('日報')+'<p class="hp">日報（コメント）と、連絡・依頼・トラブル・返品理由（インス宛）を書きます。書いた内容は欄から離れると自動で保存されます。書き終わったら「投稿する」を押すと、「投稿しました（時刻・名前）」と出ます。投稿したあとに書き換えたときは、もう一度「投稿する」を押します。</p>'+
-   h3('在庫')+'<p class="hp">商品ごとの理論在庫（投入数 − 販売 ＋ 返品（再販できる）＋ 補充など）を見ます。棚卸で数えた点数を入れると、ズレが出ます。一番上には備品（ショッパー・ラッピング資材）の残数が出ます（下の「備品」）。</p>'+
+   h3('在庫')+'<p class="hp">商品ごとの理論在庫（投入数 − 販売 ＋ 返品（再販できる）＋ 補充など）を見ます。棚卸で数えた点数を入れると、ズレが出ます。備品（ショッパー・ラッピング資材）は「備品」タブで見ます。</p>'+
    h3('履歴')+'<p class="hp">だれが、いつ、何を入れた・取り消したかが新しい順に並びます。日付を押すとその日の画面に移ります。</p>');
-  h+=sec("sup","備品（ショッパー・ラッピング資材）","在庫タブの一番上。残りは客数・ラッピング件数から自動で減る",
-   ol(['閉店後、売上タブのその日の詳細で<b>客数</b>と<b>ラッピング件数</b>を入れる（ここから使った数を自動で計算します）','補充が届いたら、在庫タブの備品で「<b>＋ 補充が届いた</b>」を押して、届いた数を入れる','閉店後や週1回、残りを数えて「<b>数えた残数を入れる</b>」。目安が実際の数に戻ります'+go("stock","在庫")])+
+  h+=sec("sup","備品（ショッパー・ラッピング資材）","備品タブ。残りは客数・ラッピング件数から自動で減る",
+   ol(['閉店後、売上タブのその日の詳細で<b>客数</b>と<b>ラッピング件数</b>を入れる（ここから使った数を自動で計算します）','補充が届いたら、備品タブで「<b>＋ 補充が届いた</b>」を押して、届いた数を入れる','閉店後や週1回、残りを数えて「<b>数えた残数を入れる</b>」。目安が実際の数に戻ります'+go("sup","備品")])+
    tbl(['表示','意味'],[['十分','通知ラインより多い'],['少なめ','通知ラインの1.5倍以下'],['要発注','通知ライン以下。確認タブにも出ます。管理者が送り先を設定していれば、毎朝、発注担当にメールが届きます']])+
    note('残数は「目安」です。会計1件でショッパーを2枚使ったときなどはズレるので、ときどき数えて合わせてください。日付は画面上の日付で記録されます。'));
   h+=sec("coupon","クーポンを使ったとき","枚数と金額を、その日の詳細に入れる",
@@ -902,6 +903,13 @@ function supCard(){
   rec.sort(function(a,b){return(b[1].at||0)-(a[1].at||0)});
   if(rec.length)h+='<details class="suph"'+(S.supHist?' open':'')+' id="suphist"><summary>最近の記録（'+rec.length+' 件）</summary>'+rec.slice(0,15).map(function(r){var e=r[1];return'<div class="sr"><span class="num">'+md(e.date)+'</span><span>'+esc(r[0].name)+'</span><span>'+(e.kind==="add"?'補充 ＋'+e.n:'数えた '+e.n)+esc(r[0].unit||"")+'</span><span class="muted">'+esc(e.by||"")+'</span>'+(can?'<button class="btn small danger" data-act="supdel" data-v="'+e.id+'">取消</button>':'')+'</div>'}).join("")+'</details>';
   return h+'</div>';
+}
+/* ---- 備品タブ ---- */
+function vSup(){
+  var h=supCard();
+  if(!supItems().length&&!S.demo&&!scoped())h+='<div class="card"><h2>はじめに</h2><ol class="hs" style="margin:0"><li>管理者タブの「<b>備品の品目</b>」で、ショッパー・ラッピング資材などの品目と通知ラインを登録します</li><li>管理者タブの「<b>全店舗の備品</b>」で、発注担当のメールアドレスを登録すると、残りが少なくなったときに毎朝メールが届きます</li><li>閉店後に売上タブで<b>客数</b>と<b>ラッピング件数</b>を入れると、残りが自動で減ります</li></ol><div class="row" style="margin-top:10px"><button class="btn primary" data-act="tab" data-v="admin">管理者タブへ</button><button class="btn" data-act="supdemo">見本データで試す</button></div></div>';
+  if(!scoped())h+='<div class="card"><h2>保管備品の管理 <small>レジ・ドロアー・什器など</small></h2><div class="muted" style="font-size:13.5px;line-height:1.7;margin-bottom:10px">機材や什器が、本部倉庫・どの店舗・修理中などのどこに何台あるかを管理する別のページです。同じ合言葉で入れます。</div><a class="btn" href="kizai.html" style="text-decoration:none;display:inline-flex;align-items:center">保管備品の管理を開く →</a></div>';
+  return h;
 }
 function supAdmin(){
   var it=supItems(),f=S.supForm||{};
@@ -1252,7 +1260,7 @@ function vStock(){
   var C=calc(),sk=getSkus(),can=writable(),cn=getCounts(),q=S.q.trim().toLowerCase();
   var tot={base:0,net:0,moves:0,stock:0,hold:0,retailStock:0,saleStock:0};
   sk.forEach(function(s){var x=C.st[s.id];tot.base+=x.base;tot.net+=x.net;tot.moves+=x.moves;tot.stock+=x.stock;tot.hold+=x.hold;tot.retailStock+=Math.max(0,x.stock)*s.retail;tot.saleStock+=Math.max(0,x.stock)*s.sale});
-  var h=supCard()+'<div class="kpis"><div class="kpi"><div class="l">投入点数</div><div class="v">'+tot.base+'<small>点</small></div><div class="n">'+sk.length+' SKU</div></div>'+
+  var h='<div class="kpis"><div class="kpi"><div class="l">投入点数</div><div class="v">'+tot.base+'<small>点</small></div><div class="n">'+sk.length+' SKU</div></div>'+
    '<div class="kpi"><div class="l">純販売点数</div><div class="v">'+tot.net+'<small>点</small></div><div class="n">消化率 '+pct((tot.base+tot.moves)?tot.net/(tot.base+tot.moves):null)+'</div></div>'+
    '<div class="kpi"><div class="l">売場の理論在庫</div><div class="v">'+tot.stock+'<small>点</small></div><div class="n">セール価格換算 '+yen(tot.saleStock)+'（税抜）</div></div>'+
    '<div class="kpi"><div class="l">別保管（再販不可）</div><div class="v">'+tot.hold+'<small>点</small></div></div></div>';
@@ -1348,6 +1356,7 @@ document.addEventListener("click",function(e){
     case"supdel":(function(){var e=getSup()[v];if(!e)return;var x=getSup()[e.item]||{};putSup(v,null).then(function(ok){if(ok){toast("取り消しました");logEv("備品","取消："+(x.name||"")+" "+(e.kind==="add"?"補充 ＋":"数えた ")+e.n,e.date)}})})();break;
     case"supedit":(function(){var x=getSup()[v];if(!x)return;S.supForm=Object.assign({id:v},x);S.supAdmOpen=true;render()})();break;
     case"supinew":S.supForm={};render();break;
+    case"supdemo":startDemo(true);S.tab="sup";render.force=true;render();break;
     case"supntnow":(function(){var ac=($("supadmc")||{}).value||"";if(!ac){toast("管理者コードを入れてください",1);return}toast("確認しています…");window.T8Data.supNotifyNow(ac).then(function(j){toast(j.low?("通知ライン以下 "+j.low+" 件"+(j.sent?"・"+j.sent+" 件をメールで送りました":(j.to?"":"（送り先が未設定のため送っていません）"))):"通知ライン以下の品目はありません");var x=$("supadmc");if(x)x.value="";render.force=true;render()},function(e){toast(e&&e.code==="unauthorized"||/admin_required/.test(String(e&&e.message))?"管理者コードが違います":"確認できませんでした："+(e&&e.message||""),1)})})();break;
     case"supntsave":(function(){var v2=($("supnto")||{}).value||"",to=v2.split(/[,、\s]+/).map(function(x){return x.trim()}).filter(Boolean),bad=to.filter(function(x){return!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x)});if(bad.length){toast("メールアドレスの形が正しくありません："+bad.join(", "),1);return}
       var cur=supNotifyCfg();window.T8Data.rawSet("sup","global~notify",Object.assign({},cur,{to:to.join(", "),at:Date.now(),by:(S.who||"").trim()})).then(function(){toast(to.length?"通知の送り先を保存しました":"通知の送り先を空にしました（送りません）");logEv("備品","通知の送り先："+(to.join(", ")||"（なし）"));render.force=true;render()},dbErr)})();break;
