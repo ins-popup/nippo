@@ -663,7 +663,7 @@ function squareDismiss_(pid) {
  *  - 同じ品目は、通知ラインを上回るまで1回だけ送る（記録：sup/global~notified）
  *  - 計算はサイト（index.html の supCalcRaw）と同じ
  * ===================================================================== */
-var SITE_URL = 'https://onishi-design.github.io/t8-nippo/';
+var SITE_URL = 'https://ins-popup.github.io/nippo/';
 function supNotify() {
   var lock = LockService.getScriptLock();
   lock.waitLock(30000);
