@@ -711,7 +711,7 @@ function supNotifyCore_(force) {
     b.items.forEach(function (it) {
       var ev2 = (b.evs[it.id] || []).sort(function (x, y) { return x.date < y.date ? -1 : x.date > y.date ? 1 : (x.at || 0) - (y.at || 0); });
       var c = supCalc_(it, ev2, b.days, start);
-      if (c.est <= (+it.alert || 0)) low.push({ key: ev + '|' + it.id, ev: names[ev] || cfg.name || ev, name: it.name, unit: it.unit || '', est: c.est, left: c.left, alert: +it.alert || 0 });
+      if ((+it.alert || 0) > 0 && c.est <= (+it.alert || 0)) low.push({ key: ev + '|' + it.id, ev: names[ev] || cfg.name || ev, name: it.name, unit: it.unit || '', est: c.est, left: c.left, alert: +it.alert || 0 });
     });
   });
   var conf = docs['sup/global~notify'] || {}, done = (docs['sup/global~notified'] || {}).keys || {}, keep = {};
