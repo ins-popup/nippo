@@ -108,6 +108,7 @@ function list_(scope) {
     var c = r[1], id = r[2], d;
     try { d = JSON.parse(r[3]); } catch (e) { return; }
     if (c === 'sqseen') return;
+    if (c === 'eq' && scope.role !== 'admin') return; /* 保管備品は管理者だけ */
     if (scope.role === 'event') {
       if (c === 'config' && id === 'events') {
         /* 自分のイベントの1件だけを見せる（他のイベント名は渡さない） */
@@ -138,6 +139,7 @@ function write_(ops, isAdmin, scope) {
   ops.forEach(function (o) {
     if (!o || !o.collection || !o.id) throw 'bad_op';
     if (ADMIN_ONLY[o.collection] && !isAdmin) throw 'admin_required';
+    if (o.collection === 'eq' && !isAdmin && !(scope && scope.role === 'admin')) throw 'admin_required'; /* 保管備品は管理者コードで入ったときだけ */
     if (scope && scope.role === 'event' && !inScope_(scope, o.collection, o.id)) throw 'not_allowed';
     var key = o.collection + '/' + o.id, idx = index_(sh), row = idx[key];
     if (o.op === 'delete') { if (row) sh.deleteRow(row); return; }
