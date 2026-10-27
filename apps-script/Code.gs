@@ -205,10 +205,12 @@ function trash_(id) {
 var SQ_QUERY = 'subject:(Square売上レポート) newer_than:14d';
 
 function setupSquareTrigger() {
-  ScriptApp.getProjectTriggers().forEach(function (t) { if (t.getHandlerFunction() === 'squareScan' || t.getHandlerFunction() === 'supNotify') ScriptApp.deleteTrigger(t); });
+  ScriptApp.getProjectTriggers().forEach(function (t) { if (['squareScan', 'supNotify', 'bihinDaily'].indexOf(t.getHandlerFunction()) >= 0) ScriptApp.deleteTrigger(t); });
   ScriptApp.newTrigger('squareScan').timeBased().everyMinutes(30).create();
   /* 備品の通知：毎朝9時ごろ */
   ScriptApp.newTrigger('supNotify').timeBased().everyDays(1).atHour(9).inTimezone('Asia/Tokyo').create();
+  /* 備品のスプシ：毎朝8時ごろ（客数を入れて、残数を確認してメール） */
+  ScriptApp.newTrigger('bihinDaily').timeBased().everyDays(1).atHour(8).inTimezone('Asia/Tokyo').create();
   return squareScanNow_();
 }
 
@@ -730,4 +732,83 @@ function supNotifyCore_(force) {
   conf2.checked = Utilities.formatDate(new Date(), 'Asia/Tokyo', 'M/d HH:mm');
   sqWrite_([{ op: 'set', collection: 'sup', id: 'global~notified', data: { keys: keep } }, { op: 'set', collection: 'sup', id: 'global~notify', data: conf2 }]);
   return { ok: true, low: low.length, sent: sent, to: to.length };
+}
+
+/* =====================================================================
+ * 備品のスプレッドシート（備品管理（POPUP））との連携
+ *  - 毎朝、日報サイトの客数・ラッピング件数を、スプシの「客数」シートに入れる（店舗シートの「日報サイトのイベントID」で対応づけ）
+ *  - スプシの「残数」シート（式で計算）を確認し、通知ライン以下の品目があれば「設定」シートの発注担当にメールする
+ *  - 同じ店舗・品目は、通知ラインを上回るまで1回だけ送る（記録：スクリプトプロパティ BIHIN_NOTIFIED）
+ *  - スプシのID：スクリプトプロパティ BIHIN_SHEET_ID
+ * ===================================================================== */
+var BIHIN_ROWS = { head: 4, first: 5, items: 30, firstCol: 6, stores: 10 };
+function bihinDaily() {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try { return bihinCore_(false); } finally { try { lock.releaseLock(); } catch (x) {} }
+}
+function bihinSheetId_() { return PropertiesService.getScriptProperties().getProperty('BIHIN_SHEET_ID') || ''; }
+function bihinCore_(force) {
+  var id = bihinSheetId_();
+  if (!id) return { ok: false, error: 'no_sheet' };
+  var ss = SpreadsheetApp.openById(id), R = BIHIN_ROWS;
+  /* 1. 店舗 ↔ 日報サイトのイベントID */
+  var map = {};
+  ss.getSheetByName('店舗').getRange(2, 1, R.stores, 2).getValues().forEach(function (r) {
+    var name = String(r[0] || '').trim(), ev = String(r[1] || '').trim();
+    if (name && ev) map[ev] = name;
+  });
+  /* 2. 日報サイトの日別データ（客数・ラッピング件数）を「客数」シートへ */
+  var sh = sheet_(), n = sh.getLastRow(), out = [];
+  if (n >= 2) sh.getRange(2, 1, n - 1, 4).getValues().forEach(function (r) {
+    if (r[1] !== 'days') return;
+    var ev = evOfId_(r[2]);
+    if (!ev || !map[ev]) return;
+    var day = ev === 't8' ? String(r[2]) : String(r[2]).slice(('ev~' + ev + '~').length);
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(day);
+    if (!m) return;
+    var d = {}; try { d = JSON.parse(r[3]); } catch (e) { return; }
+    var c = +d.customers || 0, w = +d.wraps || 0;
+    if (!c && !w) return;
+    out.push([new Date(+m[1], +m[2] - 1, +m[3]), map[ev], c, w]);
+  });
+  out.sort(function (a, b) { return a[0] - b[0] || (a[1] < b[1] ? -1 : 1); });
+  var ks = ss.getSheetByName('客数'), last = ks.getLastRow();
+  if (last >= 2) ks.getRange(2, 1, last - 1, 4).clearContent();
+  if (out.length) { ks.getRange(2, 1, out.length, 4).setValues(out); ks.getRange(2, 1, out.length, 1).setNumberFormat('yyyy/m/d'); }
+  SpreadsheetApp.flush();
+  /* 3. 「残数」シートを確認 */
+  var zs = ss.getSheetByName('残数');
+  var heads = zs.getRange(R.head, R.firstCol, 1, R.stores).getValues()[0];
+  var left = zs.getRange(R.first, 1, R.items, 3).getValues();
+  var vals = zs.getRange(R.first, R.firstCol, R.items, R.stores).getValues();
+  var low = [], seen = {};
+  left.forEach(function (row, i) {
+    var item = String(row[0] || '').trim(), unit = String(row[1] || ''), line = +row[2] || 0;
+    if (!item || line <= 0) return;
+    heads.forEach(function (store, j) {
+      var v = vals[i][j];
+      if (!store || v === '' || v === null || typeof v !== 'number') return;
+      var key = store + '|' + item;
+      if (v <= line) { low.push({ key: key, store: store, item: item, unit: unit, n: v, line: line }); seen[key] = 1; }
+    });
+  });
+  /* 4. 発注担当へメール（新しく通知ライン以下になったものがあるとき） */
+  var props = PropertiesService.getScriptProperties(), done = {};
+  try { done = JSON.parse(props.getProperty('BIHIN_NOTIFIED') || '{}') || {}; } catch (e) { done = {}; }
+  var keep = {}; Object.keys(done).forEach(function (k) { if (seen[k]) keep[k] = done[k]; });
+  var set = ss.getSheetByName('設定'), to = String(set.getRange('B2').getValue() || '').split(/[,、\s]+/).filter(function (x) { return /@/.test(x); });
+  var fresh = low.filter(function (x) { return force || !keep[x.key]; }), sent = 0, now = Utilities.formatDate(new Date(), 'Asia/Tokyo', 'M/d HH:mm');
+  if (fresh.length && to.length) {
+    var lines = low.map(function (x) { return '・' + x.store + '　' + x.item + '　残り 約' + x.n + x.unit + '（通知ライン ' + x.line + x.unit + '）' + (keep[x.key] && !force ? '' : '　★新'); });
+    var body = '発注担当者さま\n\n備品の残りが少なくなっています。発注をお願いします。\n\n' + lines.join('\n') +
+      '\n\n★新＝今回はじめて通知ライン以下になった品目です。\n残数は「最後に数えた数＋届いた数−客数などから計算した使用数」の目安です。\n\n備品のスプレッドシート：' + ss.getUrl() + '\n（このメールは自動で送っています）';
+    GmailApp.sendEmail(to.join(','), '【備品】発注のお願い（' + fresh.length + '件）', body);
+    sent = fresh.length;
+    fresh.forEach(function (x) { keep[x.key] = Date.now(); });
+    set.getRange('B5').setValue(now + '（' + sent + '件）');
+  }
+  props.setProperty('BIHIN_NOTIFIED', JSON.stringify(keep));
+  set.getRange('B4').setValue(now);
+  return { ok: true, days: out.length, low: low.length, sent: sent, to: to.length };
 }
