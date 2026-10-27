@@ -1,6 +1,6 @@
 <!doctype html>
 <meta charset="utf-8">
-<title>備品管理システム（試作）｜POPUP</title>
+<title>備品管理｜POPUP</title>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#e3e3e4">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%276%27 fill=%27%231d1f17%27/%3E%3Crect x=%277%27 y=%2711%27 width=%2718%27 height=%2713%27 rx=%272%27 fill=%27%23d8ff1a%27/%3E%3Crect x=%2711%27 y=%277%27 width=%2710%27 height=%275%27 rx=%271.5%27 fill=%27none%27 stroke=%27%23d8ff1a%27 stroke-width=%272%27/%3E%3C/svg%3E">
@@ -82,6 +82,10 @@ td.bad{background:var(--bad-soft)!important;color:var(--bad)}td.warn{background:
 .orow{display:flex;justify-content:space-between;align-items:center;gap:10px;border:1px solid rgba(194,55,43,.35);background:#fff;border-radius:14px;padding:10px 12px}
 .orow.done{border-color:var(--line);background:var(--surface)}
 .orow small{display:block;font-size:12.5px;color:var(--muted)}.orow small.ok{color:var(--ok);font-weight:700}
+.modes{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.modes button{font:inherit;text-align:left;border:1px solid var(--line2);background:rgba(255,255,255,.6);border-radius:16px;padding:10px 14px;cursor:pointer;display:flex;flex-direction:column;gap:2px;min-height:56px}
+.modes button b{font-size:16px}.modes button small{font-size:12px;color:var(--muted)}
+.modes button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}.modes button[aria-pressed="true"] small{color:var(--lime)}
 a{color:inherit}
 @media (max-width:640px){.brand b{font-size:24px}main{padding:16px 16px 80px}}
 </style>
@@ -95,7 +99,8 @@ a{color:inherit}
 /* 備品管理システム（試作）：ショッパー・ラッピング資材などの消耗品を、本部倉庫と全店舗まとめて管理する。
    日報サイトの「備品」タブ（客数から自動で減らす方式）と見比べるための、別の作り（数えて入れる方式＋本部から送る＋発注一覧）。
    保存先：bh コレクション（全店舗共通。IDは global~ で始める）。日報サイトの備品データとは別。 */
-var S={gate:"login",err:"",tab:"all",place:"",confirm:null,who:"",it:{},mvKind:"count"};
+var S={gate:"login",err:"",tab:"all",place:"",confirm:null,who:"",it:{},mvKind:"count",mode:"sup",k:{tab:"loc",q:"",mv:{},it:{},confirm:null}};
+var ROOT=S;
 var HQ="本部倉庫";
 var KIND={count:"数えた残数",in:"入荷（業者から届いた）",send:"本部から店舗へ送った",use:"使った・ロス"};
 function $(id){return document.getElementById(id)}
@@ -104,7 +109,7 @@ function today(){var d=new Date();return d.getFullYear()+"-"+String(d.getMonth()
 function md(s){var a=String(s||"").split("-");return a.length===3?(+a[1])+"/"+(+a[2]):s}
 function rid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
 var tt;function toast(m,err){var t=$("toast");t.textContent=m;t.className=err?"err":"";t.hidden=false;clearTimeout(tt);tt=setTimeout(function(){t.hidden=true},3400)}
-try{S.who=localStorage.getItem("t8who")||"";S.place=localStorage.getItem("bh_place")||""}catch(e){}
+try{S.who=localStorage.getItem("t8who")||"";S.place=localStorage.getItem("bh_place")||"";S.mode=/eq/.test(location.hash)?"eq":(localStorage.getItem("bh_mode")||"sup")}catch(e){}
 function docs(){var o={};(window.T8Data.rawAll("bh")||[]).forEach(function(r){if(r.id.indexOf("global~")===0)o[r.id.slice(7)]=r.data});return o}
 function items(){var o=docs();return Object.keys(o).filter(function(k){return k.indexOf("i-")===0}).map(function(k){return Object.assign({id:k},o[k])}).sort(function(a,b){return(a.order||0)-(b.order||0)||(a.at||0)-(b.at||0)})}
 function recs(){var o=docs();return Object.keys(o).filter(function(k){return k.indexOf("r-")===0}).map(function(k){return Object.assign({id:k},o[k])}).sort(function(a,b){return a.date<b.date?-1:a.date>b.date?1:(a.at||0)-(b.at||0)})}
@@ -132,21 +137,147 @@ function lineOf(it,place){return place===HQ?(+it.hqAlert||0):(+it.alert||0)}
 function lowList(){var out=[];items().forEach(function(it){places().forEach(function(p){var s=stockOf(it.id,p),al=lineOf(it,p);if(s.has&&al>0&&s.n<=al)out.push({it:it,place:p,n:s.n,al:al})})});return out}
 function ordered(it,place){var o=(conf().ordered||{})[it.id+"|"+place];return o||null}
 
+/* ===== 保管備品（レジ・ドロアー・什器など）：元の kizai.html。データは eq ===== */
+var EQ=(function(){
+var S=ROOT.k;
+var CATS=["レジ・決済機器","什器・ディスプレイ","工具・その他"];
+var FIXED=["本部倉庫"],OUT="（廃棄・処分）",NEW="（新しく入れる）";
+function $(id){return document.getElementById(id)}
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+function today(){var d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+function md(s){var a=String(s||"").split("-");return a.length===3?(+a[1])+"/"+(+a[2]):s}
+function rid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+var tt;function toast(m,err){var t=$("toast");t.textContent=m;t.className=err?"err":"";t.hidden=false;clearTimeout(tt);tt=setTimeout(function(){t.hidden=true},3200)}
+try{ROOT.who=localStorage.getItem("t8who")||""}catch(e){}
+/* データ：eq コレクション。全店舗共通なので、IDは「global~」で始める（イベントの接頭辞を付けない） */
+function docs(){var A=window.T8Data,o={};(A.rawAll("eq")||[]).forEach(function(r){if(r.id.indexOf("global~")===0)o[r.id.slice(7)]=r.data});return o}
+function items(){var o=docs();return Object.keys(o).filter(function(k){return k.indexOf("i-")===0}).map(function(k){return Object.assign({id:k},o[k])}).sort(function(a,b){return(CATS.indexOf(a.cat)-CATS.indexOf(b.cat))||String(a.name).localeCompare(String(b.name),"ja")})}
+function moves(){var o=docs();return Object.keys(o).filter(function(k){return k.indexOf("m-")===0}).map(function(k){return Object.assign({id:k},o[k])}).sort(function(a,b){return a.date<b.date?-1:a.date>b.date?1:(a.at||0)-(b.at||0)})}
+function put(id,data){return window.T8Data.rawSet("eq","global~"+id,data)}
+/* 置き場所の候補：本部倉庫＋イベント名＋これまでに使った場所 */
+function places(){
+  var A=window.T8Data,set={},out=[];FIXED.forEach(function(p){set[p]=1;out.push(p)});
+  (A.events()||[]).forEach(function(e){var n=e.name||e.id;if(n&&!set[n]){set[n]=1;out.push(n)}});
+  moves().forEach(function(m){[m.from,m.to].forEach(function(p){if(p&&!set[p]){set[p]=1;out.push(p)}})});
+  ["修理中","紛失"].forEach(function(p){if(!set[p]){set[p]=1;out.push(p)}});
+  return out;
+}
+/* 置き場所ごとの数＝その場所へ入った数 − 出た数 */
+function stock(){var st={};moves().forEach(function(m){var n=+m.n||0;if(m.from){(st[m.item]=st[m.item]||{})[m.from]=((st[m.item]||{})[m.from]||0)-n}if(m.to){(st[m.item]=st[m.item]||{})[m.to]=((st[m.item]||{})[m.to]||0)+n}});return st}
+function total(st,id){var o=st[id]||{},t=0;Object.keys(o).forEach(function(k){t+=o[k]});return t}
+
+function vLoc(){
+  var it=items(),st=stock(),pl=places(),h='';
+  if(!it.length)return'<div class="card"><h2>まだ品目がありません</h2><p class="muted" style="font-size:14px;margin:0">「移動・登録」で、品目と最初の置き場所を登録してください。</p><div style="margin-top:10px"><button class="btn primary" data-act="k_tab" data-v="move">品目を登録する</button></div></div>';
+  h+='<div class="card"><h2>置き場所ごと <small>いま、どこに何があるか</small></h2><div class="loc">';
+  pl.forEach(function(p){var rows=it.filter(function(x){return((st[x.id]||{})[p]||0)!==0});if(!rows.length)return;
+    var sum=rows.reduce(function(a,x){return a+(st[x.id][p]||0)},0),al=p==="修理中"||p==="紛失";
+    h+='<div class="lc'+(al?' alert':'')+'"><h3><span>'+esc(p)+'</span><span class="muted" style="font-size:13px">'+sum+' 点</span></h3>'+rows.map(function(x){var n=st[x.id][p];return'<div class="it"><span>'+esc(x.name)+(x.code?' <small class="muted">'+esc(x.code)+'</small>':'')+'</span><b'+(n<0?' style="color:var(--bad)"':'')+'>'+n+'</b></div>'}).join("")+'</div>'});
+  h+='</div><div class="muted" style="font-size:12px;margin-top:8px">数がマイナスの場所は、移動の記録の入れ違いです。「記録」で確かめてください。</div></div>';
+  return h;
+}
+function vItem(){
+  var it=items(),st=stock(),pl=places().filter(function(p){return it.some(function(x){return((st[x.id]||{})[p]||0)!==0})}),q=S.q.trim().toLowerCase();
+  var rows=it.filter(function(x){return!q||(x.name+" "+(x.code||"")+" "+(x.cat||"")+" "+(x.memo||"")).toLowerCase().indexOf(q)>=0});
+  var h='<div class="card"><h2>品目ごと <small>品目 × 置き場所の一覧</small></h2><label class="f" style="margin-bottom:10px"><input type="search" id="q" value="'+esc(S.q)+'" placeholder="品目名・管理番号で絞り込み"></label>';
+  if(!rows.length)return h+'<div class="muted" style="font-size:14px">該当する品目がありません。</div></div>';
+  h+='<div class="tablewrap"><table><thead><tr><th>品目</th><th>合計</th>'+pl.map(function(p){return'<th>'+esc(p)+'</th>'}).join("")+'<th></th></tr></thead><tbody>';
+  var last="";
+  rows.forEach(function(x){if(x.cat!==last){last=x.cat;h+='<tr><td colspan="'+(pl.length+3)+'" style="background:var(--surface2);font-size:12.5px;font-weight:700;position:static">'+esc(x.cat||"未分類")+'</td></tr>'}
+    var o=st[x.id]||{};h+='<tr><td><b>'+esc(x.name)+'</b>'+(x.code?'<span class="code">'+esc(x.code)+'</span>':'')+(x.memo?'<span class="code">'+esc(x.memo)+'</span>':'')+'</td><td><b>'+total(st,x.id)+'</b></td>'+pl.map(function(p){var n=o[p]||0;return'<td'+(n?'':' class="z"')+'>'+n+'</td>'}).join("")+'<td><button class="btn small" data-act="k_edit" data-v="'+x.id+'">変更</button></td></tr>'});
+  return h+'</tbody></table></div></div>';
+}
+function opts(list,sel,first){return(first?'<option value="">'+esc(first)+'</option>':'')+list.map(function(p){return'<option'+(p===sel?' selected':'')+'>'+esc(p)+'</option>'}).join("")}
+function vMove(){
+  var it=items(),pl=places(),m=S.mv,f=S.it,st=stock();
+  var h='<div class="card"><h2>移動を記録する <small>店舗へ送った・戻ってきた・修理に出した など</small></h2>';
+  if(!it.length)h+='<div class="muted" style="font-size:14px">先に下で品目を登録してください。</div>';
+  else{
+    var cur=m.item?(st[m.item]||{}):{},have=Object.keys(cur).filter(function(p){return cur[p]>0});
+    h+='<div class="grid g2"><label class="f"><span>品目</span><select id="mv_item">'+'<option value="">選んでください</option>'+it.map(function(x){return'<option value="'+x.id+'"'+(x.id===m.item?' selected':'')+'>'+esc(x.name+(x.code?"（"+x.code+"）":""))+'</option>'}).join("")+'</select></label>'+
+     '<label class="f"><span>数</span><input type="number" inputmode="numeric" min="1" id="mv_n" value="'+esc(m.n||1)+'"></label>'+
+     '<label class="f"><span>どこから</span><select id="mv_from">'+opts(have.length?have:pl,m.from,null)+'<option value="'+NEW+'"'+(m.from===NEW?' selected':'')+'>'+NEW+'</option></select></label>'+
+     '<label class="f"><span>どこへ</span><input type="text" id="mv_to" list="pl" value="'+esc(m.to||"")+'" placeholder="例：京都高島屋S.C. T8／本部倉庫／修理中"><datalist id="pl">'+pl.map(function(p){return'<option value="'+esc(p)+'">'}).join("")+'<option value="'+OUT+'"></datalist></label>'+
+     '<label class="f"><span>日付</span><input type="date" id="mv_date" value="'+esc(m.date||today())+'"></label>'+
+     '<label class="f"><span>メモ（任意）</span><input type="text" id="mv_memo" value="'+esc(m.memo||"")+'" placeholder="例：宅配で発送、11/1着"></label></div>'+
+     (m.item?'<div class="muted" style="font-size:12.5px;margin-top:8px">いまの置き場所：'+(have.length?have.map(function(p){return esc(p)+' '+cur[p]}).join("／"):'なし')+'</div>':'')+
+     '<div class="row" style="margin-top:12px"><button class="btn primary" data-act="k_mvsave">この移動を記録する</button></div>';
+  }
+  h+='</div>';
+  h+='<div class="card"><h2>'+(f.id?'品目を変更する':'品目を登録する')+' <small>レジ・ドロアー・什器など</small></h2><div class="grid g2">'+
+   '<label class="f"><span>品目名</span><input type="text" id="it_name" value="'+esc(f.name||"")+'" placeholder="例：キャッシュドロアー"></label>'+
+   '<label class="f"><span>区分</span><select id="it_cat">'+opts(CATS,f.cat||CATS[0])+'</select></label>'+
+   '<label class="f"><span>管理番号（任意）</span><input type="text" id="it_code" value="'+esc(f.code||"")+'" placeholder="例：DR-01"></label>'+
+   '<label class="f"><span>メモ（任意）</span><input type="text" id="it_memo" value="'+esc(f.memo||"")+'" placeholder="例：鍵は2本、ケースに入れて保管"></label>'+
+   (f.id?'':'<label class="f"><span>最初の数</span><input type="number" inputmode="numeric" min="0" id="it_n" value="1"></label><label class="f"><span>最初の置き場所</span><input type="text" id="it_place" list="pl2" value="本部倉庫"><datalist id="pl2">'+places().map(function(p){return'<option value="'+esc(p)+'">'}).join("")+'</datalist></label>')+
+   '</div><div class="row" style="margin-top:12px"><button class="btn primary" data-act="k_itsave">'+(f.id?'この内容で変更':'登録する')+'</button>'+(f.id?'<button class="btn" data-act="k_itnew">やめる</button><button class="btn danger" data-act="k_itdel" data-v="'+f.id+'">'+(S.confirm==="del:"+f.id?'もう一度押すと削除':'この品目を削除')+'</button>':'')+'</div>'+
+   (f.id?'<div class="muted" style="font-size:12px;margin-top:6px">数や置き場所を変えるときは、上の「移動を記録する」を使います。</div>':'')+'</div>';
+  return h;
+}
+function vHist(){
+  var it={},mv=moves().slice().reverse();items().forEach(function(x){it[x.id]=x});
+  var h='<div class="card hist"><h2>記録 <small>新しい順・'+mv.length+' 件</small></h2>';
+  if(!mv.length)return h+'<div class="muted" style="font-size:14px">まだ記録がありません。</div></div>';
+  mv.slice(0,200).forEach(function(m){var x=it[m.item]||{name:"（削除した品目）"};
+    h+='<div class="h"><b>'+md(m.date)+'</b><div class="t">'+esc(x.name)+' ×'+esc(m.n)+'　'+esc(m.from||"新しく入れた")+' → '+esc(m.to||"廃棄・処分")+'<small>'+esc(m.by||"")+(m.memo?'・'+esc(m.memo):'')+'</small></div><button class="btn small danger" data-act="k_mvdel" data-v="'+m.id+'">'+(S.confirm==="mv:"+m.id?'もう一度押すと取消':'取消')+'</button></div>'});
+  return h+'</div>';
+}
+function val(id){var e=$(id);return e?String(e.value).trim():""}
+function act(a,v){
+  render.force=true;
+      if(a==="tab"){S.tab=v;S.confirm=null;return render()}
+  if(a==="edit"){var x=docs()[v];if(!x)return;S.it=Object.assign({id:v},x);S.tab="move";render();window.scrollTo(0,document.body.scrollHeight);return}
+  if(a==="itnew"){S.it={};S.confirm=null;return render()}
+  if(a==="itsave"){
+    var name=val("it_name");if(!name)return toast("品目名を入れてください",1);
+    var f=S.it,d={name:name,cat:val("it_cat"),code:val("it_code"),memo:val("it_memo"),at:(f.at||Date.now()),by:ROOT.who};
+    if(f.id){put(f.id,d).then(function(){toast("品目を変更しました");S.it={};render.force=true;render()},err);return}
+    var n=Math.max(0,Math.round(+val("it_n")||0)),pl=val("it_place")||"本部倉庫",id="i-"+rid();
+    put(id,d).then(function(){return n?put("m-"+rid(),{item:id,n:n,from:"",to:pl,date:today(),by:ROOT.who,memo:"登録",at:Date.now()}):null}).then(function(){toast("品目を登録しました");S.it={};S.mv={item:id};render.force=true;render()},err);return;
+  }
+  if(a==="itdel"){if(S.confirm!=="del:"+v){S.confirm="del:"+v;return render()}S.confirm=null;
+    var ops=[put(v,null)];moves().filter(function(m){return m.item===v}).forEach(function(m){ops.push(put(m.id,null))});
+    Promise.all(ops).then(function(){toast("品目を削除しました");S.it={};render.force=true;render()},err);return}
+  if(a==="mvsave"){
+    var m={item:val("mv_item"),n:Math.round(+val("mv_n")||0),from:val("mv_from"),to:val("mv_to"),date:val("mv_date")||today(),memo:val("mv_memo")};
+    if(!m.item)return toast("品目を選んでください",1);if(m.n<=0)return toast("数を入れてください",1);if(!m.to)return toast("どこへ移すかを入れてください",1);
+    if(m.from===NEW)m.from="";if(m.to===OUT)m.to="";if(m.from&&m.from===m.to)return toast("移動元と移動先が同じです",1);
+    var have=(stock()[m.item]||{})[m.from]||0;
+    if(m.from&&have<m.n&&S.confirm!=="over"){S.confirm="over";S.mv=m;render();return toast(m.from+" には "+have+" 点しかありません。そのまま記録するなら、もう一度押してください",1)}
+    S.confirm=null;
+    put("m-"+rid(),Object.assign({},m,{by:ROOT.who,at:Date.now()})).then(function(){toast("移動を記録しました");S.mv={item:m.item};render.force=true;render()},err);return;
+  }
+  if(a==="mvdel"){if(S.confirm!=="mv:"+v){S.confirm="mv:"+v;return render()}S.confirm=null;put(v,null).then(function(){toast("取り消しました");render.force=true;render()},err);return}
+}
+function err(e){console.error(e);toast("保存できませんでした："+(e&&e.message||"通信を確認してください"),1)}
+return{
+  tabs:[["loc","置き場所ごと"],["item","品目ごと"],["move","移動・登録"],["hist","記録"]],
+  view:function(){return({loc:vLoc,item:vItem,move:vMove,hist:vHist})[S.tab]()},
+  act:act,
+  change:function(t){if(t.id==="mv_item"){S.mv={item:t.value,n:val("mv_n"),to:val("mv_to"),date:val("mv_date"),memo:val("mv_memo")};render.force=true;render();return true}return false},
+  input:function(t){if(t.id==="q"){S.q=t.value;render.force=true;render();return true}return false}
+};
+})();
 function render(){
   var a=document.activeElement,fid=a&&a.id,sy=window.scrollY;
   if(S.gate){$("main").innerHTML=gateHtml();return}
   if(a&&fid&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)&&!render.force){S.pending=true;return}
   render.force=false;S.pending=false;
   var low=lowList().filter(function(x){return!ordered(x.it,x.place)}).length;
-  var h='<div class="top"><div class="brand"><small>POPUP ｜ SUPPLIES ・ 試作</small><b>備品管理システム</b><span>ショッパー・ラッピング資材などを、本部倉庫と全店舗まとめて管理</span></div><div class="row"><label class="f" style="flex-direction:row;align-items:center;gap:8px"><span style="white-space:nowrap">入力者</span><input type="text" id="who" value="'+esc(S.who)+'" placeholder="あなたの名前" style="max-width:180px"></label><a class="btn small" href="./" style="text-decoration:none;display:inline-flex;align-items:center">日報サイトへ</a></div></div>';
-  h+='<div class="trial">試作です。日報サイトの「備品」タブとは別のデータで動いています。見比べて、使いやすい方を残します。</div>';
-  h+='<div class="tabs">'+[["all","全体の一覧"],["input","店舗で入力"],["order","発注"+(low?' <b class="cnt">'+low+'</b>':'')],["hist","記録"],["set","品目・設定"]].map(function(t){return'<button data-act="tab" data-v="'+t[0]+'" aria-pressed="'+(S.tab===t[0])+'">'+t[1]+'</button>'}).join("")+'</div>';
-  h+=({all:vAll,input:vInput,order:vOrder,hist:vHist,set:vSet})[S.tab]();
+  var h='<div class="top"><div class="brand"><small>POPUP ｜ SUPPLIES ・ 試作</small><b>備品管理</b><span>消耗品（ショッパー・ラッピング資材など）と、保管備品（レジ・ドロアー・什器など）</span></div><div class="row"><label class="f" style="flex-direction:row;align-items:center;gap:8px"><span style="white-space:nowrap">入力者</span><input type="text" id="who" value="'+esc(S.who)+'" placeholder="あなたの名前" style="max-width:180px"></label><a class="btn small" href="./" style="text-decoration:none;display:inline-flex;align-items:center">日報サイトへ</a></div></div>';
+  h+='<div class="trial">試作です。消耗品は、日報サイトの「備品」タブ・スプレッドシートとは別のデータで動いています。見比べて、使いやすい方を残します。</div>';
+  h+='<div class="modes"><button data-act="mode" data-v="sup" aria-pressed="'+(S.mode==="sup")+'"><b>消耗品</b><small>ショッパー・ラッピング資材など'+(low?'　要発注 '+low:'')+'</small></button><button data-act="mode" data-v="eq" aria-pressed="'+(S.mode==="eq")+'"><b>保管備品</b><small>レジ・ドロアー・什器など</small></button></div>';
+  if(S.mode==="eq"){
+    h+='<div class="tabs">'+EQ.tabs.map(function(t){return'<button data-act="k_tab" data-v="'+t[0]+'" aria-pressed="'+(S.k.tab===t[0])+'">'+t[1]+'</button>'}).join("")+'</div>'+EQ.view();
+  }else{
+    h+='<div class="tabs">'+[["all","全体の一覧"],["input","店舗で入力"],["order","発注"+(low?' <b class="cnt">'+low+'</b>':'')],["hist","記録"],["set","品目・設定"]].map(function(t){return'<button data-act="tab" data-v="'+t[0]+'" aria-pressed="'+(S.tab===t[0])+'">'+t[1]+'</button>'}).join("")+'</div>';
+    h+=({all:vAll,input:vInput,order:vOrder,hist:vHist,set:vSet})[S.tab]();
+  }
   $("main").innerHTML=h;
   if(fid){var el=$(fid);if(el)el.focus()}window.scrollTo(0,sy);
 }
 function gateHtml(){
-  var h='<div class="gate"><div class="brand" style="margin-bottom:18px"><small>POPUP ｜ SUPPLIES ・ 試作</small><b>備品管理システム</b><span>日報サイトと同じ合言葉で入れます</span></div><div class="card">';
+  var h='<div class="gate"><div class="brand" style="margin-bottom:18px"><small>POPUP ｜ SUPPLIES ・ 試作</small><b>備品管理</b><span>日報サイトと同じ合言葉で入れます</span></div><div class="card">';
   if(S.gate==="loading")return h+'<h2>読み込み中です</h2></div></div>';
   if(S.gate==="noaccess")return h+'<h2>このページは使えません</h2><p class="muted" style="font-size:14px">イベント限定の合言葉では入れません。社内スタッフ用の合言葉で入ってください。</p><button class="btn" data-act="logout">合言葉を入れ直す</button></div></div>';
   return h+'<h2>合言葉を入力してください</h2>'+(S.err?'<p style="color:var(--bad);font-size:14px;margin:0 0 8px">'+esc(S.err)+'</p>':'')+'<label class="f"><span>合言葉</span><input type="password" id="code" autocomplete="current-password"></label><div style="margin-top:12px"><button class="btn primary" style="width:100%;min-height:52px" data-act="login">入る</button></div></div></div>';
@@ -220,6 +351,8 @@ function act(a,v){
   if(a==="login")return login();
   if(a==="logout"){try{localStorage.removeItem("t8code")}catch(e){}S.gate="login";return render()}
   if(a==="tab"){S.tab=v;S.confirm=null;return render()}
+  if(a==="mode"){S.mode=v;try{localStorage.setItem("bh_mode",v);history.replaceState(null,"",v==="eq"?"#eq":location.pathname)}catch(e){}window.scrollTo(0,0);return render()}
+  if(a.indexOf("k_")===0)return EQ.act(a.slice(2),v);
   if(a==="kind"){S.mvKind=v;return render()}
   if(a==="save"){
     var p=val("in_place"),d=val("in_date")||today(),k=S.mvKind,to=val("in_to");if(!p)return toast("場所を選んでください",1);
@@ -244,8 +377,8 @@ function act(a,v){
 function clearOrdered(ops){var o=Object.assign({},conf().ordered||{}),ch=false;ops.forEach(function(r){[r.place,r.to].forEach(function(p){if(!p)return;var k=r.item+"|"+p,it=docs()[r.item];if(o[k]&&it){var s=stockOf(r.item,p);if(s.n>lineOf(it,p)){delete o[k];ch=true}}})});if(ch)setConf({ordered:o}).catch(function(){})}
 document.addEventListener("click",function(e){var el=e.target.closest&&e.target.closest("[data-act]");if(!el)return;if(el.tagName!=="A")e.preventDefault();act(el.dataset.act,el.dataset.v)});
 document.addEventListener("keydown",function(e){if(e.key==="Enter"&&e.target&&e.target.id==="code")login();if(e.key==="Enter"&&e.target&&e.target.dataset&&e.target.dataset.q){e.preventDefault();var all=[].slice.call(document.querySelectorAll("input[data-q]")),i=all.indexOf(e.target);if(all[i+1])all[i+1].focus()}});
-document.addEventListener("input",function(e){var t=e.target;if(t.id==="who"){S.who=t.value;try{localStorage.setItem("t8who",t.value)}catch(x){}}});
-document.addEventListener("change",function(e){var t=e.target;if(t.id==="in_place"){S.place=t.value;try{localStorage.setItem("bh_place",t.value)}catch(x){}render.force=true;render()}if(t.id==="in_date")S.date=t.value;if(t.id==="in_to")S.to=t.value});
+document.addEventListener("input",function(e){var t=e.target;if(S.mode==="eq"&&EQ.input(t))return;if(t.id==="who"){S.who=t.value;try{localStorage.setItem("t8who",t.value)}catch(x){}}});
+document.addEventListener("change",function(e){var t=e.target;if(S.mode==="eq"&&EQ.change(t))return;if(t.id==="in_place"){S.place=t.value;try{localStorage.setItem("bh_place",t.value)}catch(x){}render.force=true;render()}if(t.id==="in_date")S.date=t.value;if(t.id==="in_to")S.to=t.value});
 document.addEventListener("focusout",function(){setTimeout(function(){if(S.pending){var a=document.activeElement;if(!(a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)))render()}},60)});
 async function login(code){
   var A=window.T8Data,c=code||val("code");if(!c)return;
@@ -253,7 +386,7 @@ async function login(code){
   A.setCode(c);S.gate="loading";render();
   try{await A.connect();try{localStorage.setItem("t8code",c)}catch(x){}
     if(A.scope().role==="event"){S.gate="noaccess";return render()}
-    S.gate=null;A.db.collection("bh").onSnapshot(function(){render()});A.db.collection("config").onSnapshot(function(){render()});render.force=true;render();
+    S.gate=null;A.db.collection("bh").onSnapshot(function(){render()});A.db.collection("eq").onSnapshot(function(){render()});A.db.collection("config").onSnapshot(function(){render()});render.force=true;render();
   }catch(e){S.gate="login";S.err=e&&e.code==="unauthorized"?"合言葉が違います。":"データを読み込めませんでした。通信を確認してください。";render.force=true;render()}
 }
 var saved="";try{saved=localStorage.getItem("t8code")||""}catch(e){}
