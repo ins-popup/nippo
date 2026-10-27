@@ -844,7 +844,7 @@ function supCalcRaw(it,ev,days,start){
   Object.keys(days).forEach(function(d){if(d>from)use+=supUseRaw(it,days[d])});
   var est=Math.round(base+add-use);
   var rd=Object.keys(days).filter(function(d){return supUseRaw(it,days[d])>0}).sort().slice(-7),avg=rd.length?rd.reduce(function(a,d){return a+supUseRaw(it,days[d])},0)/rd.length:0;
-  var al=+it.alert||0,lv=est<=al?"red":(est<=al*1.5?"yel":"ok");
+  var al=+it.alert||0,lv=al<=0?"ok":(est<=al?"red":(est<=al*1.5?"yel":"ok")); /* 通知ライン0＝通知しない品目 */
   var gap=null;if(last){var prev=null;ev.forEach(function(e){if(e.kind==="count"&&e!==last)prev=e});var pb=prev?+prev.n:(+it.init||0),pf=prev?prev.date:addDays(start,-1),pa=prev?(prev.at||0):0,a2=0,u2=0;
     ev.forEach(function(e){if(e.kind==="add"&&(e.date>pf||(e.date===pf&&(e.at||0)>pa))&&(e.date<last.date||(e.date===last.date&&(e.at||0)<(last.at||0))))a2+=+e.n||0});
     Object.keys(days).forEach(function(d){if(d>pf&&d<=last.date)u2+=supUseRaw(it,days[d])});gap=+last.n-Math.round(pb+a2-u2)}
@@ -893,9 +893,9 @@ function supCard(){
   it.forEach(function(x){var c=supCalc(x),ed=S.supEdit&&S.supEdit.id===x.id?S.supEdit:null;
     h+='<div class="si '+c.lv+'"><div class="sh"><div class="sn"><b>'+esc(x.name)+'</b><span>'+esc(SUP_MODE[x.mode]||"")+((x.mode==="cust"||x.mode==="wrap")&&+x.per!==1?'（1件 '+esc(x.per)+esc(x.unit||"")+'）':'')+'</span></div>'+
       '<div class="sv"><b class="num">'+c.est+'</b><small>'+esc(x.unit||"")+'</small></div></div>'+
-      '<div class="sm">'+(c.lv==="red"?'<span class="pill bad">要発注</span>':c.lv==="yel"?'<span class="pill warn">少なめ</span>':'<span class="pill ok">十分</span>')+
+      '<div class="sm">'+(!(+x.alert>0)?'<span class="pill">通知なし</span>':c.lv==="red"?'<span class="pill bad">要発注</span>':c.lv==="yel"?'<span class="pill warn">少なめ</span>':'<span class="pill ok">十分</span>')+
       (c.left!=null?'<span>あと約 '+c.left+' 日分（1日 約'+(Math.round(c.avg*10)/10)+esc(x.unit||"")+'）</span>':'')+
-      '<span>通知ライン '+esc(x.alert||0)+esc(x.unit||"")+'</span>'+
+      (+x.alert>0?'<span>通知ライン '+esc(x.alert)+esc(x.unit||"")+'</span>':'')+
       (c.last?'<span>最後に数えた日 '+md(c.last.date)+'（'+c.last.n+esc(x.unit||"")+(c.gap?'・目安との差 '+(c.gap>0?'+':'')+c.gap:'')+'）</span>':'<span>まだ数えていません</span>')+'</div>';
     if(can){
       if(ed)h+='<div class="sf"><label class="f"><span>'+(ed.kind==="add"?'届いた数':'数えた残数')+'（'+mdw(S.date)+'）</span><input type="number" inputmode="numeric" id="supn" min="0" placeholder="'+(ed.kind==="add"?'例：100':'例：'+Math.max(0,c.est))+'"></label><button class="btn primary" data-act="supsave">保存</button><button class="btn" data-act="supx">やめる</button></div>';
@@ -1563,7 +1563,7 @@ function gateHtml(){
   return h+'</div></div>';
 }
 /* 新しい版の確認：ブラウザが古いページを覚えていても、新しい版が出たら「最新にする」を出す（5分ごと・画面に戻ったとき） */
-var APP_VER="2026-10-27a";
+var APP_VER="2026-10-27b";
 function checkUpdate(){
   if(location.protocol==="file:")return;
   fetch(location.pathname.replace(/[^\/]*$/,"")+"index.html?v="+Date.now(),{cache:"no-store"}).then(function(r){return r.ok?r.text():""}).then(function(t){var m=/var APP_VER="([^"]+)"/.exec(t);if(m&&m[1]!==APP_VER){var u=$("upd");if(u)u.hidden=false}}).catch(function(){});
