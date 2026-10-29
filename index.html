@@ -583,7 +583,7 @@ async function delTx(id){
 async function putDay(date,patch){
   if(S.demo){S.dDays[date]=Object.assign({},S.dDays[date]||{},patch);bump();return true}
   if(!ensureDb())return false;
-  try{var ref=S.db.doc("days/"+date);if(S.days[date]){await ref.update(patch)}else{await ref.set(patch)}return true}catch(e){dbErr(e);return false}
+  try{var ref=S.db.doc("days/"+date);await ref.update(patch);return true}catch(e){dbErr(e);return false}
 }
 async function putCount(id,date,n){
   if(S.demo){if(n==null)delete S.dCounts[id];else S.dCounts[id]={id:id,date:date,n:n};bump();return true}
@@ -1460,7 +1460,7 @@ document.addEventListener("change",function(e){
     holdRender();
     var fld=t.dataset.day,k=S.date+":"+fld,val=t.value;
     if(fld==="customers"||fld==="reportTotal"||fld==="wraps"||fld==="couponN"||fld==="couponAmt")val=val===""?null:Math.round(+val);
-    var d1=S.date;putDay(d1,(function(o){o[fld]=val;return o})({})).then(function(ok){delete S.draft[k];if(ok){toast("保存しました");logEv(fld==="customers"||fld==="reportTotal"||fld==="wraps"||fld==="couponN"||fld==="couponAmt"?"売上":"日報",FLAB[fld]+"："+(val==null||val===""?"（空）":String(val).replace(/\s+/g," ").slice(0,40)),d1)}else render()});
+    var d1=S.date;putDay(d1,(function(o){o[fld]=val;return o})({})).then(function(ok){delete S.draft[k];if(ok){toast("保存しました");logEv(fld==="customers"||fld==="reportTotal"||fld==="wraps"||fld==="couponN"||fld==="couponAmt"?"売上":"日報",FLAB[fld]+"："+(val==null||val===""?"（空）":String(val).replace(/\s+/g," ").slice(0,1000)),d1)}else render()});
   }
   else if(t.dataset&&t.dataset.count){
     holdRender();
@@ -1603,7 +1603,7 @@ function gateHtml(){
   return h+'</div></div>';
 }
 /* 新しい版の確認：ブラウザが古いページを覚えていても、新しい版が出たら「最新にする」を出す（5分ごと・画面に戻ったとき） */
-var APP_VER="2026-10-27c";
+var APP_VER="2026-10-29a";
 function checkUpdate(){
   if(location.protocol==="file:")return;
   fetch(location.pathname.replace(/[^\/]*$/,"")+"index.html?v="+Date.now(),{cache:"no-store"}).then(function(r){return r.ok?r.text():""}).then(function(t){var m=/var APP_VER="([^"]+)"/.exec(t);if(m&&m[1]!==APP_VER){var u=$("upd");if(u)u.hidden=false}}).catch(function(){});
