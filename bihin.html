@@ -146,7 +146,7 @@ function ordered(it,place){var o=(conf().ordered||{})[it.id+"|"+place];return o|
 /* ===== 保管備品（レジ・ドロアー・什器など）：元の kizai.html。データは eq ===== */
 var EQ=(function(){
 var S=ROOT.k;
-var CATS=["レジ・決済機器","什器・ディスプレイ","工具・その他"];
+var CATS=["レジ・決済機器","什器・ディスプレイ","工具・その他","消耗品"];
 var FIXED=["本部倉庫"],OUT="（廃棄・処分）",NEW="（新しく入れる）";
 function $(id){return document.getElementById(id)}
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}

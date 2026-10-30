@@ -96,6 +96,10 @@ input[type=text],input[type=number],input[type=date],input[type=search],select,t
 textarea{min-height:84px;resize:vertical;line-height:1.55}
 input:read-only,textarea:read-only{background:var(--surface2)}
 .row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}
+.flt{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px}
+.fltr{display:grid;grid-template-columns:5.5em 1fr auto 6em;align-items:center;gap:8px;padding:6px 10px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+.fltr .d{font-weight:700;font-size:14px}.fltr input{width:100%;min-width:0;font-size:16px;padding:8px;text-align:right}.fltr .u{font-size:13px;color:var(--muted)}.fltr .s{text-align:right;font-size:13px;color:var(--muted)}
+.fltt{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px;padding:12px 14px;border-radius:10px;background:var(--surface2);font-size:14px}.fltt b{font-size:22px}
 .row>*{min-width:0}
 .seg{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:8px}
 .seg button{border:1.5px solid var(--line2);background:var(--surface);border-radius:10px;min-height:46px;font-weight:700;cursor:pointer;padding:4px 8px;line-height:1.25}
@@ -551,6 +555,7 @@ function checks(){
       }
     }
   });
+  (function(){var E=fltDay(),set=fltSet();if(!E||!set)return;var fs=fltSum((getDays()[E]||{}).floatCnt);if(fs==null){if(today>E)out.push({lv:"yel",tag:"準備金が未確認",txt:mdw(E)+"（最終日）",sub:"備品タブの「レジ準備金」で、最終日に数えた枚数を入れてください",go:{tab:"sup"}})}else if(fs!==set)out.push({lv:"red",tag:"準備金が合わない",txt:mdw(E)+"（最終日）：数えた合計 "+yen(fs)+" ／ 準備金 "+yen(set)+"（"+fltDiffTxt(fs-set)+"）",sub:"売上の現金が混ざっていないか、数え間違いがないか確認してください",go:{tab:"sup"}})})();
   supItems().forEach(function(x){var c=supCalc(x);if(c.lv!=="ok")out.push({lv:c.lv==="red"?"red":"yel",tag:c.lv==="red"?"備品が要発注":"備品が少なめ",txt:x.name+"：残り 約"+c.est+(x.unit||"")+"（通知ライン "+(x.alert||0)+(x.unit||"")+"）",sub:c.left!=null?"あと約"+c.left+"日分です。発注担当に連絡してください":"発注担当に連絡してください",go:{tab:"sup"}})});
   out.sort(function(a,b){return(a.lv==="red"?0:1)-(b.lv==="red"?0:1)});
   return out;
@@ -663,7 +668,8 @@ function eventForm(px,c,btn,label){
    '<div class="row">'+f("start","開始日",c.start||"","date")+f("end","終了日",c.end||"","date")+'</div>'+
    '<div class="row">'+f("budget","売上予算（税抜・円）",c.budget==null?"":c.budget,"number","例：2100000")+f("tax","消費税率（％）",tax,"number")+'</div>'+
    '<div class="row">'+f("defOff","標準のオフ率（％・任意）",c.defOff==null?"":c.defOff,"number","例：30")+'<label class="f"><span>上代・販売価格の税区分</span><select id="'+px+'retailIncl"><option value="0"'+(c.retailIncl?'':' selected')+'>税抜の金額</option><option value="1"'+(c.retailIncl?' selected':'')+'>税込の金額</option></select></label></div>'+
-   '<div class="muted" style="font-size:12px;line-height:1.7">標準のオフ率は、商品マスタ登録の「オフ率」欄に最初から入ります。税込を選ぶと、取り込むときに消費税率で割って税抜に直します（サイト内の金額は税抜で管理します）。</div>'+
+   '<div class="row">'+f("float","レジ準備金（おつり金）の金額（円・任意）",c.float==null?"":c.float,"number","例：50000")+'</div>'+
+   '<div class="muted" style="font-size:12px;line-height:1.7">準備金の金額を入れると、会期の最終日にスタッフが備品タブで残りを数えて、過不足を確認できます（確認タブにも出ます）。<br>標準のオフ率は、商品マスタ登録の「オフ率」欄に最初から入ります。税込を選ぶと、取り込むときに消費税率で割って税抜に直します（サイト内の金額は税抜で管理します）。</div>'+
    (px==="evN_"?f("code","このイベントの合言葉（社外メンバー用・任意）","","text","4文字以上。あとから設定もできます"):'')+
    '<button class="btn primary" data-act="'+btn+'">'+label+'</button></div>';
 }
@@ -905,7 +911,7 @@ function supAuto(x){return x.mode==="cust"||x.mode==="wrap"||+x.alert>0}
 function supPill(x,c){return!(+x.alert>0)?'':c.lv==="red"?'<span class="pill bad">要発注</span>':c.lv==="yel"?'<span class="pill warn">少なめ</span>':'<span class="pill ok">十分</span>'}
 function supEditForm(x,c,ed){return'<div class="sf"><label class="f"><span>'+(ed.kind==="add"?'届いた数':'数えた残数')+'（'+mdw(S.date)+'）</span><input type="number" inputmode="numeric" id="supn" min="0" placeholder="'+(ed.kind==="add"?'例：100':'例：'+Math.max(0,c.est))+'"></label><button class="btn primary" data-act="supsave">保存</button><button class="btn" data-act="supx">やめる</button></div>'}
 function supCard(){
-  var it=supItems(),can=writable();
+  var it=supItems().filter(supAuto),can=writable(); /* 自動で減らない備品（ハンガー・レジ・ペン等）は保管備品で管理するので、備品タブには出さない */
   if(!it.length){if(S.demo)return"";return'<div class="card"><h2>備品 <small>ショッパー・ラッピング資材</small></h2><div class="muted" style="font-size:13.5px;line-height:1.7">まだ品目が登録されていません。'+(scoped()?'管理者に登録を頼んでください。':'管理者タブの「備品の品目」で登録すると、ここに残数が出ます。')+'</div></div>'}
   var auto=it.filter(supAuto),other=it.filter(function(x){return!supAuto(x)}),cs={};it.forEach(function(x){cs[x.id]=supCalc(x)});
   var nRed=it.filter(function(x){return cs[x.id].lv==="red"}).length,nYel=it.filter(function(x){return cs[x.id].lv==="yel"}).length;
@@ -943,7 +949,7 @@ function supCard(){
 }
 /* ---- 備品タブ ---- */
 function vSup(){
-  var h=supCard();
+  var h=supCard()+fltCard();
   if(!supItems().length&&!S.demo&&!scoped())h+='<div class="card"><h2>はじめに</h2><ol class="hs" style="margin:0"><li>管理者タブの「<b>備品の品目</b>」で、ショッパー・ラッピング資材などの品目と通知ラインを登録します</li><li>管理者タブの「<b>全店舗の備品</b>」で、発注担当のメールアドレスを登録すると、残りが少なくなったときに毎朝メールが届きます</li><li>閉店後に売上タブで<b>客数</b>と<b>ラッピング件数</b>を入れると、残りが自動で減ります</li></ol><div class="row" style="margin-top:10px"><button class="btn primary" data-act="tab" data-v="admin">管理者タブへ</button><button class="btn" data-act="supdemo">見本データで試す</button></div></div>';
   return h;
 }
@@ -1269,6 +1275,42 @@ function vReport(){
      (x.event?'<p><b>館のイベント・混雑状況</b>'+esc(x.event)+'</p>':'')+(x.hot?'<p><b>売れ筋</b>'+esc(x.hot)+'</p>':'')+(x.comment?'<p><b>日報（コメント）</b>'+esc(x.comment)+'</p>':'')+(x.notice?'<p><b>連絡・依頼・トラブル（インス宛）</b>'+esc(x.notice)+'</p>':'')+'</div>'}).join("");
   return h+'</div>';
 }
+
+
+/* ---- レジ準備金（おつり金）：会期の最終日に、閉店後に金種ごとの枚数を数えて、設定額との過不足を見る ---- */
+var FLT_DEN=[5000,1000,500,100,50,10,5,1];
+function fltSet(){var n=+S.cfg.float;return n>0?n:0}
+function fltDay(){return S.cfg.end||""}
+function fltSum(o){var t=0,any=false;FLT_DEN.forEach(function(k){var n=o&&o[k];if(n!=null&&n!==""){any=true;t+=k*(+n||0)}});return any?t:null}
+function fltDiffTxt(df){return df===0?"ぴったり":(df>0?"＋"+yen(df)+" 多い":"−"+yen(-df)+" 足りない")}
+function fltCard(){
+  var E=fltDay();if(!E)return"";
+  var can=writable(),set=fltSet(),dd=getDays()[E]||{},o=(S.fltDraft&&S.fltDraft.date===E)?S.fltDraft.o:(dd.floatCnt||{}),sum=fltSum(o),td=todayStr();
+  var st=sum!=null?(set?(sum===set?'<span class="pill ok">数えました・ぴったり</span>':'<span class="pill bad">数えました・'+fltDiffTxt(sum-set)+'</span>'):'<span class="pill ok">数えました</span>'):(td>E?'<span class="pill bad">まだ数えていません</span>':td===E?'<span class="pill warn">今日が最終日です</span>':'<span class="pill">最終日に数えます</span>');
+  var h='<div class="card" id="fltcard"><div class="suphd"><h2>レジ準備金（おつり金） <small>会期の最終日 '+esc(mdw(E))+' に数えます</small></h2>'+st+'</div>';
+  h+='<div class="muted" style="font-size:13px;line-height:1.7;margin:4px 0 10px">最終日の閉店後、<b>最後に残ったスタッフ</b>が数えます。売上の現金を分けたあと、レジに残っている<b>おつり用のお金だけ</b>を数えて、金種ごとの枚数を入れてください。'+(set?'準備金は <b>'+yen(set)+'</b> です。':'<br><span style="color:var(--warn)">準備金の金額がまだ設定されていません（管理者タブの「イベントの設定」で入れます）。</span>')+'</div>';
+  var open=td>=E||sum!=null||S.fltOpen;
+  h+='<details id="fltdet"'+(open?' open':'')+'><summary style="cursor:pointer;min-height:40px;display:flex;align-items:center;font-weight:700;font-size:14px">'+(open?'入力欄':'入力欄を開く（最終日に使います）')+'</summary>';
+  h+='<div class="flt">'+FLT_DEN.map(function(k){var n=o[k];return'<label class="fltr"><span class="d">'+(k>=1000?k.toLocaleString()+"円札":k+"円玉")+'</span><input type="number" inputmode="numeric" min="0" data-flt="'+k+'" value="'+esc(n==null?"":n)+'"'+(can?'':' readonly')+'><span class="u">枚</span><span class="s num" data-flts="'+k+'">'+(n?yen(k*n):'')+'</span></label>'}).join("")+'</div>';
+  h+='<div class="fltt" id="flt_sum">'+fltTotalHtml(sum,set)+'</div>';
+  if(dd.floatBy||dd.floatAt){var t=dd.floatAt?new Date(dd.floatAt):null;h+='<div class="muted" style="font-size:12px;margin-top:6px">数えた人：'+esc(dd.floatBy||"")+(t?'（'+(t.getMonth()+1)+'/'+t.getDate()+' '+String(t.getHours()).padStart(2,"0")+':'+String(t.getMinutes()).padStart(2,"0")+'）':'')+'</div>'}
+  return h+'</details></div>';
+}
+function fltTotalHtml(sum,set){
+  if(sum==null)return'<span>合計</span><b class="num">—</b><span class="pill">まだ数えていません</span>';
+  var p=set?(sum===set?'<span class="pill ok">ぴったり</span>':'<span class="pill bad">'+fltDiffTxt(sum-set)+'</span>'):'';
+  return'<span>合計</span><b class="num">'+yen(sum)+'</b>'+(set?'<span class="muted">／ 準備金 '+yen(set)+'</span>':'')+p;
+}
+function fltRead(){var o={};document.querySelectorAll("[data-flt]").forEach(function(el){var v=String(el.value).trim();if(v!=="")o[el.getAttribute("data-flt")]=Math.max(0,Math.round(+v)||0)});return o}
+/* 入力中は下書きに持っておき、最後の入力から1.5秒たったらまとめて保存（履歴が1件ずつ増えないように） */
+function fltSave(){clearTimeout(S.fltT);var dr=S.fltDraft;if(!dr)return;S.fltDraft=null;var o=dr.o,d=dr.date,sum=fltSum(o),set=fltSet();
+  putDay(d,{floatCnt:o,floatAt:Date.now(),floatBy:(S.who||"").trim()||"名前未設定"}).then(function(ok){if(ok){toast("準備金を保存しました");logEv("備品","準備金（最終日）："+(sum==null?"（空）":"合計 "+yen(sum)+(set?"（"+fltDiffTxt(sum-set)+"）":"")),d)}else render()})}
+document.addEventListener("input",function(e){var t=e.target;if(!(t&&t.getAttribute&&t.getAttribute("data-flt"))||!writable())return;
+  var o=fltRead(),k=t.getAttribute("data-flt"),c=document.querySelector('[data-flts="'+k+'"]');if(c)c.textContent=o[k]?yen(k*o[k]):"";
+  var b=$("flt_sum");if(b)b.innerHTML=fltTotalHtml(fltSum(o),fltSet());
+  S.fltDraft={date:fltDay(),o:o};holdRender();clearTimeout(S.fltT);S.fltT=setTimeout(fltSave,1500)});
+document.addEventListener("click",function(e){var sm=e.target.closest&&e.target.closest("#fltdet>summary");if(sm)S.fltOpen=!sm.parentNode.open},true);
+window.addEventListener("pagehide",fltSave);
 
 /* ---- 履歴 ---- */
 var FLAB={customers:"客数",wraps:"ラッピング件数",couponN:"クーポン枚数",couponAmt:"クーポン金額",reportTotal:"レポート合計",reporter:"報告者",event:"館のイベント・混雑状況",hot:"売れ筋",comment:"日報（コメント）",notice:"連絡・依頼・トラブル",weather:"天気"};
@@ -1603,7 +1645,7 @@ function gateHtml(){
   return h+'</div></div>';
 }
 /* 新しい版の確認：ブラウザが古いページを覚えていても、新しい版が出たら「最新にする」を出す（5分ごと・画面に戻ったとき） */
-var APP_VER="2026-10-29a";
+var APP_VER="2026-10-30a";
 function checkUpdate(){
   if(location.protocol==="file:")return;
   fetch(location.pathname.replace(/[^\/]*$/,"")+"index.html?v="+Date.now(),{cache:"no-store"}).then(function(r){return r.ok?r.text():""}).then(function(t){var m=/var APP_VER="([^"]+)"/.exec(t);if(m&&m[1]!==APP_VER){var u=$("upd");if(u)u.hidden=false}}).catch(function(){});
@@ -2060,7 +2102,8 @@ async function doEvent(isNew){
   var squareNames=v("squareNames"),brand=v("brand"),kind=v("kind"),dof=v("defOff"),inc=$(px+"retailIncl")&&$(px+"retailIncl").value==="1",code=isNew?v("code"):"";
   if(dof!==""&&(!isFinite(Number(dof))||Number(dof)<0||Number(dof)>100)){say("標準のオフ率は0〜100の数字で入れてください",true);return}
   if(code&&code.length<4){say("合言葉は4文字以上にしてください",true);return}
-  var place=v("place"),tag=v("tag"),cfgData={name:name,place:place,tag:tag,squareNames:squareNames,brand:brand,kind:kind,defOff:dof===""?null:Number(dof),retailIncl:!!inc,start:st,end:en,budget:budget,tax:Math.round(tax*10)/1000};
+  var flt=v("float");if(flt!==""&&(!isFinite(Number(flt))||Number(flt)<0)){say("準備金の金額は数字で入れてください",true);return}
+  var place=v("place"),tag=v("tag"),cfgData={name:name,place:place,tag:tag,squareNames:squareNames,brand:brand,kind:kind,defOff:dof===""?null:Number(dof),retailIncl:!!inc,start:st,end:en,budget:budget,tax:Math.round(tax*10)/1000,float:flt===""?null:Math.round(Number(flt))};
   var ev={id:id,name:name,brand:brand,place:place,start:st,end:en};
   try{
     await A.saveEvent(ad,ev,cfgData,evList());
