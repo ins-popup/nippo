@@ -938,7 +938,6 @@ function supCard(){
       h+='</div>'});
     h+='</div>';
   }
-  h+='<div class="muted" style="font-size:12.5px;line-height:1.7;margin-top:12px;padding:10px 12px;border:1px dashed var(--line);border-radius:10px">ハンガー・スチーマー・レジ・業務PC・ペン・ゴミ袋・レシートロールなどは、管理者が「保管備品」で管理しています。'+(!scoped()&&!S.demo?' <a href="bihin_preview.html#eq">保管備品を開く（管理者）</a>':'')+'</div>';
   if(other.length){
     h+='<div class="supsub"><b>そのほかの備品</b><span>自動では減りません。数えたときに入れます</span></div><div class="supt"><div class="supr hd"><span>品目</span><span>数</span><span>最後に数えた日</span><span></span></div>';
     other.forEach(function(x){var c=cs[x.id],ed=S.supEdit&&S.supEdit.id===x.id?S.supEdit:null;
