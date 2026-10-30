@@ -1,6 +1,7 @@
 <!doctype html>
 <meta charset="utf-8">
-<meta name="robots" content="noindex"><title>POPUP 日報・在庫管理</title>
+<meta name="robots" content="noindex">
+<title>【プレビュー】POPUP 日報・在庫管理</title>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#e3e3e4">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%276%27 fill=%27%231d1f17%27/%3E%3Cpath d=%27M3 22 11 9l6 8 4-5 8 10z%27 fill=%27%23d8ff1a%27/%3E%3C/svg%3E">
@@ -96,6 +97,11 @@ input[type=text],input[type=number],input[type=date],input[type=search],select,t
 textarea{min-height:84px;resize:vertical;line-height:1.55}
 input:read-only,textarea:read-only{background:var(--surface2)}
 .row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}
+.flt{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px}
+.fltr{display:grid;grid-template-columns:5.5em 1fr auto 6em;align-items:center;gap:8px;padding:6px 10px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+.fltr .d{font-weight:700;font-size:14px}.fltr input{width:100%;min-width:0;font-size:16px;padding:8px;text-align:right}.fltr .u{font-size:13px;color:var(--muted)}.fltr .s{text-align:right;font-size:13px;color:var(--muted)}
+.fltt{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px;padding:12px 14px;border-radius:10px;background:var(--surface2);font-size:14px}.fltt b{font-size:22px}
+.pvbar{position:relative;z-index:50;background:#fff3c4;color:#5a4500;font-size:12.5px;font-weight:700;text-align:center;padding:5px 10px;border-bottom:1px solid #e8d48a}
 .row>*{min-width:0}
 .seg{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:8px}
 .seg button{border:1.5px solid var(--line2);background:var(--surface);border-radius:10px;min-height:46px;font-weight:700;cursor:pointer;padding:4px 8px;line-height:1.25}
@@ -417,6 +423,7 @@ input[type=password]{min-height:52px;border-radius:16px;background:var(--surface
 #upd[hidden]{display:none}
 </style>
 
+<div class="pvbar">プレビュー（確認用）｜本番の画面にはまだ反映していません。入力したデータは本番と同じ保存先に入ります</div>
 <div id="shell">
   <nav id="nav" aria-label="画面の切り替え"></nav>
   <main id="main"><div class="empty"><b>読み込み中です</b>保存されたデータを取得しています。</div></main>
@@ -547,6 +554,7 @@ function checks(){
         if(d.cust==null)out.push({lv:"yel",tag:"客数が未入力",txt:mdw(d.date),sub:"売上明細の日別パネルで入力します",go:{tab:"sales",date:d.date}});
         if(!dayPhotos(d.date).length&&!S.demo)out.push({lv:"yel",tag:"レポート写真が未登録",txt:mdw(d.date),sub:"レジの売上レポートを撮影して登録してください",go:{tab:"sales",date:d.date}});
         var dd=getDays()[d.date]||{};
+        if(fltSet()){var fs=fltSum(dd.floatCnt);if(fs==null){if(d.date<today)out.push({lv:"yel",tag:"準備金が未確認",txt:mdw(d.date),sub:"日報タブの「レジ準備金」で、閉店時の枚数を入れてください",go:{tab:"report",date:d.date}})}else if(fs!==fltSet())out.push({lv:"red",tag:"準備金が合わない",txt:mdw(d.date)+"：数えた合計 "+yen(fs)+" ／ 準備金 "+yen(fltSet())+"（"+fltDiffTxt(fs-fltSet())+"）",sub:"売上の現金が混ざっていないか、数え間違いがないか確認してください",go:{tab:"report",date:d.date}})}
         if(!(dd.reporter||dd.hot||dd.comment||dd.event||dd.notice||dd.weather))out.push({lv:"yel",tag:"日報が未記入",txt:mdw(d.date),sub:"日報（コメント）・連絡事項などを記入します",go:{tab:"report",date:d.date}});
       }
     }
@@ -663,7 +671,8 @@ function eventForm(px,c,btn,label){
    '<div class="row">'+f("start","開始日",c.start||"","date")+f("end","終了日",c.end||"","date")+'</div>'+
    '<div class="row">'+f("budget","売上予算（税抜・円）",c.budget==null?"":c.budget,"number","例：2100000")+f("tax","消費税率（％）",tax,"number")+'</div>'+
    '<div class="row">'+f("defOff","標準のオフ率（％・任意）",c.defOff==null?"":c.defOff,"number","例：30")+'<label class="f"><span>上代・販売価格の税区分</span><select id="'+px+'retailIncl"><option value="0"'+(c.retailIncl?'':' selected')+'>税抜の金額</option><option value="1"'+(c.retailIncl?' selected':'')+'>税込の金額</option></select></label></div>'+
-   '<div class="muted" style="font-size:12px;line-height:1.7">標準のオフ率は、商品マスタ登録の「オフ率」欄に最初から入ります。税込を選ぶと、取り込むときに消費税率で割って税抜に直します（サイト内の金額は税抜で管理します）。</div>'+
+   '<div class="row">'+f("float","レジ準備金（おつり金）の金額（円・任意）",c.float==null?"":c.float,"number","例：50000")+'</div>'+
+   '<div class="muted" style="font-size:12px;line-height:1.7">準備金の金額を入れると、日報タブで閉店時の準備金を数えて過不足を確認できます（確認タブにも出ます）。<br>標準のオフ率は、商品マスタ登録の「オフ率」欄に最初から入ります。税込を選ぶと、取り込むときに消費税率で割って税抜に直します（サイト内の金額は税抜で管理します）。</div>'+
    (px==="evN_"?f("code","このイベントの合言葉（社外メンバー用・任意）","","text","4文字以上。あとから設定もできます"):'')+
    '<button class="btn primary" data-act="'+btn+'">'+label+'</button></div>';
 }
@@ -905,7 +914,7 @@ function supAuto(x){return x.mode==="cust"||x.mode==="wrap"||+x.alert>0}
 function supPill(x,c){return!(+x.alert>0)?'':c.lv==="red"?'<span class="pill bad">要発注</span>':c.lv==="yel"?'<span class="pill warn">少なめ</span>':'<span class="pill ok">十分</span>'}
 function supEditForm(x,c,ed){return'<div class="sf"><label class="f"><span>'+(ed.kind==="add"?'届いた数':'数えた残数')+'（'+mdw(S.date)+'）</span><input type="number" inputmode="numeric" id="supn" min="0" placeholder="'+(ed.kind==="add"?'例：100':'例：'+Math.max(0,c.est))+'"></label><button class="btn primary" data-act="supsave">保存</button><button class="btn" data-act="supx">やめる</button></div>'}
 function supCard(){
-  var it=supItems().filter(supAuto),can=writable(); /* 自動で減らない備品（ハンガー・レジ等）は保管備品で管理するので、備品タブには出さない */
+  var it=supItems().filter(supAuto),can=writable(); /* 自動で減らない備品（ハンガー・レジ・ペン等）は保管備品で管理するので、備品タブには出さない */
   if(!it.length){if(S.demo)return"";return'<div class="card"><h2>備品 <small>ショッパー・ラッピング資材</small></h2><div class="muted" style="font-size:13.5px;line-height:1.7">まだ品目が登録されていません。'+(scoped()?'管理者に登録を頼んでください。':'管理者タブの「備品の品目」で登録すると、ここに残数が出ます。')+'</div></div>'}
   var auto=it.filter(supAuto),other=it.filter(function(x){return!supAuto(x)}),cs={};it.forEach(function(x){cs[x.id]=supCalc(x)});
   var nRed=it.filter(function(x){return cs[x.id].lv==="red"}).length,nYel=it.filter(function(x){return cs[x.id].lv==="yel"}).length;
@@ -929,7 +938,7 @@ function supCard(){
       h+='</div>'});
     h+='</div>';
   }
-  h+='<div class="muted" style="font-size:12.5px;line-height:1.7;margin-top:12px">ハンガー・スチーマー・レジ・業務PCなどの備品は、管理者が「保管備品」で管理しています。'+(!scoped()&&!S.demo?'<a href="bihin.html#eq" target="_blank" rel="noopener">保管備品を開く（管理者）</a>':'')+'</div>';
+  h+='<div class="muted" style="font-size:12.5px;line-height:1.7;margin-top:12px;padding:10px 12px;border:1px dashed var(--line);border-radius:10px">ハンガー・スチーマー・レジ・業務PC・ペン・ゴミ袋・レシートロールなどは、管理者が「保管備品」で管理しています。'+(!scoped()&&!S.demo?' <a href="bihin_preview.html#eq">保管備品を開く（管理者）</a>':'')+'</div>';
   if(other.length){
     h+='<div class="supsub"><b>そのほかの備品</b><span>自動では減りません。数えたときに入れます</span></div><div class="supt"><div class="supr hd"><span>品目</span><span>数</span><span>最後に数えた日</span><span></span></div>';
     other.forEach(function(x){var c=cs[x.id],ed=S.supEdit&&S.supEdit.id===x.id?S.supEdit:null;
@@ -1261,7 +1270,7 @@ function vReport(){
   var h='<div class="card"><h2>'+mdw(S.date)+' の日報'+(d&&d.lines?'<small>この日の純売上 '+yen(d.net)+'（売上画面で自動計算済み）</small>':'')+'</h2><div class="grid" style="gap:14px">'+
    ta("comment","日報（コメント）","例：午前は静かで、午後から来店が増えた。接客で気づいたこと・お客様の様子・スタッフの動きなど、自由に書いてください",6)+
    ta("notice","連絡・依頼・トラブル・返品理由（インス宛）","例：Lサイズの追加をお願いしたい")+
-   '</div>'+postBar()+'</div>';
+   '</div>'+postBar()+'</div>'+fltCard();
   var list=Object.keys(getDays()).filter(function(k){var x=getDays()[k];return x.reporter||x.event||x.hot||x.comment||x.notice||x.weather}).sort().reverse();
   h+='<div class="card"><h2>これまでの日報 <small>'+list.length+' 日分</small></h2>';
   if(!list.length)h+='<div class="empty"><b>まだ日報がありません</b>上の欄に書くと、ここに日付順で並びます。</div>';
@@ -1270,6 +1279,36 @@ function vReport(){
      (x.event?'<p><b>館のイベント・混雑状況</b>'+esc(x.event)+'</p>':'')+(x.hot?'<p><b>売れ筋</b>'+esc(x.hot)+'</p>':'')+(x.comment?'<p><b>日報（コメント）</b>'+esc(x.comment)+'</p>':'')+(x.notice?'<p><b>連絡・依頼・トラブル（インス宛）</b>'+esc(x.notice)+'</p>':'')+'</div>'}).join("");
   return h+'</div>';
 }
+
+
+/* ---- レジ準備金（おつり金）：閉店時に金種ごとの枚数を数えて、設定額との過不足を見る ---- */
+var FLT_DEN=[5000,1000,500,100,50,10,5,1];
+function fltSet(){var n=+S.cfg.float;return n>0?n:0}
+function fltSum(o){var t=0,any=false;FLT_DEN.forEach(function(k){var n=o&&o[k];if(n!=null&&n!==""){any=true;t+=k*(+n||0)}});return any?t:null}
+function fltDiffTxt(df){return df===0?"ぴったり":(df>0?"＋"+yen(df)+" 多い":"−"+yen(-df)+" 足りない")}
+function fltCard(){
+  var can=writable(),set=fltSet(),dd=getDays()[S.date]||{},o=(S.fltDraft&&S.fltDraft.date===S.date)?S.fltDraft.o:(dd.floatCnt||{}),sum=fltSum(o);
+  var h='<div class="card" id="fltcard"><h2>レジ準備金（おつり金） <small>閉店時に数えて入力</small></h2>';
+  h+='<div class="muted" style="font-size:13px;line-height:1.7;margin-bottom:10px">売上の現金を分けたあと、<b>翌日のおつり用に残すお金だけ</b>を数えて、金種ごとの枚数を入れます。'+(set?'準備金は <b>'+yen(set)+'</b> です。':'<br><span style="color:var(--warn)">準備金の金額がまだ設定されていません（管理者タブの「イベントの設定」で入れます）。</span>')+'</div>';
+  h+='<div class="flt">'+FLT_DEN.map(function(k){var n=o[k];return'<label class="fltr"><span class="d">'+(k>=1000?k.toLocaleString()+"円札":k+"円玉")+'</span><input type="number" inputmode="numeric" min="0" data-flt="'+k+'" value="'+esc(n==null?"":n)+'"'+(can?'':' readonly')+'><span class="u">枚</span><span class="s num" data-flts="'+k+'">'+(n?yen(k*n):'')+'</span></label>'}).join("")+'</div>';
+  h+='<div class="fltt" id="flt_sum">'+fltTotalHtml(sum,set)+'</div>';
+  if(dd.floatBy||dd.floatAt){var t=dd.floatAt?new Date(dd.floatAt):null;h+='<div class="muted" style="font-size:12px;margin-top:6px">最後に入力：'+esc(dd.floatBy||"")+(t?'（'+(t.getMonth()+1)+'/'+t.getDate()+' '+String(t.getHours()).padStart(2,"0")+':'+String(t.getMinutes()).padStart(2,"0")+'）':'')+'</div>'}
+  return h+'</div>';
+}
+function fltTotalHtml(sum,set){
+  if(sum==null)return'<span>合計</span><b class="num">—</b><span class="pill">まだ数えていません</span>';
+  var p=set?(sum===set?'<span class="pill ok">ぴったり</span>':'<span class="pill bad">'+fltDiffTxt(sum-set)+'</span>'):'';
+  return'<span>合計</span><b class="num">'+yen(sum)+'</b>'+(set?'<span class="muted">／ 準備金 '+yen(set)+'</span>':'')+p;
+}
+function fltRead(){var o={};document.querySelectorAll("[data-flt]").forEach(function(el){var v=String(el.value).trim();if(v!=="")o[el.getAttribute("data-flt")]=Math.max(0,Math.round(+v)||0)});return o}
+/* 入力中は下書きに持っておき、最後の入力から1.5秒たったらまとめて保存（履歴が1件ずつ増えないように） */
+function fltSave(){clearTimeout(S.fltT);var dr=S.fltDraft;if(!dr)return;S.fltDraft=null;var o=dr.o,d=dr.date,sum=fltSum(o),set=fltSet();
+  putDay(d,{floatCnt:o,floatAt:Date.now(),floatBy:(S.who||"").trim()||"名前未設定"}).then(function(ok){if(ok){toast("準備金を保存しました");logEv("日報","準備金："+(sum==null?"（空）":"合計 "+yen(sum)+(set?"（"+fltDiffTxt(sum-set)+"）":"")),d)}else render()})}
+document.addEventListener("input",function(e){var t=e.target;if(!(t&&t.getAttribute&&t.getAttribute("data-flt"))||!writable())return;
+  var o=fltRead(),k=t.getAttribute("data-flt"),c=document.querySelector('[data-flts="'+k+'"]');if(c)c.textContent=o[k]?yen(k*o[k]):"";
+  var b=$("flt_sum");if(b)b.innerHTML=fltTotalHtml(fltSum(o),fltSet());
+  if(S.fltDraft&&S.fltDraft.date!==S.date)fltSave();S.fltDraft={date:S.date,o:o};holdRender();clearTimeout(S.fltT);S.fltT=setTimeout(fltSave,1500)});
+window.addEventListener("pagehide",fltSave);
 
 /* ---- 履歴 ---- */
 var FLAB={customers:"客数",wraps:"ラッピング件数",couponN:"クーポン枚数",couponAmt:"クーポン金額",reportTotal:"レポート合計",reporter:"報告者",event:"館のイベント・混雑状況",hot:"売れ筋",comment:"日報（コメント）",notice:"連絡・依頼・トラブル",weather:"天気"};
@@ -2061,7 +2100,8 @@ async function doEvent(isNew){
   var squareNames=v("squareNames"),brand=v("brand"),kind=v("kind"),dof=v("defOff"),inc=$(px+"retailIncl")&&$(px+"retailIncl").value==="1",code=isNew?v("code"):"";
   if(dof!==""&&(!isFinite(Number(dof))||Number(dof)<0||Number(dof)>100)){say("標準のオフ率は0〜100の数字で入れてください",true);return}
   if(code&&code.length<4){say("合言葉は4文字以上にしてください",true);return}
-  var place=v("place"),tag=v("tag"),cfgData={name:name,place:place,tag:tag,squareNames:squareNames,brand:brand,kind:kind,defOff:dof===""?null:Number(dof),retailIncl:!!inc,start:st,end:en,budget:budget,tax:Math.round(tax*10)/1000};
+  var flt=v("float");if(flt!==""&&(!isFinite(Number(flt))||Number(flt)<0)){say("準備金の金額は数字で入れてください",true);return}
+  var place=v("place"),tag=v("tag"),cfgData={name:name,place:place,tag:tag,squareNames:squareNames,brand:brand,kind:kind,defOff:dof===""?null:Number(dof),retailIncl:!!inc,start:st,end:en,budget:budget,tax:Math.round(tax*10)/1000,float:flt===""?null:Math.round(Number(flt))};
   var ev={id:id,name:name,brand:brand,place:place,start:st,end:en};
   try{
     await A.saveEvent(ad,ev,cfgData,evList());
