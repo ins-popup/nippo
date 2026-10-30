@@ -554,11 +554,11 @@ function checks(){
         if(d.cust==null)out.push({lv:"yel",tag:"客数が未入力",txt:mdw(d.date),sub:"売上明細の日別パネルで入力します",go:{tab:"sales",date:d.date}});
         if(!dayPhotos(d.date).length&&!S.demo)out.push({lv:"yel",tag:"レポート写真が未登録",txt:mdw(d.date),sub:"レジの売上レポートを撮影して登録してください",go:{tab:"sales",date:d.date}});
         var dd=getDays()[d.date]||{};
-        if(fltSet()){var fs=fltSum(dd.floatCnt);if(fs==null){if(d.date<today)out.push({lv:"yel",tag:"準備金が未確認",txt:mdw(d.date),sub:"日報タブの「レジ準備金」で、閉店時の枚数を入れてください",go:{tab:"report",date:d.date}})}else if(fs!==fltSet())out.push({lv:"red",tag:"準備金が合わない",txt:mdw(d.date)+"：数えた合計 "+yen(fs)+" ／ 準備金 "+yen(fltSet())+"（"+fltDiffTxt(fs-fltSet())+"）",sub:"売上の現金が混ざっていないか、数え間違いがないか確認してください",go:{tab:"report",date:d.date}})}
         if(!(dd.reporter||dd.hot||dd.comment||dd.event||dd.notice||dd.weather))out.push({lv:"yel",tag:"日報が未記入",txt:mdw(d.date),sub:"日報（コメント）・連絡事項などを記入します",go:{tab:"report",date:d.date}});
       }
     }
   });
+  (function(){var E=fltDay(),set=fltSet();if(!E||!set)return;var fs=fltSum((getDays()[E]||{}).floatCnt);if(fs==null){if(today>E)out.push({lv:"yel",tag:"準備金が未確認",txt:mdw(E)+"（最終日）",sub:"備品タブの「レジ準備金」で、最終日に数えた枚数を入れてください",go:{tab:"sup"}})}else if(fs!==set)out.push({lv:"red",tag:"準備金が合わない",txt:mdw(E)+"（最終日）：数えた合計 "+yen(fs)+" ／ 準備金 "+yen(set)+"（"+fltDiffTxt(fs-set)+"）",sub:"売上の現金が混ざっていないか、数え間違いがないか確認してください",go:{tab:"sup"}})})();
   supItems().forEach(function(x){var c=supCalc(x);if(c.lv!=="ok")out.push({lv:c.lv==="red"?"red":"yel",tag:c.lv==="red"?"備品が要発注":"備品が少なめ",txt:x.name+"：残り 約"+c.est+(x.unit||"")+"（通知ライン "+(x.alert||0)+(x.unit||"")+"）",sub:c.left!=null?"あと約"+c.left+"日分です。発注担当に連絡してください":"発注担当に連絡してください",go:{tab:"sup"}})});
   out.sort(function(a,b){return(a.lv==="red"?0:1)-(b.lv==="red"?0:1)});
   return out;
@@ -672,7 +672,7 @@ function eventForm(px,c,btn,label){
    '<div class="row">'+f("budget","売上予算（税抜・円）",c.budget==null?"":c.budget,"number","例：2100000")+f("tax","消費税率（％）",tax,"number")+'</div>'+
    '<div class="row">'+f("defOff","標準のオフ率（％・任意）",c.defOff==null?"":c.defOff,"number","例：30")+'<label class="f"><span>上代・販売価格の税区分</span><select id="'+px+'retailIncl"><option value="0"'+(c.retailIncl?'':' selected')+'>税抜の金額</option><option value="1"'+(c.retailIncl?' selected':'')+'>税込の金額</option></select></label></div>'+
    '<div class="row">'+f("float","レジ準備金（おつり金）の金額（円・任意）",c.float==null?"":c.float,"number","例：50000")+'</div>'+
-   '<div class="muted" style="font-size:12px;line-height:1.7">準備金の金額を入れると、日報タブで閉店時の準備金を数えて過不足を確認できます（確認タブにも出ます）。<br>標準のオフ率は、商品マスタ登録の「オフ率」欄に最初から入ります。税込を選ぶと、取り込むときに消費税率で割って税抜に直します（サイト内の金額は税抜で管理します）。</div>'+
+   '<div class="muted" style="font-size:12px;line-height:1.7">準備金の金額を入れると、会期の最終日にスタッフが備品タブで残りを数えて、過不足を確認できます（確認タブにも出ます）。<br>標準のオフ率は、商品マスタ登録の「オフ率」欄に最初から入ります。税込を選ぶと、取り込むときに消費税率で割って税抜に直します（サイト内の金額は税抜で管理します）。</div>'+
    (px==="evN_"?f("code","このイベントの合言葉（社外メンバー用・任意）","","text","4文字以上。あとから設定もできます"):'')+
    '<button class="btn primary" data-act="'+btn+'">'+label+'</button></div>';
 }
@@ -952,7 +952,7 @@ function supCard(){
 }
 /* ---- 備品タブ ---- */
 function vSup(){
-  var h=supCard();
+  var h=supCard()+fltCard();
   if(!supItems().length&&!S.demo&&!scoped())h+='<div class="card"><h2>はじめに</h2><ol class="hs" style="margin:0"><li>管理者タブの「<b>備品の品目</b>」で、ショッパー・ラッピング資材などの品目と通知ラインを登録します</li><li>管理者タブの「<b>全店舗の備品</b>」で、発注担当のメールアドレスを登録すると、残りが少なくなったときに毎朝メールが届きます</li><li>閉店後に売上タブで<b>客数</b>と<b>ラッピング件数</b>を入れると、残りが自動で減ります</li></ol><div class="row" style="margin-top:10px"><button class="btn primary" data-act="tab" data-v="admin">管理者タブへ</button><button class="btn" data-act="supdemo">見本データで試す</button></div></div>';
   return h;
 }
@@ -1269,7 +1269,7 @@ function vReport(){
   var h='<div class="card"><h2>'+mdw(S.date)+' の日報'+(d&&d.lines?'<small>この日の純売上 '+yen(d.net)+'（売上画面で自動計算済み）</small>':'')+'</h2><div class="grid" style="gap:14px">'+
    ta("comment","日報（コメント）","例：午前は静かで、午後から来店が増えた。接客で気づいたこと・お客様の様子・スタッフの動きなど、自由に書いてください",6)+
    ta("notice","連絡・依頼・トラブル・返品理由（インス宛）","例：Lサイズの追加をお願いしたい")+
-   '</div>'+postBar()+'</div>'+fltCard();
+   '</div>'+postBar()+'</div>';
   var list=Object.keys(getDays()).filter(function(k){var x=getDays()[k];return x.reporter||x.event||x.hot||x.comment||x.notice||x.weather}).sort().reverse();
   h+='<div class="card"><h2>これまでの日報 <small>'+list.length+' 日分</small></h2>';
   if(!list.length)h+='<div class="empty"><b>まだ日報がありません</b>上の欄に書くと、ここに日付順で並びます。</div>';
@@ -1280,19 +1280,24 @@ function vReport(){
 }
 
 
-/* ---- レジ準備金（おつり金）：閉店時に金種ごとの枚数を数えて、設定額との過不足を見る ---- */
+/* ---- レジ準備金（おつり金）：会期の最終日に、閉店後に金種ごとの枚数を数えて、設定額との過不足を見る ---- */
 var FLT_DEN=[5000,1000,500,100,50,10,5,1];
 function fltSet(){var n=+S.cfg.float;return n>0?n:0}
+function fltDay(){return S.cfg.end||""}
 function fltSum(o){var t=0,any=false;FLT_DEN.forEach(function(k){var n=o&&o[k];if(n!=null&&n!==""){any=true;t+=k*(+n||0)}});return any?t:null}
 function fltDiffTxt(df){return df===0?"ぴったり":(df>0?"＋"+yen(df)+" 多い":"−"+yen(-df)+" 足りない")}
 function fltCard(){
-  var can=writable(),set=fltSet(),dd=getDays()[S.date]||{},o=(S.fltDraft&&S.fltDraft.date===S.date)?S.fltDraft.o:(dd.floatCnt||{}),sum=fltSum(o);
-  var h='<div class="card" id="fltcard"><h2>レジ準備金（おつり金） <small>閉店時に数えて入力</small></h2>';
-  h+='<div class="muted" style="font-size:13px;line-height:1.7;margin-bottom:10px">売上の現金を分けたあと、<b>翌日のおつり用に残すお金だけ</b>を数えて、金種ごとの枚数を入れます。'+(set?'準備金は <b>'+yen(set)+'</b> です。':'<br><span style="color:var(--warn)">準備金の金額がまだ設定されていません（管理者タブの「イベントの設定」で入れます）。</span>')+'</div>';
+  var E=fltDay();if(!E)return"";
+  var can=writable(),set=fltSet(),dd=getDays()[E]||{},o=(S.fltDraft&&S.fltDraft.date===E)?S.fltDraft.o:(dd.floatCnt||{}),sum=fltSum(o),td=todayStr();
+  var st=sum!=null?(set?(sum===set?'<span class="pill ok">数えました・ぴったり</span>':'<span class="pill bad">数えました・'+fltDiffTxt(sum-set)+'</span>'):'<span class="pill ok">数えました</span>'):(td>E?'<span class="pill bad">まだ数えていません</span>':td===E?'<span class="pill warn">今日が最終日です</span>':'<span class="pill">最終日に数えます</span>');
+  var h='<div class="card" id="fltcard"><div class="suphd"><h2>レジ準備金（おつり金） <small>会期の最終日 '+esc(mdw(E))+' に数えます</small></h2>'+st+'</div>';
+  h+='<div class="muted" style="font-size:13px;line-height:1.7;margin:4px 0 10px">最終日の閉店後、<b>最後に残ったスタッフ</b>が数えます。売上の現金を分けたあと、レジに残っている<b>おつり用のお金だけ</b>を数えて、金種ごとの枚数を入れてください。'+(set?'準備金は <b>'+yen(set)+'</b> です。':'<br><span style="color:var(--warn)">準備金の金額がまだ設定されていません（管理者タブの「イベントの設定」で入れます）。</span>')+'</div>';
+  var open=td>=E||sum!=null||S.fltOpen;
+  h+='<details id="fltdet"'+(open?' open':'')+'><summary style="cursor:pointer;min-height:40px;display:flex;align-items:center;font-weight:700;font-size:14px">'+(open?'入力欄':'入力欄を開く（最終日に使います）')+'</summary>';
   h+='<div class="flt">'+FLT_DEN.map(function(k){var n=o[k];return'<label class="fltr"><span class="d">'+(k>=1000?k.toLocaleString()+"円札":k+"円玉")+'</span><input type="number" inputmode="numeric" min="0" data-flt="'+k+'" value="'+esc(n==null?"":n)+'"'+(can?'':' readonly')+'><span class="u">枚</span><span class="s num" data-flts="'+k+'">'+(n?yen(k*n):'')+'</span></label>'}).join("")+'</div>';
   h+='<div class="fltt" id="flt_sum">'+fltTotalHtml(sum,set)+'</div>';
-  if(dd.floatBy||dd.floatAt){var t=dd.floatAt?new Date(dd.floatAt):null;h+='<div class="muted" style="font-size:12px;margin-top:6px">最後に入力：'+esc(dd.floatBy||"")+(t?'（'+(t.getMonth()+1)+'/'+t.getDate()+' '+String(t.getHours()).padStart(2,"0")+':'+String(t.getMinutes()).padStart(2,"0")+'）':'')+'</div>'}
-  return h+'</div>';
+  if(dd.floatBy||dd.floatAt){var t=dd.floatAt?new Date(dd.floatAt):null;h+='<div class="muted" style="font-size:12px;margin-top:6px">数えた人：'+esc(dd.floatBy||"")+(t?'（'+(t.getMonth()+1)+'/'+t.getDate()+' '+String(t.getHours()).padStart(2,"0")+':'+String(t.getMinutes()).padStart(2,"0")+'）':'')+'</div>'}
+  return h+'</details></div>';
 }
 function fltTotalHtml(sum,set){
   if(sum==null)return'<span>合計</span><b class="num">—</b><span class="pill">まだ数えていません</span>';
@@ -1302,11 +1307,12 @@ function fltTotalHtml(sum,set){
 function fltRead(){var o={};document.querySelectorAll("[data-flt]").forEach(function(el){var v=String(el.value).trim();if(v!=="")o[el.getAttribute("data-flt")]=Math.max(0,Math.round(+v)||0)});return o}
 /* 入力中は下書きに持っておき、最後の入力から1.5秒たったらまとめて保存（履歴が1件ずつ増えないように） */
 function fltSave(){clearTimeout(S.fltT);var dr=S.fltDraft;if(!dr)return;S.fltDraft=null;var o=dr.o,d=dr.date,sum=fltSum(o),set=fltSet();
-  putDay(d,{floatCnt:o,floatAt:Date.now(),floatBy:(S.who||"").trim()||"名前未設定"}).then(function(ok){if(ok){toast("準備金を保存しました");logEv("日報","準備金："+(sum==null?"（空）":"合計 "+yen(sum)+(set?"（"+fltDiffTxt(sum-set)+"）":"")),d)}else render()})}
+  putDay(d,{floatCnt:o,floatAt:Date.now(),floatBy:(S.who||"").trim()||"名前未設定"}).then(function(ok){if(ok){toast("準備金を保存しました");logEv("備品","準備金（最終日）："+(sum==null?"（空）":"合計 "+yen(sum)+(set?"（"+fltDiffTxt(sum-set)+"）":"")),d)}else render()})}
 document.addEventListener("input",function(e){var t=e.target;if(!(t&&t.getAttribute&&t.getAttribute("data-flt"))||!writable())return;
   var o=fltRead(),k=t.getAttribute("data-flt"),c=document.querySelector('[data-flts="'+k+'"]');if(c)c.textContent=o[k]?yen(k*o[k]):"";
   var b=$("flt_sum");if(b)b.innerHTML=fltTotalHtml(fltSum(o),fltSet());
-  if(S.fltDraft&&S.fltDraft.date!==S.date)fltSave();S.fltDraft={date:S.date,o:o};holdRender();clearTimeout(S.fltT);S.fltT=setTimeout(fltSave,1500)});
+  S.fltDraft={date:fltDay(),o:o};holdRender();clearTimeout(S.fltT);S.fltT=setTimeout(fltSave,1500)});
+document.addEventListener("click",function(e){var sm=e.target.closest&&e.target.closest("#fltdet>summary");if(sm)S.fltOpen=!sm.parentNode.open},true);
 window.addEventListener("pagehide",fltSave);
 
 /* ---- 履歴 ---- */
@@ -1369,7 +1375,7 @@ function vStock(){
 }
 function vAdmin(){
   if(scoped())return'<div class="card"><h2>管理者のみの画面です</h2><p class="muted" style="font-size:14px">この画面は、管理者コードを持つ管理者が使います。</p></div>';
-  return'<div class="card"><h2>管理者 <small>商品マスタ・イベント・売上の自動取り込み</small></h2><div class="muted" style="font-size:13px;line-height:1.7">登録・変更には、管理者コードが必要です。いま開いているイベント（'+esc(evName())+'）に対して行います。別のイベントの設定は、上の「イベント切替」で切り替えてから行ってください。</div></div>'+adminPanel()+supAdmin()+supAllCard()+'<div class="card"><h2>保管備品の管理 <small>レジ・ドロアー・什器など（管理者のみ）</small></h2><div class="muted" style="font-size:13px;line-height:1.7;margin-bottom:10px">機材や什器が、本部倉庫・どの店舗・修理中などのどこに何台あるかを管理するページです。<b>管理者コード</b>で入ったときだけ使えます（スタッフの合言葉では見えません）。</div><a class="btn" href="bihin.html#eq" style="text-decoration:none;display:inline-flex;align-items:center">保管備品の管理を開く →</a></div>'+eventPanel()+sqPanel();
+  return'<div class="card"><h2>管理者 <small>商品マスタ・イベント・売上の自動取り込み</small></h2><div class="muted" style="font-size:13px;line-height:1.7">登録・変更には、管理者コードが必要です。いま開いているイベント（'+esc(evName())+'）に対して行います。別のイベントの設定は、上の「イベント切替」で切り替えてから行ってください。</div></div>'+adminPanel()+supAdmin()+supAllCard()+'<div class="card"><h2>保管備品の管理 <small>レジ・ドロアー・什器など（管理者のみ）</small></h2><div class="muted" style="font-size:13px;line-height:1.7;margin-bottom:10px">機材や什器が、本部倉庫・どの店舗・修理中などのどこに何台あるかを管理するページです。<b>管理者コード</b>で入ったときだけ使えます（スタッフの合言葉では見えません）。</div><a class="btn" href="bihin_preview.html#eq" style="text-decoration:none;display:inline-flex;align-items:center">保管備品の管理を開く →</a></div>'+eventPanel()+sqPanel();
 }
 
 /* ---- 確認 ---- */
