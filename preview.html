@@ -561,6 +561,7 @@ function checks(){
     }
   });
   (function(){var S0=S.cfg.start,E=fltDay();if(!S0||!E)return;var days=getDays(),base=fltBase();if(fltStart()==null&&today>=S0)out.push({lv:"yel",tag:"準備金（最初の金額）が未入力",txt:mdw(S0)+"（会期はじめ）",sub:"備品タブの「レジ準備金」①で、受け取った準備金を数えて入れてください（必須）",go:{tab:"sup",date:S0}});Object.keys(days).sort().forEach(function(k){if(k<S0||k>E)return;var sm=fltSum(days[k].floatCnt);if(sm!=null&&base&&sm!==base)out.push({lv:"red",tag:"準備金が合わない",txt:mdw(k)+(k===E?"（最終日）":"")+"：数えた合計 "+yen(sm)+" ／ 準備金 "+yen(base)+"（"+fltDiffTxt(sm-base)+"）",sub:"売上の現金が混ざっていないか、数え間違いがないか確認してください",go:{tab:"sup",date:k}})});if(today>E&&fltSum((days[E]||{}).floatCnt)==null)out.push({lv:"yel",tag:"準備金（最終日）が未入力",txt:mdw(E)+"（最終日）",sub:"備品タブの「レジ準備金」③で、最終日に数えた枚数を入れてください（必須）",go:{tab:"sup",date:E}})})();
+  getTx().forEach(function(t){if(!t.fz||t.fzOk||t.kind!=="sale")return;out.push({lv:"yel",tag:"名前違いで自動結び付け",txt:mdw(t.date)+"：レジ「"+t.fz+"」→ "+skuLabel(sm[t.skuId])+(sm[t.skuId]&&sm[t.skuId].name?"（"+sm[t.skuId].name+"）":""),sub:"同じ商品なら「確認した」を押してください。違う商品なら、売上タブの手入力で直してください",go:{tab:"sales",date:t.date},ok:t.id})});
   supItems().forEach(function(x){var c=supCalc(x);if(c.lv!=="ok")out.push({lv:c.lv==="red"?"red":"yel",tag:c.lv==="red"?"備品が要発注":"備品が少なめ",txt:x.name+"：残り 約"+c.est+(x.unit||"")+"（通知ライン "+(x.alert||0)+(x.unit||"")+"）",sub:c.left!=null?"あと約"+c.left+"日分です。発注担当に連絡してください":"発注担当に連絡してください",go:{tab:"sup"}})});
   out.sort(function(a,b){return(a.lv==="red"?0:1)-(b.lv==="red"?0:1)});
   return out;
@@ -1404,7 +1405,7 @@ function vCheck(){
   var h='<div class="card"><h2>要確認 <small>入力内容から自動でチェックしています</small></h2>';
   if(!list.length)h+='<div class="ok-all">確認が必要な項目はありません</div>';
   else{
-    var item=function(c,i){return'<div class="alert '+c.lv+'"><div class="tx"><span class="tag">'+esc(c.tag)+'</span><br>'+esc(c.txt)+'<small>'+esc(c.sub)+'</small></div><button class="btn small" data-act="fix" data-v="'+list.indexOf(c)+'">開く</button></div>'};
+    var item=function(c,i){return'<div class="alert '+c.lv+'"><div class="tx"><span class="tag">'+esc(c.tag)+'</span><br>'+esc(c.txt)+'<small>'+esc(c.sub)+'</small></div><button class="btn small" data-act="fix" data-v="'+list.indexOf(c)+'">開く</button>'+(c.ok&&writable()?'<button class="btn small" data-act="fzok" data-v="'+esc(c.ok)+'">確認した</button>':'')+'</div>'};
     if(red.length)h+='<div style="font-weight:700;margin:4px 0 8px;color:var(--bad)">数字が合っていない可能性（'+red.length+'）</div>'+red.map(item).join("");
     if(yel.length)h+='<div style="font-weight:700;margin:14px 0 8px;color:var(--warn)">未入力・書き忘れ（'+yel.length+'）</div>'+yel.map(item).join("");
   }
@@ -1437,6 +1438,7 @@ document.addEventListener("click",function(e){
     case"lf":S.logFilter=v;render();break;
     case"sf":S.stockFilter=v;render();break;
     case"fix":var c=checks()[+v];if(c)goTab(c.go.tab,c.go);break;
+    case"fzok":(function(){var t=getTx().find(function(x){return String(x.id)===String(v)});if(!t||!writable())return;if(S.demo){t.fzOk=true;bump();return}if(!ensureDb())return;S.db.doc("tx/"+v).update({fzOk:true}).then(function(){toast("確認しました");logEv("売上","名前違いの結び付けを確認：レジ「"+t.fz+"」→ "+skuLabel(calc().sm[t.skuId]),t.date)}).catch(dbErr)})();break;
     case"demo":startDemo(v==="on");break;
     case"login":doLogin();break;
     case"evsw":S.evBack=true;S.gate="events";render.force=true;render();window.scrollTo(0,0);break;
@@ -1668,7 +1670,7 @@ function gateHtml(){
   return h+'</div></div>';
 }
 /* 新しい版の確認：ブラウザが古いページを覚えていても、新しい版が出たら「最新にする」を出す（5分ごと・画面に戻ったとき） */
-var APP_VER="2026-11-02a";
+var APP_VER="2026-11-02b";
 function checkUpdate(){
   if(location.protocol==="file:")return;
   fetch(location.pathname.replace(/[^\/]*$/,"")+"index.html?v="+Date.now(),{cache:"no-store"}).then(function(r){return r.ok?r.text():""}).then(function(t){var m=/var APP_VER="([^"]+)"/.exec(t);if(m&&m[1]!==APP_VER){var u=$("upd");if(u)u.hidden=false}}).catch(function(){});
@@ -1941,9 +1943,10 @@ async function arLoad(inp){
   S.ar=(st.items||st.sum)?st:null;render.force=true;render();
 }
 function arIndex(){
-  var ix={full:{},by:{}};
+  var ix={full:{},by:{},all:[]};
   getSkus().forEach(function(s){
     var co=arKey(s.color),sz=arKey(s.size);
+    ix.all.push({id:s.id,name:s.name,hin:s.hin,co:co,sz:sz});
     [arKey(s.name),arKey(s.hin),arKey(s.hin+s.name)].forEach(function(nm){
       if(!nm)return;
       ix.full[nm+"|"+co+"|"+sz]=s.id;ix.full[nm+"|"+sz+"|"+co]=s.id;
@@ -1952,20 +1955,45 @@ function arIndex(){
   });
   return ix;
 }
+/* 商品名のゆるい比較：【】などの括弧書き・記号を除いた単語で比べる（Squareは20文字で切れる・レジ側で名前を変えた、などに対応） */
+function arWords(t){return String(t==null?"":t).normalize("NFKC").toUpperCase().replace(/[【\[（(][^】\]）)]*[】\]）)]/g," ").split(/[^0-9A-Z぀-ヿ一-鿿]+/).filter(Boolean)}
+function arSim(a,b){
+  var A=arWords(a),B=arWords(b);if(!A.length||!B.length)return 0;
+  var ka=A.join(""),kb=B.join("");if(ka===kb)return 1;
+  var sb={},hit=0;B.forEach(function(w){sb[w]=1});A.forEach(function(w){if(sb[w])hit++});
+  var sc=hit/Math.max(A.length,B.length),sh=ka.length<kb.length?ka:kb,lg=ka.length<kb.length?kb:ka;
+  var rt=sh.length/lg.length;if(sh.length>=6&&lg.indexOf(sh)===0)sc=Math.max(sc,0.7+0.3*rt);else if(sh.length>=6&&lg.indexOf(sh)>=0)sc=Math.max(sc,0.5+0.4*rt);
+  return sc;
+}
+function arFuzzy(ix,it){
+  var v=[it.v1,it.v2].map(arKey).filter(Boolean),c;
+  if(v.length>=2)c=ix.all.filter(function(x){return(x.co===v[0]&&x.sz===v[1])||(x.co===v[1]&&x.sz===v[0])});
+  else if(v.length===1)c=ix.all.filter(function(x){return x.co===v[0]||x.sz===v[0]});
+  else c=ix.all;
+  var best=null,b=0,sec=0;
+  c.forEach(function(x){var sc=Math.max(arSim(it.name,x.name),arSim(it.name,x.hin));if(sc>b){sec=b;b=sc;best=x}else if(sc>sec)sec=sc});
+  return best&&b>=(v.length?0.5:0.75)&&b>sec?best.id:null;
+}
 function arMatch(ix,it){
+  var id=arMatchExact(ix,it);if(id){it.fz=0;return id}
+  if(/任意の金額|custom amount/i.test(it.name))return null;
+  id=arFuzzy(ix,it);it.fz=id?1:0;return id;
+}
+function arMatchExact(ix,it){
   var nm=arKey(it.name),v=[it.v1,it.v2].map(arKey).filter(Boolean),c=ix.by[nm]||[],id;
   if(v.length>=2){id=ix.full[nm+"|"+v[0]+"|"+v[1]]||ix.full[nm+"|"+v[1]+"|"+v[0]];return id||null}
   if(v.length===1){var h=c.filter(function(x){return x.co===v[0]||x.sz===v[0]}),u={};h.forEach(function(x){u[x.id]=1});return Object.keys(u).length===1?Object.keys(u)[0]:null}
   var u2={};c.forEach(function(x){u2[x.id]=1});return Object.keys(u2).length===1?Object.keys(u2)[0]:null;
 }
 function arPlan(){
-  var st=S.ar,pl={by:{},rby:{},un:[],pcs:0,rets:0,rows:0,nprod:0,dates:[]};
+  var st=S.ar,pl={by:{},rby:{},un:[],fz:[],pcs:0,rets:0,rows:0,nprod:0,dates:[]};
   if(!st||!st.items)return pl;
   var ix=arIndex(),sm={},isSq=st.items.src==="sq",fd={};getSkus().forEach(function(s){sm[s.id]=s});
   st.items.items.forEach(function(it,i){
     if(isSq&&st.loc&&it.loc!==st.loc)return;
     var date=isSq?it.date:st.date;if(date)fd[date]=1;
     var id=st.map[i]!==undefined?st.map[i]:arMatch(ix,it);
+    if(st.map[i]===undefined&&id&&it.fz&&sm[id])pl.fz.push({i:i,it:it,sku:sm[id]});
     /* エアレジ：同じ日に販売と返品（打ち直し・取消）がある商品は、販売総売上が返品を引いたあとの金額なので「販売数−返品数」で数える */
     var sold=it.sold,ret=it.ret;
     if(!isSq&&sold>0&&ret>0){var nq=sold-ret;if(nq>=0){sold=nq;ret=0}else{ret=-nq;sold=0}}
@@ -1976,7 +2004,7 @@ function arPlan(){
     if(sold<=0)return;
     pl.rows++;
     if(!id||!sm[id]){pl.un.push({i:i,it:it,why:(/任意の金額|custom amount/i.test(it.name)?"金額だけの入力（商品なし）":"商品マスタに見つかりません"),sku:null});return}
-    var D=pl.by[date]=pl.by[date]||{},a=D[id]=D[id]||{qty:0,amount:0};
+    var D=pl.by[date]=pl.by[date]||{},a=D[id]=D[id]||{qty:0,amount:0};if(it.fz&&st.map[i]===undefined)a.fz=it.name+(it.v1?"／"+it.v1:"")+(it.v2?"／"+it.v2:"");
     a.qty+=sold;a.amount+=(it.tax==="外税"?Math.round(it.amount*(1+S.cfg.tax)):it.amount);
   });
   pl.dates=Object.keys(fd).sort();Object.keys(pl.rby).forEach(function(d){if(pl.dates.indexOf(d)<0)pl.dates.push(d)});pl.dates.sort();
@@ -2010,6 +2038,10 @@ function arPanel(){
       }
     }
     if(pl.rets)h+='<div class="muted" style="font-size:12.5px;margin-top:6px">返品 '+pl.rets+' 点を「返品（再販の判断待ち）」として登録します。再販できるかどうかは、取り込んだあと、このタブ下の「手入力」で選んでください。</div>';
+    if(pl.fz.length){
+      h+='<div style="margin-top:8px;font-size:13px"><b>名前が違うけれど同じ商品として結び付けた行</b> <span class="muted">（カラー・サイズが同じで、名前が一番近い商品）</span></div>';
+      pl.fz.forEach(function(f){h+='<div style="padding:6px 0;border-top:1px solid var(--line);font-size:13px"><div>'+esc(f.it.name+(f.it.v1?"／"+f.it.v1:"")+(f.it.v2?"／"+f.it.v2:""))+' → <b>'+esc(skuLabel(f.sku))+(f.sku.name?"｜"+esc(f.sku.name):"")+'</b> <span class="muted">（違う場合は選び直す）</span></div><select data-arsel="'+f.i+'" style="width:100%;margin-top:4px"><option value="">（登録しない）</option>'+sk.map(function(x){return'<option value="'+esc(x.id)+'"'+(String(x.id)===String(f.sku.id)?' selected':'')+'>'+esc(skuLabel(x))+(x.name?"｜"+esc(x.name):"")+'</option>'}).join("")+'</select></div>'});
+    }
     if(pl.un.length){
       h+='<div style="margin-top:8px;font-size:13px"><b>登録しない行（商品を選ぶと登録します）</b></div>';
       pl.un.forEach(function(u){
@@ -2049,6 +2081,7 @@ async function doArApply(){
       Object.keys(D).forEach(function(id){
         var a=D[id],std=unitIncl(sm[id].sale)*a.qty,rec={date:d,skuId:id,kind:"sale",qty:a.qty,at:at0+(i++),by:label+(who?"（"+who+"）":""),memo:label+"取込",src:src};
         if(Math.abs(a.amount-std)>a.qty)rec.amount=Math.round(a.amount);
+        if(a.fz){rec.fz=a.fz;var po=old[pre+id];if(po&&po.fz===a.fz&&po.fzOk)rec.fzOk=true}
         ops.push({op:"set",collection:"tx",id:pre+id,data:rec});
       });
     });
@@ -2061,7 +2094,7 @@ async function doArApply(){
   try{
     await A.batch(ops);
     var msg=(doItems?(isSq?pl.dates.length+" 日分":md(date))+"：登録 "+pl.nprod+" 商品"+(isSq?"・日":"")+"／"+pl.pcs+" 点"+(pl.rets?"／返品 "+pl.rets+" 点（再販の判断待ち）":"")+(skip?"（登録しなかった行 "+skip+" 行は手入力してください）":""):"")+(nd?(doItems?"／":"")+"日別の合計 "+nd+" 日":"");
-    if(doItems)logEv("売上",label+"を取り込み："+pl.nprod+" 商品"+(isSq?"・日":"")+"／"+pl.pcs+" 点"+(skip?"（未登録 "+skip+" 行）":""),isSq?pl.dates[0]:date);
+    if(doItems)logEv("売上",label+"を取り込み："+pl.nprod+" 商品"+(isSq?"・日":"")+"／"+pl.pcs+" 点"+(skip?"（未登録 "+skip+" 行）":"")+(pl.fz.length?"（名前違いを自動で結び付け "+pl.fz.length+" 行："+pl.fz.map(function(f){return f.it.name+"→"+f.sku.hin}).join("、").slice(0,200)+"）":""),isSq?pl.dates[0]:date);
     if(doItems){var ld=isSq?pl.dates[pl.dates.length-1]:date;if(ld)S.date=ld}
     S.ar=null;S.arMsg="✓ 取り込みました（"+msg+"）";toast("取り込みました");S.busy=false;render.force=true;render();
   }catch(e){S.busy=false;dbErr(e);say("うまくいきませんでした。通信を確認してもう一度お試しください",true)}
