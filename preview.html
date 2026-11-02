@@ -1668,7 +1668,7 @@ function gateHtml(){
   return h+'</div></div>';
 }
 /* 新しい版の確認：ブラウザが古いページを覚えていても、新しい版が出たら「最新にする」を出す（5分ごと・画面に戻ったとき） */
-var APP_VER="2026-10-30c";
+var APP_VER="2026-11-02a";
 function checkUpdate(){
   if(location.protocol==="file:")return;
   fetch(location.pathname.replace(/[^\/]*$/,"")+"index.html?v="+Date.now(),{cache:"no-store"}).then(function(r){return r.ok?r.text():""}).then(function(t){var m=/var APP_VER="([^"]+)"/.exec(t);if(m&&m[1]!==APP_VER){var u=$("upd");if(u)u.hidden=false}}).catch(function(){});
@@ -1966,15 +1966,18 @@ function arPlan(){
     if(isSq&&st.loc&&it.loc!==st.loc)return;
     var date=isSq?it.date:st.date;if(date)fd[date]=1;
     var id=st.map[i]!==undefined?st.map[i]:arMatch(ix,it);
-    if(it.ret>0){
-      if(id&&sm[id]){var RD=pl.rby[date]=pl.rby[date]||{},ra=RD[id]=RD[id]||{qty:0,amount:0};ra.qty+=it.ret;if(it.retAmt)ra.amount+=(it.tax==="外税"?Math.round(it.retAmt*(1+S.cfg.tax)):it.retAmt);pl.rets+=it.ret}
-      else if(it.sold<=0)pl.un.push({i:i,it:it,why:"返品（商品マスタに見つかりません）",sku:null});
+    /* エアレジ：同じ日に販売と返品（打ち直し・取消）がある商品は、販売総売上が返品を引いたあとの金額なので「販売数−返品数」で数える */
+    var sold=it.sold,ret=it.ret;
+    if(!isSq&&sold>0&&ret>0){var nq=sold-ret;if(nq>=0){sold=nq;ret=0}else{ret=-nq;sold=0}}
+    if(ret>0){
+      if(id&&sm[id]){var RD=pl.rby[date]=pl.rby[date]||{},ra=RD[id]=RD[id]||{qty:0,amount:0};ra.qty+=ret;if(it.retAmt)ra.amount+=(it.tax==="外税"?Math.round(it.retAmt*(1+S.cfg.tax)):it.retAmt);pl.rets+=ret}
+      else if(sold<=0)pl.un.push({i:i,it:it,why:"返品（商品マスタに見つかりません）",sku:null});
     }
-    if(it.sold<=0)return;
+    if(sold<=0)return;
     pl.rows++;
     if(!id||!sm[id]){pl.un.push({i:i,it:it,why:(/任意の金額|custom amount/i.test(it.name)?"金額だけの入力（商品なし）":"商品マスタに見つかりません"),sku:null});return}
     var D=pl.by[date]=pl.by[date]||{},a=D[id]=D[id]||{qty:0,amount:0};
-    a.qty+=it.sold;a.amount+=(it.tax==="外税"?Math.round(it.amount*(1+S.cfg.tax)):it.amount);
+    a.qty+=sold;a.amount+=(it.tax==="外税"?Math.round(it.amount*(1+S.cfg.tax)):it.amount);
   });
   pl.dates=Object.keys(fd).sort();Object.keys(pl.rby).forEach(function(d){if(pl.dates.indexOf(d)<0)pl.dates.push(d)});pl.dates.sort();
   Object.keys(pl.by).forEach(function(d){Object.keys(pl.by[d]).forEach(function(k){pl.nprod++;pl.pcs+=pl.by[d][k].qty})});
