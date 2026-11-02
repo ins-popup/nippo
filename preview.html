@@ -561,6 +561,13 @@ function checks(){
     }
   });
   (function(){var S0=S.cfg.start,E=fltDay();if(!S0||!E)return;var days=getDays(),base=fltBase();if(fltStart()==null&&today>=S0)out.push({lv:"yel",tag:"準備金（最初の金額）が未入力",txt:mdw(S0)+"（会期はじめ）",sub:"備品タブの「レジ準備金」①で、受け取った準備金を数えて入れてください（必須）",go:{tab:"sup",date:S0}});Object.keys(days).sort().forEach(function(k){if(k<S0||k>E)return;var sm=fltSum(days[k].floatCnt);if(sm!=null&&base&&sm!==base)out.push({lv:"red",tag:"準備金が合わない",txt:mdw(k)+(k===E?"（最終日）":"")+"：数えた合計 "+yen(sm)+" ／ 準備金 "+yen(base)+"（"+fltDiffTxt(sm-base)+"）",sub:"売上の現金が混ざっていないか、数え間違いがないか確認してください",go:{tab:"sup",date:k}})});if(today>E&&fltSum((days[E]||{}).floatCnt)==null)out.push({lv:"yel",tag:"準備金（最終日）が未入力",txt:mdw(E)+"（最終日）",sub:"備品タブの「レジ準備金」③で、最終日に数えた枚数を入れてください（必須）",go:{tab:"sup",date:E}})})();
+  (function(){var A=window.T8Data,ev=A&&A.eventId?A.eventId():"",P=!A||ev===A.LEGACY?"":"ev~"+ev+"~",days=getDays(),list=[];
+    function why2(w){return/金額だけ/.test(w)?"商品を選ばずに金額だけで会計されています。何が売れたか確認して、売上タブの「手入力」で入れてください":/複数/.test(w)?"名前が近い商品が複数あって、どれか決められませんでした。売上タブの「手入力」で正しい商品を入れてください":/マイナス/.test(w)?"金額がマイナスの行です。売上タブの「手入力」で入れてください":"日報サイトの商品マスタに見つかりません。売上タブの「手入力」で入れてください（投入在庫にない商品なら社内に確認）"}
+    if(A&&A.rawAll)A.rawAll("imports").forEach(function(r){var id=String(r.id);if(P?id.indexOf(P)!==0:id.indexOf("~")>=0)return;var l=r.data||{};(l.unmatched||[]).forEach(function(u,k){list.push({date:l.date,key:"sq:"+(l.msgId||id)+":"+k,u:u,src:l.label||"Square"})})});
+    Object.keys(days).forEach(function(d){(days[d].csvUn||[]).forEach(function(u){list.push({date:d,key:"csv:"+arKey(u.name)+"|"+arKey(u.variant)+"|"+u.qty,u:u,src:days[d].csvUnSrc||"CSV"})})});
+    list.forEach(function(x){var ok=(days[x.date]||{}).unOk||{};if(ok[x.key])return;var u=x.u;
+      out.push({lv:"red",tag:"レジの売上が未登録",txt:mdw(x.date)+"："+x.src+"の「"+u.name+(u.variant&&!/詳細なし/.test(u.variant)?"／"+u.variant:"")+"」×"+Math.abs(u.qty||0)+(u.amount!=null?"　"+yen(Math.abs(u.amount))+(u.tax==="外税"||x.src==="Square"?"（税抜）":""):"")+"｜"+u.why,sub:why2(u.why)+"。入れ終わったら「確認した」を押してください",go:{tab:"sales",date:x.date},ok:x.date+"|"+encodeURIComponent(x.key),okAct:"unok"})});
+  })();
   getTx().forEach(function(t){if(!t.fz||t.fzOk||t.kind!=="sale")return;out.push({lv:"yel",tag:"名前違いで自動結び付け",txt:mdw(t.date)+"：レジ「"+t.fz+"」→ "+skuLabel(sm[t.skuId])+(sm[t.skuId]&&sm[t.skuId].name?"（"+sm[t.skuId].name+"）":""),sub:"同じ商品なら「確認した」を押してください。違う商品なら、売上タブの手入力で直してください",go:{tab:"sales",date:t.date},ok:t.id})});
   supItems().forEach(function(x){var c=supCalc(x);if(c.lv!=="ok")out.push({lv:c.lv==="red"?"red":"yel",tag:c.lv==="red"?"備品が要発注":"備品が少なめ",txt:x.name+"：残り 約"+c.est+(x.unit||"")+"（通知ライン "+(x.alert||0)+(x.unit||"")+"）",sub:c.left!=null?"あと約"+c.left+"日分です。発注担当に連絡してください":"発注担当に連絡してください",go:{tab:"sup"}})});
   out.sort(function(a,b){return(a.lv==="red"?0:1)-(b.lv==="red"?0:1)});
@@ -1405,7 +1412,7 @@ function vCheck(){
   var h='<div class="card"><h2>要確認 <small>入力内容から自動でチェックしています</small></h2>';
   if(!list.length)h+='<div class="ok-all">確認が必要な項目はありません</div>';
   else{
-    var item=function(c,i){return'<div class="alert '+c.lv+'"><div class="tx"><span class="tag">'+esc(c.tag)+'</span><br>'+esc(c.txt)+'<small>'+esc(c.sub)+'</small></div><button class="btn small" data-act="fix" data-v="'+list.indexOf(c)+'">開く</button>'+(c.ok&&writable()?'<button class="btn small" data-act="fzok" data-v="'+esc(c.ok)+'">確認した</button>':'')+'</div>'};
+    var item=function(c,i){return'<div class="alert '+c.lv+'"><div class="tx"><span class="tag">'+esc(c.tag)+'</span><br>'+esc(c.txt)+'<small>'+esc(c.sub)+'</small></div><button class="btn small" data-act="fix" data-v="'+list.indexOf(c)+'">開く</button>'+(c.ok&&writable()?'<button class="btn small" data-act="'+(c.okAct||"fzok")+'" data-v="'+esc(c.ok)+'">確認した</button>':'')+'</div>'};
     if(red.length)h+='<div style="font-weight:700;margin:4px 0 8px;color:var(--bad)">数字が合っていない可能性（'+red.length+'）</div>'+red.map(item).join("");
     if(yel.length)h+='<div style="font-weight:700;margin:14px 0 8px;color:var(--warn)">未入力・書き忘れ（'+yel.length+'）</div>'+yel.map(item).join("");
   }
@@ -1438,6 +1445,7 @@ document.addEventListener("click",function(e){
     case"lf":S.logFilter=v;render();break;
     case"sf":S.stockFilter=v;render();break;
     case"fix":var c=checks()[+v];if(c)goTab(c.go.tab,c.go);break;
+    case"unok":(function(){if(!writable())return;var p=String(v).indexOf("|"),d=String(v).slice(0,p),k=decodeURIComponent(String(v).slice(p+1)),cur=(getDays()[d]||{}).unOk||{},o={};Object.keys(cur).forEach(function(x){o[x]=cur[x]});o[k]=true;putDay(d,{unOk:o}).then(function(ok){if(ok){toast("確認しました");logEv("売上","レジの未登録の会計を確認済みにした（"+k.split(":")[0]+"）",d)}})})();break;
     case"fzok":(function(){var t=getTx().find(function(x){return String(x.id)===String(v)});if(!t||!writable())return;if(S.demo){t.fzOk=true;bump();return}if(!ensureDb())return;S.db.doc("tx/"+v).update({fzOk:true}).then(function(){toast("確認しました");logEv("売上","名前違いの結び付けを確認：レジ「"+t.fz+"」→ "+skuLabel(calc().sm[t.skuId]),t.date)}).catch(dbErr)})();break;
     case"demo":startDemo(v==="on");break;
     case"login":doLogin();break;
@@ -1670,7 +1678,7 @@ function gateHtml(){
   return h+'</div></div>';
 }
 /* 新しい版の確認：ブラウザが古いページを覚えていても、新しい版が出たら「最新にする」を出す（5分ごと・画面に戻ったとき） */
-var APP_VER="2026-11-02b";
+var APP_VER="2026-11-02c";
 function checkUpdate(){
   if(location.protocol==="file:")return;
   fetch(location.pathname.replace(/[^\/]*$/,"")+"index.html?v="+Date.now(),{cache:"no-store"}).then(function(r){return r.ok?r.text():""}).then(function(t){var m=/var APP_VER="([^"]+)"/.exec(t);if(m&&m[1]!==APP_VER){var u=$("upd");if(u)u.hidden=false}}).catch(function(){});
@@ -1972,6 +1980,7 @@ function arFuzzy(ix,it){
   else c=ix.all;
   var best=null,b=0,sec=0;
   c.forEach(function(x){var sc=Math.max(arSim(it.name,x.name),arSim(it.name,x.hin));if(sc>b){sec=b;b=sc;best=x}else if(sc>sec)sec=sc});
+  if(best&&b>=(v.length?0.5:0.75)&&b===sec)it.fzTie=1;
   return best&&b>=(v.length?0.5:0.75)&&b>sec?best.id:null;
 }
 function arMatch(ix,it){
@@ -1999,11 +2008,11 @@ function arPlan(){
     if(!isSq&&sold>0&&ret>0){var nq=sold-ret;if(nq>=0){sold=nq;ret=0}else{ret=-nq;sold=0}}
     if(ret>0){
       if(id&&sm[id]){var RD=pl.rby[date]=pl.rby[date]||{},ra=RD[id]=RD[id]||{qty:0,amount:0};ra.qty+=ret;if(it.retAmt)ra.amount+=(it.tax==="外税"?Math.round(it.retAmt*(1+S.cfg.tax)):it.retAmt);pl.rets+=ret}
-      else if(sold<=0)pl.un.push({i:i,it:it,why:"返品（商品マスタに見つかりません）",sku:null});
+      else if(sold<=0)pl.un.push({i:i,it:it,date:date,why:"返品（商品マスタに見つかりません）",sku:null});
     }
     if(sold<=0)return;
     pl.rows++;
-    if(!id||!sm[id]){pl.un.push({i:i,it:it,why:(/任意の金額|custom amount/i.test(it.name)?"金額だけの入力（商品なし）":"商品マスタに見つかりません"),sku:null});return}
+    if(!id||!sm[id]){pl.un.push({i:i,it:it,date:date,why:(/任意の金額|custom amount/i.test(it.name)?"金額だけの入力（商品なし）":it.fzTie?"名前が近い商品が複数（決められません）":"商品マスタに見つかりません"),sku:null});return}
     var D=pl.by[date]=pl.by[date]||{},a=D[id]=D[id]||{qty:0,amount:0};if(it.fz&&st.map[i]===undefined)a.fz=it.name+(it.v1?"／"+it.v1:"")+(it.v2?"／"+it.v2:"");
     a.qty+=sold;a.amount+=(it.tax==="外税"?Math.round(it.amount*(1+S.cfg.tax)):it.amount);
   });
@@ -2086,6 +2095,7 @@ async function doArApply(){
       });
     });
   }
+  if(doItems)pl.dates.forEach(function(d){var un=pl.un.filter(function(u){return u.date===d&&!st.map[u.i]}).map(function(u){var it=u.it;return{name:it.name,variant:[it.v1,it.v2].filter(Boolean).join(" / "),qty:it.sold>0?it.sold:-(it.ret||0),amount:it.sold>0?it.amount:(it.retAmt||null),tax:it.tax||"",why:u.why}});ops.push({op:"update",collection:"days",id:d,data:{csvUn:un,csvUnSrc:label}})});
   var nd=0;
   if(st.sum)st.sum.days.forEach(function(d){var p={reportTotal:Math.round(d.total),disc:Math.round(d.disc||0)};if(d.cust>0)p.customers=Math.round(d.cust);ops.push({op:"update",collection:"days",id:d.date,data:p});nd++});
   if(!ops.length){say("取り込む内容がありません",true);return}
