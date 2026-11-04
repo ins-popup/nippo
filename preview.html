@@ -557,7 +557,6 @@ function checks(){
       if(!had&&d.date<today)out.push({lv:"yel",tag:"売上の入力なし",txt:mdw(d.date)+" は売上の入力が0件です",sub:"売上ゼロの日なら問題ありません",go:{tab:"sales",date:d.date}});
       if(had){
         if(d.cust==null)out.push({lv:"yel",tag:"客数が未入力",txt:mdw(d.date),sub:"売上明細の日別パネルで入力します",go:{tab:"sales",date:d.date}});
-        if(!dayPhotos(d.date).length&&!S.demo)out.push({lv:"yel",tag:"レポート写真が未登録",txt:mdw(d.date),sub:"レジの売上レポートを撮影して登録してください",go:{tab:"sales",date:d.date}});
         var dd=getDays()[d.date]||{};
         if(!(dd.reporter||dd.hot||dd.comment||dd.event||dd.notice||dd.weather))out.push({lv:"yel",tag:"日報が未記入",txt:mdw(d.date),sub:"日報（コメント）・連絡事項などを記入します",go:{tab:"report",date:d.date}});
       }
@@ -839,7 +838,7 @@ function vHelp(){
    tbl(['列','意味'],[['総売上高','売れた商品を販売価格で計算した金額'],['返品・ディスカウント','返品と割引（マイナス）'],['純売上高','総売上高＋返品＋ディスカウント'],['合計（税込）','純売上高に消費税を足した金額'],['予算比','その日の純売上高 ÷ 1日の予算'],['レポートとの差','サイトとレジのレポートの差。「一致」ならOK']])+
    '<p class="hp">表の行を押すと、その日の詳細（客数・レポートの合計・写真）が開きます。写真は保存するだけで、数字は読み取りません。</p>');
   h+=sec("check","確認タブの表示と対応","赤は対応が必要、黄は確認。押すと直す画面に移る",
-   tbl(['表示','すること'],[['在庫マイナス','数量・商品の入力ミスか、補充の入れ忘れを確かめる'],['レジ報告と不一致','取り込み漏れ・二重入力・任意の金額・返品を確かめる'],['カウントのズレ','数え直すか、入力漏れを探す'],['返品の再販が未確認','手入力の一覧で「再販できる／できない」を押す'],['返品の商品が未入力','Squareの返品を手入力で商品として入れる'],['客数が未入力','売上タブのその日の詳細で入れる'],['レポート写真が未登録','写真を登録する'],['日報が未記入','日報タブで書く']])+go("check","確認"));
+   tbl(['表示','すること'],[['在庫マイナス','数量・商品の入力ミスか、補充の入れ忘れを確かめる'],['レジ報告と不一致','取り込み漏れ・二重入力・任意の金額・返品を確かめる'],['カウントのズレ','数え直すか、入力漏れを探す'],['返品の再販が未確認','手入力の一覧で「再販できる／できない」を押す'],['返品の商品が未入力','Squareの返品を手入力で商品として入れる'],['客数が未入力','売上タブのその日の詳細で入れる'],['日報が未記入','日報タブで書く']])+go("check","確認"));
   h+=sec("other","日報・在庫・履歴","",
    h3('日報')+'<p class="hp">日報（コメント）と、連絡・依頼・トラブル・返品理由（インス宛）を書きます。書いた内容は欄から離れると自動で保存されます。書き終わったら「投稿する」を押すと、「投稿しました（時刻・名前）」と出ます。投稿したあとに書き換えたときは、もう一度「投稿する」を押します。</p>'+
    h3('在庫')+'<p class="hp">商品ごとの理論在庫（投入数 − 販売 ＋ 返品（再販できる）＋ 補充など）を見ます。棚卸で数えた点数を入れると、ズレが出ます。備品（ショッパー・ラッピング資材）は「備品」タブで見ます。</p>'+
@@ -1241,7 +1240,7 @@ function dayPanel(d){
   else if(d.diff===0)h+='<span class="pill ok">レポートと一致</span>';
   else h+='<span class="pill bad">レポートと '+(d.diff>0?'+':'')+numf(d.diff)+' 円の差</span>';
   h+='</div>';
-  h+='<div><div style="font-size:13px;font-weight:700;margin-bottom:6px">売上レポートの写真</div>';
+  h+='<div><div style="font-size:13px;font-weight:700;margin-bottom:6px">売上レポートの写真 <span class="muted" style="font-weight:400">（任意）</span></div>';
   if(ph.length)h+='<div class="photos">'+ph.map(function(p){return'<div class="photo"><img src="'+esc(photoUrl(p.asset))+'" alt="売上レポート" data-act="zoom" data-v="'+esc(p.asset)+'" loading="lazy">'+(can&&S.assets?'<button class="btn small danger" data-act="pdel" data-v="'+esc(p.id)+'">削除</button>':'')+'</div>'}).join("")+'</div>';
   if(S.demo)h+='<div class="empty" style="margin-top:6px">見本表示では写真は登録できません</div>';
   else if(can&&S.assets)h+='<div class="drop" style="margin-top:'+(ph.length?10:0)+'px"><span>撮影した写真を選ぶか、画像をコピーして、この画面に貼り付け（Ctrl+V / ⌘V）</span><label class="btn primary" style="display:inline-flex;align-items:center">写真を追加<input type="file" id="photoIn" accept="image/*" multiple hidden></label></div>';
@@ -1426,7 +1425,7 @@ function vCheck(){
     if(red.length)h+='<div style="font-weight:700;margin:4px 0 8px;color:var(--bad)">数字が合っていない可能性（'+red.length+'）</div>'+red.map(item).join("");
     if(yel.length)h+='<div style="font-weight:700;margin:14px 0 8px;color:var(--warn)">未入力・書き忘れ（'+yel.length+'）</div>'+yel.map(item).join("");
   }
-  h+='</div><div class="card"><h2>チェックしている内容</h2><div class="muted" style="font-size:13.5px">在庫がマイナスになっていないか／棚卸の実数と理論在庫が合っているか／日付が会期内か／レジの売上レポートの合計と入力から計算した合計が一致しているか／客数・レポート写真・日報の書き忘れがないか（会期中の過去日のみ）。</div></div>';
+  h+='</div><div class="card"><h2>チェックしている内容</h2><div class="muted" style="font-size:13.5px">在庫がマイナスになっていないか／棚卸の実数と理論在庫が合っているか／日付が会期内か／レジの売上レポートの合計と入力から計算した合計が一致しているか／客数・日報の書き忘れがないか（会期中の過去日のみ）。</div></div>';
   return h;
 }
 
