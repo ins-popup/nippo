@@ -843,7 +843,7 @@ function vHelp(){
   h+=sec("sup","備品（ショッパー・ラッピング資材）","備品タブ。残りは客数・ラッピング件数から自動で減る",
    ol(['閉店後、売上タブのその日の詳細で<b>客数</b>と<b>ラッピング件数</b>を入れる（ここから使った数を自動で計算します）','補充が届いたら、備品タブで「<b>＋ 補充が届いた</b>」を押して、届いた数を入れる','閉店後や週1回、残りを数えて「<b>まとめて数える</b>」で、数えた品目の残数を入れて保存（1品目だけなら、その品目の「数えた残数を入れる」／「数えた」）。目安が実際の数に戻ります'+go("sup","備品")])+
    tbl(['表示','意味'],[['十分','通知ラインより多い'],['少なめ','通知ラインの1.5倍以下'],['要発注','通知ライン以下。確認タブにも出ます。管理者が送り先を設定していれば、毎朝、発注担当にメールが届きます']])+
-   note('残数は「目安」です。会計1件でショッパーを2枚使ったときなどはズレるので、ときどき数えて合わせてください。日付は画面上の日付で記録されます。'));
+   note('エアレジは返品の会計も客数に入るため、ショッパーはエアレジのCSVの返品の点数を客数から引いて計算します。残数は「目安」です。会計1件でショッパーを2枚使ったときなどはズレるので、ときどき数えて合わせてください。日付は画面上の日付で記録されます。'));
   h+=sec("coupon","クーポンを使ったとき","枚数と金額を、その日の詳細に入れる",
    ol(['レジでは、これまでどおり割引としてクーポンを使う','閉店後、売上タブのその日の詳細の「<b>クーポン</b>」に、使った枚数と割り引いた金額（税込）を入れる'+go("sales","売上")])+
    note('クーポンの金額はディスカウントの中に含まれています（二重には引かれません）。会期の合計は売上タブの表の下、日ごとの数は売上明細のCSVに出ます。'));
@@ -867,7 +867,7 @@ var SUP_MODE={cust:"会計1件（客数）ごとに減る",wrap:"ラッピング
 function getSup(){return S.demo?(S.dSup||{}):(S.sup||{})}
 function supItems(){var m=getSup();return Object.keys(m).filter(function(k){return k.indexOf("i-")===0}).map(function(k){return Object.assign({id:k},m[k])}).sort(function(a,b){return(a.order||0)-(b.order||0)||(a.at||0)-(b.at||0)})}
 function supEvs(iid){var m=getSup();return Object.keys(m).filter(function(k){return k.indexOf("e-")===0&&m[k].item===iid}).map(function(k){return Object.assign({id:k},m[k])}).sort(function(a,b){return a.date<b.date?-1:a.date>b.date?1:(a.at||0)-(b.at||0)})}
-function supUseRaw(it,dd){dd=dd||{};var per=+it.per||1;if(it.mode==="cust")return(+dd.customers||0)*per;if(it.mode==="wrap")return(+dd.wraps||0)*per;return 0}
+function supUseRaw(it,dd){dd=dd||{};var per=+it.per||1;if(it.mode==="cust")return Math.max(0,(+dd.customers||0)-(+dd.custRet||0))*per; /* エアレジは返品の会計も客数に入るので、返品の点数（custRet）を引く */if(it.mode==="wrap")return(+dd.wraps||0)*per;return 0}
 function supUseOn(it,d){return supUseRaw(it,getDays()[d])}
 /* 残数（目安）の計算。ev＝その品目の記録（日付順）、days＝そのイベントの日別データ、start＝会期はじめ */
 function supCalcRaw(it,ev,days,start){
@@ -1227,7 +1227,7 @@ function dayPanel(d){
   var cv=S.draft[S.date+":customers"];if(cv===undefined)cv=dd.customers==null?"":dd.customers;
   var rv=S.draft[S.date+":reportTotal"];if(rv===undefined)rv=dd.reportTotal==null?"":dd.reportTotal;
   var h='<div class="card"><h2>'+mdw(S.date)+' の詳細</h2><div class="grid g2">';
-  h+='<div class="grid" style="gap:12px"><div class="row"><label class="f" style="flex:1 1 130px"><span>客数（会計件数）</span><input type="number" inputmode="numeric" id="f_customers" data-day="customers" value="'+esc(cv)+'"'+(can?'':' readonly')+'></label>'+
+  h+='<div class="grid" style="gap:12px"><div class="row"><label class="f" style="flex:1 1 130px"><span>客数（会計件数）</span>'+(+dd.custRet>0?'<span class="h">うち返品の会計 '+(+dd.custRet)+' 件（ショッパーは返品を除いて計算）</span>':'')+'<input type="number" inputmode="numeric" id="f_customers" data-day="customers" value="'+esc(cv)+'"'+(can?'':' readonly')+'></label>'+
     (supWrapOn()?'<label class="f" style="flex:1 1 130px"><span>ラッピング件数</span><input type="number" inputmode="numeric" id="f_wraps" data-day="wraps" value="'+esc((function(){var v=S.draft[S.date+":wraps"];return v===undefined?(dd.wraps==null?"":dd.wraps):v})())+'"'+(can?'':' readonly')+'></label>':'')+
     '<label class="f" style="flex:1 1 170px"><span>レポートの合計（税込）</span><span class="h">任意。入力すると計算と照合します</span><input type="number" inputmode="numeric" id="f_reportTotal" data-day="reportTotal" value="'+esc(rv)+'"'+(can?'':' readonly')+'></label></div>';
   (function(){function v(f){var x=S.draft[S.date+":"+f];return x===undefined?(dd[f]==null?"":dd[f]):x}
@@ -1686,7 +1686,7 @@ function gateHtml(){
   return h+'</div></div>';
 }
 /* 新しい版の確認：ブラウザが古いページを覚えていても、新しい版が出たら「最新にする」を出す（5分ごと・画面に戻ったとき） */
-var APP_VER="2026-11-04b";
+var APP_VER="2026-11-04c";
 function checkUpdate(){
   if(location.protocol==="file:")return;
   fetch(location.pathname.replace(/[^\/]*$/,"")+"index.html?v="+Date.now(),{cache:"no-store"}).then(function(r){return r.ok?r.text():""}).then(function(t){var m=/var APP_VER="([^"]+)"/.exec(t);if(m&&m[1]!==APP_VER){var u=$("upd");if(u)u.hidden=false}}).catch(function(){});
@@ -2003,7 +2003,7 @@ function arMatchExact(ix,it){
   var u2={};c.forEach(function(x){u2[x.id]=1});return Object.keys(u2).length===1?Object.keys(u2)[0]:null;
 }
 function arPlan(){
-  var st=S.ar,pl={by:{},rby:{},un:[],fz:[],pcs:0,rets:0,rows:0,nprod:0,dates:[]};
+  var st=S.ar,pl={by:{},rby:{},un:[],fz:[],pcs:0,rets:0,rows:0,nprod:0,dates:[],retCnt:{}};
   if(!st||!st.items)return pl;
   var ix=arIndex(),sm={},isSq=st.items.src==="sq",fd={};getSkus().forEach(function(s){sm[s.id]=s});
   st.items.items.forEach(function(it,i){
@@ -2013,6 +2013,7 @@ function arPlan(){
     if(st.map[i]===undefined&&id&&it.fz&&sm[id])pl.fz.push({i:i,it:it,sku:sm[id]});
     /* エアレジ：同じ日に販売と返品（打ち直し・取消）がある商品は、販売総売上が返品を引いたあとの金額なので「販売数−返品数」で数える */
     var sold=it.sold,ret=it.ret;
+    if(!isSq&&it.ret>0&&date)pl.retCnt[date]=(pl.retCnt[date]||0)+it.ret; /* 返品の会計の数（ショッパーの計算で客数から引く） */
     if(!isSq&&sold>0&&ret>0){var nq=sold-ret;if(nq>=0){sold=nq;ret=0}else{ret=-nq;sold=0}}
     if(ret>0){
       if(id&&sm[id]){var RD=pl.rby[date]=pl.rby[date]||{},ra=RD[id]=RD[id]||{qty:0,amount:0};ra.qty+=ret;if(it.retAmt)ra.amount+=(it.tax==="外税"?Math.round(it.retAmt*(1+S.cfg.tax)):it.retAmt);pl.rets+=ret}
@@ -2103,7 +2104,7 @@ async function doArApply(){
       });
     });
   }
-  if(doItems)pl.dates.forEach(function(d){var un=pl.un.filter(function(u){return u.date===d&&!st.map[u.i]}).map(function(u){var it=u.it;return{name:it.name,variant:[it.v1,it.v2].filter(Boolean).join(" / "),qty:it.sold>0?it.sold:-(it.ret||0),amount:it.sold>0?it.amount:(it.retAmt||null),tax:it.tax||"",why:u.why}});ops.push({op:"update",collection:"days",id:d,data:{csvUn:un,csvUnSrc:label}})});
+  if(doItems)pl.dates.forEach(function(d){var un=pl.un.filter(function(u){return u.date===d&&!st.map[u.i]}).map(function(u){var it=u.it;return{name:it.name,variant:[it.v1,it.v2].filter(Boolean).join(" / "),qty:it.sold>0?it.sold:-(it.ret||0),amount:it.sold>0?it.amount:(it.retAmt||null),tax:it.tax||"",why:u.why}});ops.push({op:"update",collection:"days",id:d,data:Object.assign({csvUn:un,csvUnSrc:label},isSq?{}:{custRet:pl.retCnt[d]||0})})});
   var nd=0;
   if(st.sum)st.sum.days.forEach(function(d){var p={reportTotal:Math.round(d.total),disc:Math.round(d.disc||0)};if(d.cust>0)p.customers=Math.round(d.cust);ops.push({op:"update",collection:"days",id:d.date,data:p});nd++});
   if(!ops.length){say("取り込む内容がありません",true);return}
