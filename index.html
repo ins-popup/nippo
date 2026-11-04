@@ -484,7 +484,10 @@ function getDays(){return S.demo?S.dDays:S.days}
 function getCounts(){return S.demo?S.dCounts:S.counts}
 function skuLabel(s){return s?s.hin+"｜"+s.color+"｜"+s.size:"（削除された商品）"}
 function unitIncl(p){return Math.round((p||0)*(1+S.cfg.tax))}
-function writable(){return S.demo||S.canWrite!==false}
+function writable(){return S.demo||(S.canWrite!==false&&whoOk())}
+/* 入力者：日付が変わったら入れ直し（共有の端末で前の日の名前が残らないように）。名前が空のあいだは入力・変更できない */
+function whoOk(){if(S.demo)return true;if(S.who&&S.whoDay!==todayStr())S.who="";return!!(S.who||"").trim()}
+function needWho(){if(whoOk())return true;toast("画面上の「入力者」に名前を入れてから入力してください",true);var w=$("who");if(w){try{w.scrollIntoView({block:"center"})}catch(e){}w.focus()}return false}
 
 /* ============ 集計 ============ */
 var memo=null;
@@ -556,7 +559,7 @@ function checks(){
       }
     }
   });
-  (function(){var S0=S.cfg.start,E=fltDay();if(!S0||!E)return;var days=getDays(),base=fltBase();if(fltStart()==null&&today>=S0)out.push({lv:"yel",tag:"準備金（最初の金額）が未入力",txt:mdw(S0)+"（会期はじめ）",sub:"備品タブの「レジ準備金」①で、受け取った準備金を数えて入れてください（必須）",go:{tab:"sup",date:S0}});Object.keys(days).sort().forEach(function(k){if(k<S0||k>E)return;var sm=fltSum(days[k].floatCnt);if(sm!=null&&base&&sm!==base)out.push({lv:"red",tag:"準備金が合わない",txt:mdw(k)+(k===E?"（最終日）":"")+"：数えた合計 "+yen(sm)+" ／ 準備金 "+yen(base)+"（"+fltDiffTxt(sm-base)+"）",sub:"売上の現金が混ざっていないか、数え間違いがないか確認してください",go:{tab:"sup",date:k}})});if(today>E&&fltSum((days[E]||{}).floatCnt)==null)out.push({lv:"yel",tag:"準備金（最終日）が未入力",txt:mdw(E)+"（最終日）",sub:"備品タブの「レジ準備金」③で、最終日に数えた枚数を入れてください（必須）",go:{tab:"sup",date:E}})})();
+  (function(){var S0=S.cfg.start,E=fltDay();if(!S0||!E)return;var days=getDays(),base=fltBase();if(fltStart()==null&&today>=S0)out.push({lv:"yel",tag:"準備金（最初の金額）が未入力",txt:mdw(S0)+"（会期はじめ）",sub:"備品タブの「レジ準備金」①で、受け取った準備金を数えて入れてください（必須）",go:{tab:"sup",date:S0}});Object.keys(days).sort().forEach(function(k){if(k<S0||k>E)return;var sm=fltSum(days[k].floatCnt);if(sm!=null&&base&&sm!==base)out.push({lv:"red",tag:"準備金が合わない",txt:mdw(k)+(k===E?"（最終日）":"")+"：数えた合計 "+yen(sm)+" ／ 準備金 "+yen(base)+"（"+fltDiffTxt(sm-base)+"）",sub:"売上の現金が混ざっていないか、数え間違いがないか確認してください",go:{tab:"sup",date:k}})});Object.keys((function(){var o={},k=S0>FLT_DAILY_FROM?S0:FLT_DAILY_FROM;while(k<today&&k<E){o[k]=1;k=addDays(k,1)}return o})()).forEach(function(k){if(fltSum((days[k]||{}).floatCnt)==null)out.push({lv:"red",tag:"準備金の確認が未入力",txt:mdw(k),sub:"備品タブの「レジ準備金」②で、その日の閉店後のおつり金を入れてください（毎日必須）",go:{tab:"sup",date:k}})});if(today>E&&fltSum((days[E]||{}).floatCnt)==null)out.push({lv:"yel",tag:"準備金（最終日）が未入力",txt:mdw(E)+"（最終日）",sub:"備品タブの「レジ準備金」③で、最終日に数えた枚数を入れてください（必須）",go:{tab:"sup",date:E}})})();
   (function(){var A=window.T8Data,ev=A&&A.eventId?A.eventId():"",P=!A||ev===A.LEGACY?"":"ev~"+ev+"~",days=getDays(),list=[];
     function why2(w){return/金額だけ/.test(w)?"商品を選ばずに金額だけで会計されています。何が売れたか確認して、売上タブの「手入力」で入れてください":/複数/.test(w)?"名前が近い商品が複数あって、どれか決められませんでした。売上タブの「手入力」で正しい商品を入れてください":/マイナス/.test(w)?"金額がマイナスの行です。売上タブの「手入力」で入れてください":"日報サイトの商品マスタに見つかりません。売上タブの「手入力」で入れてください（投入在庫にない商品なら社内に確認）"}
     if(A&&A.rawAll)A.rawAll("imports").forEach(function(r){var id=String(r.id);if(P?id.indexOf(P)!==0:id.indexOf("~")>=0)return;var l=r.data||{};(l.unmatched||[]).forEach(function(u,k){list.push({date:l.date,key:"sq:"+(l.msgId||id)+":"+k,u:u,src:l.label||"Square"})})});
@@ -571,7 +574,7 @@ function checks(){
 }
 
 /* ============ データ書き込み ============ */
-function ensureDb(){if(!S.db){toast("データ保存が使えない状態です。ページを再読み込みしてください",true);return false}return true}
+function ensureDb(){if(!S.db){toast("データ保存が使えない状態です。ページを再読み込みしてください",true);return false}return needWho()}
 function guard(fn){return function(){if(S.busy)return;return fn.apply(null,arguments)}}
 function dbErr(e){var c=e&&e.code;toast(c==="quota_exceeded"?"保存の上限に達しました":c==="invalid_argument"?"保存できませんでした（書き込み権限がない可能性があります）":"保存に失敗しました。通信を確認してもう一度お試しください",true);console.error(e)}
 async function addTx(rec){
@@ -651,10 +654,11 @@ function header(){
   if(!S.demo&&!scoped()&&evList().length>1)h+='<button class="btn small" data-act="evsw">イベント切替</button>';
   h+=S.demo?'<span class="pill warn">見本データ表示中</span>':'<span class="pill ok">保存済みデータ</span>';
   if(!S.demo&&S.skus.length)h+='<button class="btn small" data-act="demo" data-v="on">見本データで試す</button>';
-  h+='<label class="who"><span>入力者</span><input type="text" id="who" value="'+esc(S.who||"")+'" placeholder="あなたの名前" autocomplete="off"'+(S.who&&S.who.trim()?'':' class="need"')+'></label>';
+  h+='<label class="who"><span>入力者</span><input type="text" id="who" value="'+esc(S.who||"")+'" placeholder="あなたの名前" autocomplete="off"'+(whoOk()?'':' class="need"')+'></label>';
   h+='</div><div class="muted note-sync" style="font-size:12.5px">変更はすぐに全員の画面へ反映され、「履歴」に名前つきで残ります。</div>';
   if(S.demo)h+='<div class="banner demo"><span>これは操作を試すための見本です。ここで入力した内容は保存されず、本番のデータには入りません。</span><button class="btn small" data-act="demo" data-v="off">本番データに戻る</button></div>';
   else if(S.canWrite===false)h+='<div class="banner ro">閲覧のみのアカウントです。入力・変更はできません。</div>';
+  else if(!whoOk())h+='<div class="banner demo"><b>はじめに「入力者」にあなたの名前を入れてください（毎日必須）。</b>入れるまで入力・変更はできません。日付が変わると入れ直しになります。</div>';
   if(S.tab!=="check"&&S.tab!=="stock"&&S.tab!=="log"&&S.tab!=="admin"&&S.tab!=="help"&&getSkus().length)h+=datebar();
   return h;
 }
@@ -813,7 +817,7 @@ function vHelp(){
   h+='<div class="card"><h2>毎日やること</h2>'+
    h3('お店を開けているあいだ')+ul(['商品の補充・店舗間の移動・破損・返送があったら、売上タブの一番下の「手入力」で入れる','返品の理由など伝えたいことは、日報タブの「連絡・依頼・トラブル・返品理由」に書く'])+
    h3('閉店後')+ol(['レジを締めたら、その日の<b>売上を入れる</b>（下の「売上を入れる」）','返品があった日は、<b>再販できるかを選ぶ</b>（下の「返品があったとき」）','売上タブでその日の行を押し、<b>客数</b>（ラッピングがあれば<b>ラッピング件数</b>、クーポンがあれば<b>枚数・金額</b>も）を入れて、<b>レジの売上レポートの写真</b>を登録する','日報タブに、コメントと連絡事項を書いて「<b>投稿する</b>」を押す'+go("report","日報"),'確認タブを開いて、<b>赤い項目が残っていないか</b>見る'+go("check","確認")])+
-   note('最初に、画面上の「入力者」に自分の名前を入れてください。だれが入れたかが履歴に残ります。前の日の分を入れるときは、画面上の日付を ◀ ▶ で変えてから入れます。')+'</div>';
+   note('最初に、画面上の「入力者」に自分の名前を入れてください（<b>毎日必須</b>。日付が変わると入れ直しになり、入れるまで入力できません）。だれが入れたかが履歴に残ります。閉店後は、備品タブの「レジ準備金」を<b>毎日</b>数えて入れてから日報を投稿します。前の日の分を入れるときは、画面上の日付を ◀ ▶ で変えてから入れます。')+'</div>';
   h+=sec("sales","売上を入れる","Squareはメールで送る／エアレジはファイルを読み込む",
    h3('Square')+ol(['Squareの管理画面で、その日の「売上レポート」を出す','<b>期間は1日だけ</b>、<b>「商品別売上」を含める</b>にする','<b>signup@ins.fm</b> に送る（Squareの送信機能か、ins.fm のアドレスから）','30分以内に売上タブに入る'])+
    note('複数日をまとめたレポート、「商品別売上」が入っていないレポート、個人のアドレスから送ったものは、自動では入りません。')+
@@ -1257,12 +1261,16 @@ function postBar(){
   if(ps.st==="ok")h+='<div class="pst ok"><span class="mk">✓</span><span><b>投稿しました</b>（'+hm(ps.po.at)+(ps.po.by?'・'+esc(ps.po.by):'')+'）</span></div>';
   else if(ps.st==="changed")h+='<div class="pst warn"><span class="mk">!</span><span><b>投稿したあとに書き換えました</b>（書き換えた内容も自動で保存されています）。確定するときは、もう一度「投稿する」を押してください。</span></div>';
   else h+='<div class="pst"><span class="mk"></span><span>まだ投稿していません。書いた内容は、欄から離れると自動で保存されます。書き終わったら「投稿する」を押してください。</span></div>';
+  var miss=[];if(!whoOk())miss.push('画面上の「入力者」に名前');if(fltNeed(S.date)&&fltSum((getDays()[S.date]||{}).floatCnt)==null)miss.push('備品タブの「レジ準備金」（'+(S.date===fltDay()?'③ 最終日の確認':'② 日々の確認')+'）');
+  if(miss.length)h+='<div class="pst warn" style="flex-basis:100%;align-items:center;flex-wrap:wrap"><span class="mk">!</span><span><b>投稿の前に入れてください：</b>'+miss.join('、')+'</span>'+(fltNeed(S.date)&&fltSum((getDays()[S.date]||{}).floatCnt)==null?'<button class="btn small" data-act="tab" data-v="sup">備品タブへ</button>':'')+'</div>';
   if(can)h+='<button class="btn primary" data-act="post">'+(ps.st==="none"?'投稿する':'もう一度投稿する')+'</button>';
   return h+'</div>';
 }
 async function doPost(){
   var d=S.date,ce=$("f_comment"),ne=$("f_notice"),c=ce?ce.value:dv("comment"),n=ne?ne.value:dv("notice");
   if(!String(c).trim()&&!String(n).trim()){toast("日報を書いてから投稿してください",1);return}
+  if(!needWho())return;
+  if(fltNeed(d)&&fltSum((getDays()[d]||{}).floatCnt)==null){toast("先に備品タブの「レジ準備金」を数えて入れてください（毎日必須）",1);return}
   var who=(S.who||"").trim(),po={at:Date.now(),by:who,sig:repSig(c,n)};
   var ok=await putDay(d,{comment:c,notice:n,posted:po});
   if(ok){delete S.draft[d+":comment"];delete S.draft[d+":notice"];toast("投稿しました");logEv("日報","投稿しました",d);render.force=true;render()}
@@ -1285,8 +1293,10 @@ function vReport(){
 }
 
 
-/* ---- レジ準備金（おつり金）：①会期はじめに受け取った額（必須）②日々の確認（任意）③最終日の確認（必須） ---- */
-var FLT_DEN=[5000,1000,500,100,50,10,5,1];
+/* ---- レジ準備金（おつり金）：①会期はじめに受け取った額（必須）②日々の確認（毎日必須・2026/11/4から）③最終日の確認（必須） ---- */
+var FLT_DEN=[5000,1000,500,100,50,10,5,1],FLT_DAILY_FROM="2026-11-04";
+/* その日の準備金の確認が必要か（会期中・毎日必須にした日から） */
+function fltNeed(d){var S0=S.cfg.start,E=fltDay();return!!(S0&&E&&d>=S0&&d<=E&&d>=FLT_DAILY_FROM)}
 function fltSet(){var n=+S.cfg.float;return n>0?n:0}
 function fltDay(){return S.cfg.end||""}
 function fltSum(o){var t=0,any=false;FLT_DEN.forEach(function(k){var n=o&&o[k];if(n!=null&&n!==""){any=true;t+=k*(+n||0)}});return any?t:null}
@@ -1314,8 +1324,8 @@ function fltCard(){
   h+=fltGrid("s",o0,can)+'<div class="fltt" id="flt_sum_s">'+fltTotalHtml(fltSum(o0),0)+'</div></details></div>';
   /* ② 日々の確認／③ 最終日の確認 */
   var isEnd=S.date===E;
-  h+='<div class="fsec"><div class="fsum" style="cursor:default"><b>'+(isEnd?'③ 最終日の確認':'② 日々の確認')+'</b><span class="pill '+(isEnd?(sd==null?'bad':'ok'):'')+'">'+(isEnd?(sd==null?'必須・未入力':'入力済み'):'任意')+'</span><span class="num" style="font-weight:700">'+esc(mdw(S.date))+'</span></div>';
-  h+='<div class="muted fnote" style="margin:2px 0 8px">'+(isEnd?'閉店後、<b>最後に残ったスタッフ</b>が必ず数えてください。':'閉店後、確かめたい日だけ入れます。')+'売上を分けたあとの<b>おつり用のお金だけ</b>を数えます。'+(base?'':'<span style="color:var(--warn)">①を入れると過不足が出ます。</span>')+'</div>';
+  h+='<div class="fsec"><div class="fsum" style="cursor:default"><b>'+(isEnd?'③ 最終日の確認':'② 日々の確認')+'</b><span class="pill '+(sd==null?'bad':'ok')+'">'+(sd==null?'必須・未入力':'入力済み')+'</span><span class="num" style="font-weight:700">'+esc(mdw(S.date))+'</span></div>';
+  h+='<div class="muted fnote" style="margin:2px 0 8px">'+(isEnd?'閉店後、<b>最後に残ったスタッフ</b>が必ず数えてください。':'閉店後、<b>毎日</b>数えて入れてください（必須）。日報の投稿の前に入れます。')+'売上を分けたあとの<b>おつり用のお金だけ</b>を数えます。'+(base?'':'<span style="color:var(--warn)">①を入れると過不足が出ます。</span>')+'</div>';
   h+='<div class="fltc">'+FLT_DEN.map(function(k){var n=od[k];return'<label class="fc"><span>'+(k>=1000?k.toLocaleString():k)+'円</span><input type="number" inputmode="numeric" min="0" placeholder="枚" data-flt="'+k+'" data-fg="d" value="'+esc(n==null?"":n)+'"'+(can?'':' readonly')+'></label>'}).join("")+'</div>';
   h+='<div class="fltt sm" id="flt_sum_d">'+fltTotalHtml(sd,base)+(dd.floatBy||dd.floatAt?'<span class="muted" style="font-size:12px;margin-left:auto">'+fltWhen(dd.floatBy,dd.floatAt)+'</span>':'')+'</div>';
   h+='</div>';
@@ -1507,7 +1517,7 @@ document.addEventListener("input",function(e){
   else if(t.id==="al_no"){alState();S.al.no=t.value}
   else if(t.dataset&&t.dataset.alx){alxSet(t.dataset.alx,t.value)}
   else if(t.id==="memo"){f.memo=t.value}
-  else if(t.id==="who"){S.who=t.value;try{localStorage.setItem("t8who",t.value)}catch(e){}}
+  else if(t.id==="who"){S.who=t.value;S.whoDay=todayStr();try{localStorage.setItem("t8who",t.value);localStorage.setItem("t8whoDay",S.whoDay)}catch(e){}}
   else if(t.dataset&&t.dataset.day){S.draft[S.date+":"+t.dataset.day]=t.value}
   else if(t.dataset&&t.dataset.count){S.draft["c:"+t.dataset.count]=t.value}
 });
@@ -1526,6 +1536,7 @@ document.addEventListener("change",function(e){
   else if(t.id==="ar_loc"){if(S.ar){S.ar.loc=t.value;S.ar.map={};render.force=true;render()}}
   else if(t.dataset&&t.dataset.arsel!==undefined&&t.dataset.arsel!==""){if(S.ar){S.ar.map[+t.dataset.arsel]=t.value===""?null:t.value;render.force=true;render()}}
   else if(t.id==="other"){S.form.other=t.value;render.force=true;render()}
+  else if(t.id==="who"){render.force=true;render()}
   else if(t.id==="datepick"){if(t.value){S.date=t.value;render.force=true;render()}}
   else if(t.dataset&&t.dataset.day){
     holdRender();
@@ -1636,7 +1647,8 @@ function defaultDate(){
 }
 async function boot(){
   S.date=defaultDate();
-  try{S.who=localStorage.getItem("t8who")||""}catch(e){S.who=""}
+  try{S.who=localStorage.getItem("t8who")||"";S.whoDay=localStorage.getItem("t8whoDay")||""}catch(e){S.who=""}
+  if(S.whoDay!==todayStr())S.who="";
   var A=window.T8Data;
   if(!A||!A.configured()){S.gate="setup";render();return}
   S.db=A.db;S.assets=A.assets;S.dl=A.downloads;S.canWrite=null;
@@ -1674,7 +1686,7 @@ function gateHtml(){
   return h+'</div></div>';
 }
 /* 新しい版の確認：ブラウザが古いページを覚えていても、新しい版が出たら「最新にする」を出す（5分ごと・画面に戻ったとき） */
-var APP_VER="2026-11-04p";
+var APP_VER="2026-11-04b";
 function checkUpdate(){
   if(location.protocol==="file:")return;
   fetch(location.pathname.replace(/[^\/]*$/,"")+"index.html?v="+Date.now(),{cache:"no-store"}).then(function(r){return r.ok?r.text():""}).then(function(t){var m=/var APP_VER="([^"]+)"/.exec(t);if(m&&m[1]!==APP_VER){var u=$("upd");if(u)u.hidden=false}}).catch(function(){});
