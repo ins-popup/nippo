@@ -668,7 +668,7 @@ function datebar(){
   return'<div class="datebar"><button class="btn" data-act="dshift" data-v="-1" aria-label="前の日">◀</button><div class="d"><b>'+mdw(S.date)+'</b><span>'+lab+(S.date===todayStr()?' ｜ 今日':'')+'</span></div><label class="pick" aria-label="日付を選ぶ">日付<input type="date" id="datepick" value="'+S.date+'" data-act="dpick"></label><button class="btn" data-act="dshift" data-v="1" aria-label="次の日">▶</button></div>';
 }
 function seedForm(){
-  return'<div class="grid" style="gap:12px"><label class="f"><span>管理者コード</span><span class="pw"><input type="password" id="admin" autocomplete="off"><button type="button" class="eye" data-eye="1" aria-label="表示する" aria-pressed="false">表示</button></span></label><div class="f"><span>商品マスタのファイル（Excel / CSV / JSON）</span><label class="drop" id="seeddrop"><input type="file" id="seedfile" accept=".xlsx,.xls,.xlsm,.csv,.tsv,.json,application/json,text/csv"><div class="di"><div class="ic">↑</div><b>ここにファイルをドロップ</b><span>またはここをクリックして選びます（Excel・CSV・JSON）</span><em id="seedname"></em></div></label></div><label class="f"><span>オフ率（％）<small>任意</small></span><input type="number" inputmode="decimal" id="seedoff" value="'+esc(S.cfg&&S.cfg.defOff!=null?S.cfg.defOff:"")+'" min="0" max="100" placeholder="例：30（備考にオフ率がない受注明細のとき）"></label><div id="seedinfo" class="seedinfo" aria-live="polite"></div><div class="muted" style="font-size:12px;line-height:1.7">基幹システム（アラジン）の「受注明細問合せ」のExcelを、そのまま選べます。販売価格は、明細備考の「30％OFF」から計算します。備考にない場合は、上の「オフ率」に入れると全商品に使います。<br>それ以外の表は、1行目に見出し（品番・商品名・カラー・サイズ・JAN・上代・投入数・販売価格）があればそのまま使えます。列の順番は自由です。</div><button class="btn primary" data-act="seed">登録する</button></div>';
+  return'<div class="grid" style="gap:12px"><label class="f"><span>管理者コード</span><span class="pw"><input type="password" id="admin" autocomplete="off"><button type="button" class="eye" data-eye="1" aria-label="表示する" aria-pressed="false">表示</button></span></label><div class="f"><span>商品マスタのファイル（Excel / CSV / JSON）</span><label class="drop" id="seeddrop"><input type="file" id="seedfile" accept=".xlsx,.xls,.xlsm,.csv,.tsv,.json,application/json,text/csv"><div class="di"><div class="ic">↑</div><b>ここにファイルをドロップ</b><span>またはここをクリックして選びます（Excel・CSV・JSON）</span><em id="seedname"></em></div></label></div><label class="f"><span>オフ率（％）<small>任意</small></span><input type="number" inputmode="decimal" id="seedoff" value="'+esc(S.cfg&&S.cfg.defOff!=null?S.cfg.defOff:"")+'" min="0" max="100" placeholder="例：30（備考にオフ率がない受注明細のとき）"></label><div id="seedinfo" class="seedinfo" aria-live="polite"></div><div class="muted" style="font-size:12px;line-height:1.7">基幹システム（アラジン）の「受注明細問合せ」「倉庫別入出庫明細問合せ」のExcelを、そのまま選べます（入出庫明細は「入庫数量」、なければ「出庫数量」を投入数にします）。販売価格は、明細備考の「30％OFF」から計算します。備考にない場合は、上の「オフ率」に入れると全商品に使います。<br>それ以外の表は、1行目に見出し（品番・商品名・カラー・サイズ・JAN・上代・投入数・販売価格）があればそのまま使えます。列の順番は自由です。</div><div class="row" style="align-items:flex-end"><label class="f" style="flex:1 1 240px"><span>登録のしかた</span><select id="seedmode"><option value="set">商品マスタとして登録（投入数を置き換える）</option><option value="add">追加の納品として在庫に足す</option></select></label><label class="f" style="flex:1 1 160px"><span>納品日（足すときだけ）</span><input type="date" id="seeddate" value="'+esc(S.date||"")+'"></label></div><div class="muted" style="font-size:12px;line-height:1.7">最初の投入は「商品マスタとして登録」。2回目以降の納品は「追加の納品として在庫に足す」を選ぶと、納品日に「追加投入（補充）」として在庫に足します（同じ商品の投入数は置き換わりません。新しい商品はマスタにも追加します）。</div><button class="btn primary" data-act="seed">登録する</button></div>';
 }
 function emptySku(){
   if(scoped())return'<div class="card"><h2>商品マスタが未登録です</h2><p class="muted" style="font-size:14px">管理者が商品マスタを登録するまで、お待ちください。</p></div>';
@@ -1762,7 +1762,7 @@ function gateHtml(){
   return h+'</div></div>';
 }
 /* 新しい版の確認：ブラウザが古いページを覚えていても、新しい版が出たら「最新にする」を出す（5分ごと・画面に戻ったとき） */
-var APP_VER="2026-11-12g";
+var APP_VER="2026-11-12h";
 function checkUpdate(){
   if(location.protocol==="file:")return;
   fetch(location.pathname.replace(/[^\/]*$/,"")+"index.html?v="+Date.now(),{cache:"no-store"}).then(function(r){return r.ok?r.text():""}).then(function(t){var m=/var APP_VER="([^"]+)"/.exec(t);if(m&&m[1]!==APP_VER){var u=$("upd");if(u)u.hidden=false}}).catch(function(){});
@@ -1830,6 +1830,7 @@ function seedJuchu(row,m){
   if(ix("JAN1コード")>=0)m.jan=ix("JAN1コード");
   m.retail=ix("上代単価")>=0?ix("上代単価"):ix("受注単価");
   m.qty=ix("受注数")>=0?ix("受注数"):ix("受注残数量");
+  if(m.qty<0){var qi=ix("入庫数量"),qo=ix("出庫数量");if(qi>=0||qo>=0){m.io=1;m.qtyIn=qi;m.qtyOut=qo;m.qty=qi>=0?qi:qo}}
   if(ix("明細備考1")>=0)m.note=ix("明細備考1");
   m.juchu=1;
   return true;
@@ -1849,6 +1850,7 @@ function seedRowsToPayload(rows){
   var h=seedFindHeader(rows);
   if(!h){var cand=rows.slice(0,30).map(function(r){return(r||[]).map(function(x){return String(x==null?"":x).trim()}).filter(Boolean)}).sort(function(a,b){return b.length-a.length})[0]||[];return{error:"見出しの行が見つかりません。1行目に「品番」「商品名」「カラー」「サイズ」「JAN」「上代」「投入数」「販売価格」などの見出しを入れてください。"+(cand.length?"（読み取れた見出し："+cand.slice(0,14).join("、")+(cand.length>14?"…":"")+"）":"（ファイルの中身が空のようです）")}};
   var m=h.m,miss=[];
+  if(m.io&&m.qtyIn>=0&&m.qtyOut>=0){var sIn=0;for(var ri=h.r+1;ri<rows.length;ri++)sIn+=seedNum((rows[ri]||[])[m.qtyIn])||0;m.qty=sIn>0?m.qtyIn:m.qtyOut}
   if(m.hin==null&&m.sku==null)miss.push("品番");
   if(m.qty==null)miss.push("投入数");
   if(m.sale==null&&m.retail==null)miss.push("販売価格（または上代）");
@@ -1876,7 +1878,7 @@ function seedRowsToPayload(rows){
   }
   if(!out.length)return{error:"商品の行が見つかりませんでした。"};
   out.forEach(function(s,i){s.id="s"+String(i+1).padStart(3,"0")});
-  if(m.juchu)warn.push("受注明細として読み込みました。販売価格は備考の「○○％OFF」から計算しています（"+offN+" 行）"+(noOff?"。オフ率が分からない "+noOff+" 行は上代と同じ価格にしています（上の「オフ率」欄に入れると全商品に使います）":"")+(merged?"。同じ商品の行 "+merged+" 件は数量を合算しました":""));
+  if(m.juchu)warn.push((m.io?"入出庫明細として読み込みました（「"+(m.qty===m.qtyIn?"入庫数量":"出庫数量")+"」を投入数にしています）。":"受注明細として読み込みました。")+"販売価格は備考の「○○％OFF」から計算しています（"+offN+" 行）"+(noOff?"。オフ率が分からない "+noOff+" 行は上代と同じ価格にしています（上の「オフ率」欄に入れると全商品に使います）":"")+(merged?"。同じ商品の行 "+merged+" 件は数量を合算しました":""));
   if(INCL_DIV>1)warn.push("このイベントは「税込の金額」の設定なので、上代・販売価格を消費税率（"+Math.round((INCL_DIV-1)*1000)/10+"％）で割って税抜に直しました");
   if(dup)warn.push("同じSKUの行 "+dup+" 件は、1件目だけを使いました");
   if(sci)warn.push("JANが「4.58E+12」のような表示になっている行が "+sci+" 件あります（JANは空欄にしました。Excelの列を『文字列』にして入力し直してください）");
@@ -1945,7 +1947,7 @@ async function seedPreview(){
     if(r.error){box.className="seedinfo bad";box.textContent=r.error;return}
     var s=r.sample;
     box.className="seedinfo ok";
-    box.textContent="✓ "+r.count+" 件の商品を読み込めました（登録先：" + evName() + "）"+(s?"（例：" + [s.hin,s.name,s.color,s.size].filter(Boolean).join(" / ")+"、投入 "+s.qty+"）":"")+(r.warn&&r.warn.length?" ／ 注意：" + r.warn.join(" ／ "):"");
+    box.textContent="✓ "+r.count+" 件・合計 "+((r.payload&&r.payload.skus)||[]).reduce(function(a,x){return a+(+x.qty||0)},0)+" 点を読み込めました（登録先：" + evName() + "）"+(s?"（例：" + [s.hin,s.name,s.color,s.size].filter(Boolean).join(" / ")+"、投入 "+s.qty+"）":"")+(r.warn&&r.warn.length?" ／ 注意：" + r.warn.join(" ／ "):"");
   }catch(e){console.error(e);box.className="seedinfo bad";box.textContent="ファイルを読み込めませんでした。形式を確認してください。"}
 }
 /* 登録済みの商品（品番・カラー・サイズが同じ）は管理番号を変えない。新しい商品は末尾の番号を使う（行の並びが違っても入力済みの売上がずれない） */
@@ -2274,6 +2276,27 @@ async function doSeed(){
   try{r=await seedReadFile(f)}catch(e){console.error(e);say("ファイルを読み込めませんでした。形式を確認してください",true);return}
   if(r.error){say(r.error,true);return}
   var b0=$("seedinfo");if(b0){b0.className="seedinfo";b0.textContent="登録しています…"}
+  if((($("seedmode")||{}).value||"set")==="add"){
+    var dt=(($("seeddate")||{}).value||"");if(!/^\d{4}-\d\d-\d\d$/.test(dt)){say("納品日を入れてください",true);return}
+    seedKeepIds(r.payload);
+    var have={};(S.skus||[]).forEach(function(s){have[s.id]=1});
+    var ops=[],nNew=0,nTx=0,pcs=0,who=(S.who||"").trim(),memo="追加の納品（"+f.name+"）",stamp=Date.now();
+    r.payload.skus.forEach(function(s){var q=Math.round(+s.qty||0);
+      if(!have[s.id]){var d={};Object.keys(s).forEach(function(k){if(k!=="id")d[k]=s[k]});d.qty=0;ops.push({op:"set",collection:"skus",id:s.id,data:d});nNew++}
+      if(q>0){var rec={date:dt,skuId:s.id,kind:"add",qty:q,at:stamp,memo:memo};if(who)rec.by=who;ops.push({op:"set",collection:"tx",id:"nv-"+dt+"-"+s.id+"-"+stamp.toString(36),data:rec});nTx++;pcs+=q}
+    });
+    if(!nTx){say("足す数量（投入数）が0のファイルです",true);return}
+    var dupe=getTx().some(function(t){return t.kind==="add"&&t.memo===memo&&t.date===dt});
+    var key=f.name+"|"+dt+"|"+pcs;
+    if(S.seedAddArm!==key){S.seedAddArm=key;var bx=$("seedinfo");if(bx){bx.className="seedinfo";bx.textContent="もう一度「登録する」を押すと、"+md(dt)+" の追加納品として "+nTx+" 商品・"+pcs+" 点を在庫に足します"+(nNew?"（新しい商品 "+nNew+" 件もマスタに追加）":"")+(dupe?"。※同じファイル・同じ納品日で登録済みです。二重にならないか確認してください":"")}toast("もう一度「登録する」を押すと在庫に足します",!!dupe);return}
+    S.seedAddArm=null;
+    var b1=$("seedinfo");if(b1){b1.className="seedinfo";b1.textContent="登録しています…"}
+    try{await window.T8Data.writeAdmin(ad,ops,function(n,t){var bb=$("seedinfo");if(bb)bb.textContent="登録しています…（"+n+" / "+t+"）"});
+      say("追加の納品を登録しました（"+md(dt)+"／"+nTx+" 商品・"+pcs+" 点）");logEv("在庫","追加の納品："+nTx+" 商品・"+pcs+" 点"+(nNew?"（新しい商品 "+nNew+" 件）":"")+"／"+f.name,dt);
+      setTimeout(function(){var d=$("adminbox");if(d)d.open=false;var sa=$("admin");if(sa)sa.value="";var sf=$("seedfile");if(sf)try{sf.value=""}catch(e){}render.force=true;render()},2500)}
+    catch(e){console.error(e);say(e&&e.code==="server"&&/admin/.test(String(e.message))?"管理者コードが違います。ADMIN_CODE の値を入力してください（合言葉ではありません）":"登録できませんでした（"+(e&&e.message?e.message:"通信エラー")+"）",true)}
+    return;
+  }
   seedKeepIds(r.payload);
   try{await window.T8Data.seed(ad,r.payload,function(n,t){var bb=$("seedinfo");if(bb)bb.textContent="登録しています…（"+n+" / "+t+"）"});say("商品マスタを登録しました（"+evName()+"／"+r.count+" 件）");setTimeout(function(){var d=$("adminbox");if(d)d.open=false;var sa=$("admin");if(sa)sa.value="";var sf=$("seedfile");if(sf)try{sf.value=""}catch(e){}render.force=true;render()},2500)}
   catch(e){console.error(e);say(e&&e.code==="server"&&/admin/.test(String(e.message))?"管理者コードが違います。ADMIN_CODE の値を入力してください（合言葉ではありません）":"登録できませんでした（"+(e&&e.message?e.message:"通信エラー")+"）",true)}
