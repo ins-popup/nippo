@@ -525,8 +525,8 @@ function calc(){
     d.pcsNet=d.pcsSale-d.pcsRet;d.skuCnt=Object.keys(d.skus).filter(function(k){return d.skus[k]>0}).length;
     d.inRange=!!inRange[ds];
     if(d.inRange){idx++;cum+=d.net;d.cum=cum;d.ratio=dayB?d.net/dayB:null;d.cumRatio=dayB?cum/(dayB*idx):null;d.idx=idx}
-    d.cust=dd.customers!=null&&dd.customers!==""?+dd.customers:(kanOn()&&krN(dd,"kr15")!=null?krN(dd,"kr15"):null);
-    d.unit=d.cust?d.sum/d.cust:null;d.rep=dd.reportTotal!=null&&dd.reportTotal!==""?+dd.reportTotal:(kanOn()?krSum(dd):null);
+    d.cust=kanOn()&&krN(dd,"kr15")!=null?krN(dd,"kr15"):(dd.customers!=null&&dd.customers!==""?+dd.customers:null);
+    d.unit=d.cust?d.sum/d.cust:null;d.rep=kanOn()&&krSum(dd)!=null?krSum(dd):(dd.reportTotal!=null&&dd.reportTotal!==""?+dd.reportTotal:null);
     d.diff=d.rep!=null?d.sum-d.rep:null;
     d.actualNet=d.actual-d.refund-dsc;
     rows.push(d);days[ds]=d;
@@ -1737,7 +1737,7 @@ function gateHtml(){
   return h+'</div></div>';
 }
 /* 新しい版の確認：ブラウザが古いページを覚えていても、新しい版が出たら「最新にする」を出す（5分ごと・画面に戻ったとき） */
-var APP_VER="2026-11-12o";
+var APP_VER="2026-11-12p";
 function checkUpdate(){
   if(location.protocol==="file:")return;
   fetch(location.pathname.replace(/[^\/]*$/,"")+"index.html?v="+Date.now(),{cache:"no-store"}).then(function(r){return r.ok?r.text():""}).then(function(t){var m=/var APP_VER="([^"]+)"/.exec(t);if(m&&m[1]!==APP_VER){var u=$("upd");if(u)u.hidden=false}}).catch(function(){});
