@@ -729,8 +729,36 @@ function sqPanel(){
 }
 function adminPanel(){
   if(scoped())return"";
-  return'<details class="card" id="adminbox" style="margin-top:14px"><summary style="cursor:pointer;font-weight:700;min-height:44px;display:flex;align-items:center">商品マスタを更新する <span style="font-weight:500;font-size:13px">（登録先：'+esc(evName())+'）</span></summary><div class="muted" style="font-size:13px;margin:6px 0 12px;line-height:1.7">同じ商品（品番・カラー・サイズ）は上書きされ、新しい商品は追加されます。売上の入力履歴は消えません。<span style="opacity:.6">（読み取り機能 '+SEED_VER+'）</span></div>'+seedForm()+'</details>';
+  return'<details class="card" id="adminbox" style="margin-top:14px"><summary style="cursor:pointer;font-weight:700;min-height:44px;display:flex;align-items:center">商品マスタを更新する <span style="font-weight:500;font-size:13px">（登録先：'+esc(evName())+'）</span></summary><div class="muted" style="font-size:13px;margin:6px 0 12px;line-height:1.7">同じ商品（品番・カラー・サイズ）は上書きされ、新しい商品は追加されます。売上の入力履歴は消えません。<span style="opacity:.6">（読み取り機能 '+SEED_VER+'）</span></div>'+seedForm()+skuDelForm()+'</details>';
 }
+function skuDelForm(){
+  var sk=getSkus();if(!sk.length)return"";
+  var C=calc(),used={};getTx().forEach(function(r){used[r.skuId]=1});
+  var rows=sk.map(function(s){var u=!!used[s.id],st=C.st[s.id]?C.st[s.id].stock:0;
+    return'<label class="skdr" data-q="'+esc((s.hin+" "+s.name+" "+s.color+" "+s.size+" "+s.color+"/"+s.size).toLowerCase())+'" style="display:flex;gap:8px;align-items:center;padding:6px 2px;border-top:1px solid var(--line);font-size:13px'+(u?';opacity:.5':'')+'"><input type="checkbox" data-skudel="'+esc(s.id)+'"'+(u?' disabled':'')+'><span style="flex:1 1 auto;min-width:0"><b>'+esc(s.hin)+'</b> '+esc(s.color)+'／'+esc(s.size)+' <span class="muted">'+esc(s.name)+'</span></span><span class="muted" style="white-space:nowrap">'+(u?'記録あり':'在庫 '+st)+'</span></label>'}).join("");
+  return'<h3 style="margin:22px 0 6px">商品を削除する</h3><div class="muted" style="font-size:12.5px;line-height:1.7;margin-bottom:8px">登録した商品マスタから、まちがって入れた商品や届かない商品を消します（'+esc(evName())+'の商品だけ）。売上・返品・移動などの記録がある商品は消せません（うすい行）。</div>'+
+   '<div class="grid" style="gap:10px"><label class="f"><span>絞り込み</span><input type="search" id="skudel_q" placeholder="品番・カラー・サイズで探す" autocomplete="off"></label>'+
+   '<div id="skudel_list" style="max-height:340px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:0 10px">'+rows+'</div>'+
+   '<div class="muted" id="skudel_n" style="font-size:12.5px">0 件を選択中</div>'+
+   '<label class="f"><span>管理者コード</span><span class="pw"><input type="password" id="skudel_admin" autocomplete="off"><button type="button" class="eye" data-eye="1" aria-label="表示する" aria-pressed="false">表示</button></span></label>'+
+   '<button class="btn danger" data-act="skudel">選んだ商品を削除する</button></div>';
+}
+async function doSkuDel(){
+  var ad=(($("skudel_admin")||{}).value||"").trim(),ids=[].slice.call(document.querySelectorAll("[data-skudel]:checked")).map(function(x){return x.getAttribute("data-skudel")});
+  if(!ids.length){toast("削除する商品を選んでください",true);return}
+  if(!ad){toast("管理者コードを入力してください",true);return}
+  var used={};getTx().forEach(function(r){used[r.skuId]=1});ids=ids.filter(function(id){return!used[id]});
+  if(!ids.length){toast("記録がある商品は削除できません",true);return}
+  var key=ids.join(",");if(S.skuDelArm!==key){S.skuDelArm=key;toast("もう一度押すと "+ids.length+" 商品を削除します（元に戻せません）");return}
+  S.skuDelArm=null;
+  var sm=calc().sm,names=ids.map(function(id){var s=sm[id];return s?s.hin+" "+s.color+"/"+s.size:id});
+  try{await window.T8Data.writeAdmin(ad,ids.map(function(id){return{op:"delete",collection:"skus",id:id}}));
+    toast(ids.length+" 商品を削除しました");logEv("在庫","商品マスタから削除（"+ids.length+" 件）："+names.slice(0,30).join("、")+(names.length>30?" ほか":""));
+    var d=$("adminbox");if(d)d.open=false;render.force=true;render()}
+  catch(e){console.error(e);toast(e&&e.code==="server"&&/admin/.test(String(e.message))?"管理者コードが違います。ADMIN_CODE の値を入力してください（合言葉ではありません）":"削除できませんでした（"+(e&&e.message?e.message:"通信エラー")+"）",true)}
+}
+document.addEventListener("input",function(e){var t=e.target;if(t&&t.id==="skudel_q"){var q=t.value.trim().toLowerCase();[].forEach.call(document.querySelectorAll(".skdr"),function(r){r.style.display=!q||r.getAttribute("data-q").indexOf(q)>=0?"flex":"none"})}});
+document.addEventListener("change",function(e){var t=e.target;if(t&&t.getAttribute&&t.getAttribute("data-skudel")!=null){var b=$("skudel_n");if(b)b.textContent=document.querySelectorAll("[data-skudel]:checked").length+" 件を選択中"}});
 
 /* ---- 入力 ---- */
 function hinGroups(){
@@ -1547,7 +1575,7 @@ document.addEventListener("click",function(e){
     case"sqdismiss":doSq("dismiss",v);break;
     case"codeshow":doCode(false);break;
     case"evnew":doEvent(true);break;
-    case"seed":doSeed();break;
+    case"seed":doSeed();break;case"skudel":doSkuDel();break;
     case"reload":location.reload();break;
     case"csv":doCsv(v);break;
     case"zoom":$("lb").innerHTML='<img src="'+esc(photoUrl(v))+'" alt="">';$("lb").hidden=false;break;
@@ -1737,7 +1765,7 @@ function gateHtml(){
   return h+'</div></div>';
 }
 /* 新しい版の確認：ブラウザが古いページを覚えていても、新しい版が出たら「最新にする」を出す（5分ごと・画面に戻ったとき） */
-var APP_VER="2026-11-12p";
+var APP_VER="2026-11-12q";
 function checkUpdate(){
   if(location.protocol==="file:")return;
   fetch(location.pathname.replace(/[^\/]*$/,"")+"index.html?v="+Date.now(),{cache:"no-store"}).then(function(r){return r.ok?r.text():""}).then(function(t){var m=/var APP_VER="([^"]+)"/.exec(t);if(m&&m[1]!==APP_VER){var u=$("upd");if(u)u.hidden=false}}).catch(function(){});
