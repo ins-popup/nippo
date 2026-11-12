@@ -1087,7 +1087,7 @@ function alCard(){
   h+='<dl class="kv" style="margin-top:12px"><dt>数量の合計</dt><dd>'+b.tot.qty+' 点</dd><dt>上代の合計（税抜）</dt><dd>'+yen(b.tot.retail)+'</dd><dt>金額の合計（税抜）</dt><dd class="big">'+yen(b.tot.amt)+'</dd><dt>（参考）税込</dt><dd>'+yen(b.tot.incl)+'</dd></dl>';
   var df=b.tot.amt-b.site;
   h+='<div class="muted" style="font-size:12.5px;line-height:1.7;margin-top:6px">アラジンに入れたあと、画面下の「数量／上代計」「金額」がこの合計と合っているか確認してください。売上タブの純売上高（税抜）との差：'+(df===0?'<span class="pill ok">なし</span>':'<span class="pill warn">'+(df>0?'+':'')+numf(df)+' 円</span>（割引や端数の丸めによる差の場合があります）')+'</div>';
-  h+='<div class="row" style="margin-top:12px"><button class="btn primary" data-act="alxsave">アラジン取込用ファイルを保存（.xlsx）</button><button class="btn" data-act="alcopy">表をコピー</button><button class="btn" data-act="alcsv">CSVで保存</button></div>';
+  h+='<div class="row" style="margin-top:12px"><button class="btn primary" data-act="alxsave">アラジン取込用ファイルを保存（.xlsx）</button><button class="btn primary" data-act="alusave">売上取込用ファイルを保存（.xlsx）</button><button class="btn" data-act="alcopy">表をコピー</button><button class="btn" data-act="alcsv">CSVで保存</button></div>';
   h+=alxPanel(b);
   if(can)h+='<div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line)"><div style="font-size:13px;font-weight:700;margin-bottom:6px">アラジンに入力し終えたら</div><div class="row" style="align-items:flex-end"><label class="f" style="flex:1 1 180px"><span>受注NO（任意・メモ）</span><input type="text" id="al_no" value="'+esc(st.no)+'" placeholder="例：00017015" autocomplete="off"></label><button class="btn" data-act="almark">この期間を「出力済み」にする</button></div><div class="muted" style="font-size:12.5px;margin-top:6px">日付ごとに印が付きます。あとで入力が増えたり減ったりした日は「出力後に変更あり」と出るので、差分だけ入れ直せます。</div></div>';
   return h+'</div>';
@@ -1158,11 +1158,11 @@ function alxZip(files){
   parts.push(new Uint8Array([].concat(u32(0x06054b50),u16(0),u16(0),u16(files.length),u16(files.length),u32(cs),u32(start),u16(0))));
   return new Blob(parts,{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
 }
-function alxXlsx(rows){
+function alxXlsx(rows,sheetName){
   return alxZip([
     ["[Content_Types].xml",'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>'],
     ["_rels/.rels",'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>'],
-    ["xl/workbook.xml",'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Sheet1" sheetId="1" r:id="rId1"/></sheets></workbook>'],
+    ["xl/workbook.xml",'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="'+alxXml(sheetName||"Sheet1")+'" sheetId="1" r:id="rId1"/></sheets></workbook>'],
     ["xl/_rels/workbook.xml.rels",'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>'],
     ["xl/styles.xml",'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="1"><font><sz val="11"/><name val="Calibri"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="49" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>'],
     ["xl/worksheets/sheet1.xml",alxSheet(rows)]
@@ -1177,23 +1177,47 @@ function alxSave(){
   toast(r.rows.length+" 行のファイルを保存しました"+(r.miss.length?"（コードが分からない色・サイズがあります）":""),!!r.miss.length);
   logEv("売上","アラジン取込用ファイルを保存："+md(b.from)+(b.from===b.to?"":"〜"+md(b.to))+"（"+r.rows.length+" 行）");
 }
+/* ---- アラジン「売上明細」（売上取込雛形）用のExcel ---- */
+var ALU_HEAD=["売上日付","出荷日付","現金区分","担当者コード","展示会コード","得意先コード","得意先略称","納品先コード","納品先略称","出庫倉庫コード","相手先NO","取引区分コード","商品コード","ロットNO","商品名1","商品名2","CS1コード","CS2コード","PLUコード","入数","ケース数","上代単価","PS区分コード","掛率","売上数量","売上単価","売上金額","明細備考1","明細備考2","明細メモ","注文NO","伝票備考","伝票メモ","拡張項目1","拡張項目2","拡張項目3","拡張項目4","拡張項目5"];
+function aluRows(b){
+  var o=alxGet(),miss={},rows=[],neg=0,odd=0;
+  b.groups.forEach(function(g){
+    var day=alxYmd(o.date||g.date||b.to),ship=alxYmd(o.ship||o.date||g.date||b.to);
+    g.lines.forEach(function(l){
+      var s=l.s,c1=AL_CS1[String(s.color||"").trim().toUpperCase()]||"",c2=AL_CS2[String(s.size||"").trim().toUpperCase()]||"",rt=Math.round(+s.retail||0);
+      if(!c1)miss["カラー「"+s.color+"」"]=1;if(!c2)miss["サイズ「"+s.size+"」"]=1;
+      var rate=rt?Math.round(l.unit/rt*100):100;if(l.qty<0)neg++;if(rt&&Math.round(rt*rate/100)!==l.unit)odd++;
+      rows.push([+day,+ship,"",alxV("tanto"),alxV("tenji"),alxV("tokui"),alxV("tokuiName"),alxV("nohin"),"",alxV("soko"),"","01",String(s.hin||"").trim(),"","","",c1,c2,"","","",rt,0,rate,l.qty,"","",alxV("biko1"),"","",alxV("chumon"),alxV("denBiko"),"","","","","",""]);
+    });
+  });
+  return{rows:rows,miss:Object.keys(miss),neg:neg,odd:odd};
+}
+function aluSave(){
+  var b=alBuild();if(!b.groups.length){toast("この期間に売れた商品はありません",true);return}
+  var r=aluRows(b),blob=alxXlsx([ALU_HEAD].concat(r.rows),"売上明細"),a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);a.download="売上取込_"+evName()+"_"+b.from+(b.from===b.to?"":"-"+b.to)+".xlsx";
+  document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},800);
+  var w=[];if(r.miss.length)w.push("コードが分からない色・サイズがあります");if(r.neg)w.push("数量がマイナスの行が "+r.neg+" 行あります");if(r.odd)w.push("上代×掛率と単価が合わない行が "+r.odd+" 行あります");
+  toast(r.rows.length+" 行の売上取込ファイルを保存しました"+(w.length?"（"+w.join("、")+"）":""),!!w.length);
+  logEv("売上","アラジン売上取込ファイルを保存："+md(b.from)+(b.from===b.to?"":"〜"+md(b.to))+"（"+r.rows.length+" 行）");
+}
 function alxPanel(b){
   var r=alxRows(b);
   return r.miss.length?'<div class="pill warn" style="margin-top:8px;display:block;white-space:normal">アラジンのコードが分からない：'+esc(r.miss.join("、"))+'。保存したファイルのCS1・CS2コードを手で入れてください。</div>':'';
 }
 /* 保存のたびに、担当者・得意先・倉庫などを確認・入力する画面 */
-function alxOpen(){
+function alxOpen(mode){var uri=mode==="uri";
   var b=alBuild();if(!b.groups.length){toast("この期間に売れた商品はありません",true);return}
   var o=alxGet(),old=$("alxdlg");if(old)old.remove();
   var lines=0;b.groups.forEach(function(g){lines+=g.lines.length});
   var auto=b.groups.length>1?"日ごとにその日":md(b.groups[0].date||b.to);
   var el=document.createElement("div");el.id="alxdlg";
   el.style.cssText="position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.45);display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow:auto";
-  el.innerHTML='<div class="card" role="dialog" aria-modal="true" aria-label="アラジン取込用ファイルの保存" style="max-width:560px;width:100%;margin:auto;background:var(--surface);backdrop-filter:none">'+
-   '<h2>アラジン取込用ファイルを保存</h2>'+
+  el.innerHTML='<div class="card" role="dialog" aria-modal="true" aria-label="'+(uri?'売上取込用ファイルの保存':'アラジン取込用ファイルの保存')+'" style="max-width:560px;width:100%;margin:auto;background:var(--surface);backdrop-filter:none">'+
+   '<h2>'+(uri?'売上取込用ファイル（売上明細）を保存':'アラジン取込用ファイルを保存')+'</h2>'+(uri?'<div class="muted" style="font-size:12.5px;line-height:1.7;margin-bottom:6px">アラジンの売上入力（Excel取込）用です。売上日付・出荷日付・上代・掛率・売上数量を入れます。</div>':'')+
    '<div class="muted" style="font-size:13px;line-height:1.7;margin-bottom:10px">'+md(b.from)+(b.from===b.to?'':'〜'+md(b.to))+'　'+lines+' 行／'+b.tot.qty+' 点／'+yen(b.tot.amt)+'（税抜）<br>今回の値を入れてください（前回の値が入っています）。</div>'+
    '<div class="row" style="flex-wrap:wrap;gap:10px">'+
-   '<label class="f" style="flex:1 1 200px"><span>受注日付</span><input type="date" id="alxd_date" value="'+esc(o.date||"")+'"><span class="h">空欄なら'+esc(auto)+'</span></label>'+
+   '<label class="f" style="flex:1 1 200px"><span>'+(uri?'売上日付':'受注日付')+'</span><input type="date" id="alxd_date" value="'+esc(o.date||"")+'"><span class="h">空欄なら'+esc(auto)+'</span></label>'+(uri?'<label class="f" style="flex:1 1 200px"><span>出荷日付</span><input type="date" id="alxd_ship" value="'+esc(o.ship||"")+'"><span class="h">空欄なら売上日付と同じ</span></label>':'')+
    ALX_FIELDS.map(function(f){return'<label class="f" style="flex:1 1 200px"><span>'+esc(f[1])+(f[3]?' <span style="color:var(--warn)">＊必須</span>':'')+'</span><input type="text" id="alxd_'+f[0]+'" value="'+esc(o[f[0]]||"")+'" placeholder="'+esc(f[2])+'" autocomplete="off"'+(f[4]?' data-max="'+f[4]+'"':'')+'><span class="h" id="alxdh_'+f[0]+'"></span></label>'}).join("")+
    '</div><div id="alxd_err" style="color:var(--bad);font-size:13px;margin-top:8px"></div>'+
    '<div class="row" style="margin-top:12px"><button class="btn primary" type="button" id="alxd_ok">この内容で保存</button><button class="btn" type="button" id="alxd_cancel">やめる</button></div></div>';
@@ -1209,8 +1233,8 @@ function alxOpen(){
     var need=[];
     ALX_FIELDS.forEach(function(f){var inp=$("alxd_"+f[0]),v=inp.value.trim();if(f[3]&&!v){need.push(f[1]);inp.style.borderColor="var(--bad)"}else inp.style.borderColor=""});
     if(need.length){$("alxd_err").textContent="入力してください："+need.join("、");return}
-    alxSet("date",$("alxd_date").value);ALX_FIELDS.forEach(function(f){alxSet(f[0],$("alxd_"+f[0]).value.trim())});
-    close();alxSave();
+    alxSet("date",$("alxd_date").value);if(uri)alxSet("ship",$("alxd_ship").value);ALX_FIELDS.forEach(function(f){alxSet(f[0],$("alxd_"+f[0]).value.trim())});
+    close();if(uri)aluSave();else alxSave();
   };
   var first=ALX_FIELDS.filter(function(f){return f[3]})[0];setTimeout(function(){var x=$("alxd_"+first[0]);if(x)x.focus()},50);
 }
@@ -1513,7 +1537,7 @@ document.addEventListener("click",function(e){
       var f=S.supForm||{},old=f.id?getSup()[f.id]||{}:{},d={name:name,unit:g("unit"),mode:g("mode")||"cust",per:g("per")===""?1:+g("per"),alert:g("alert")===""?0:Math.round(+g("alert")),init:g("init")===""?0:Math.round(+g("init")),order:old.order!=null?old.order:supItems().length,at:old.at||Date.now()};
       var id=f.id||("i-"+supRid());putSup(id,d).then(function(ok){if(ok){toast(f.id?"品目を変更しました":"品目を追加しました");logEv("備品",(f.id?"品目を変更：":"品目を追加：")+name);S.supForm={};render.force=true;render()}})})();break;
     case"alcsv":alCsv();break;
-    case"alxsave":alxOpen();break;
+    case"alxsave":alxOpen();break;case"alusave":alxOpen("uri");break;
     case"almark":alMark();break;
     case"arclear":S.ar=null;render.force=true;render();break;
     case"sqassign":doSq("assign",v);break;
@@ -1710,7 +1734,7 @@ function gateHtml(){
   return h+'</div></div>';
 }
 /* 新しい版の確認：ブラウザが古いページを覚えていても、新しい版が出たら「最新にする」を出す（5分ごと・画面に戻ったとき） */
-var APP_VER="2026-11-12k";
+var APP_VER="2026-11-12l";
 function checkUpdate(){
   if(location.protocol==="file:")return;
   fetch(location.pathname.replace(/[^\/]*$/,"")+"index.html?v="+Date.now(),{cache:"no-store"}).then(function(r){return r.ok?r.text():""}).then(function(t){var m=/var APP_VER="([^"]+)"/.exec(t);if(m&&m[1]!==APP_VER){var u=$("upd");if(u)u.hidden=false}}).catch(function(){});
