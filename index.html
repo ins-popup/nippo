@@ -522,8 +522,8 @@ function calc(){
     d.pcsNet=d.pcsSale-d.pcsRet;d.skuCnt=Object.keys(d.skus).filter(function(k){return d.skus[k]>0}).length;
     d.inRange=!!inRange[ds];
     if(d.inRange){idx++;cum+=d.net;d.cum=cum;d.ratio=dayB?d.net/dayB:null;d.cumRatio=dayB?cum/(dayB*idx):null;d.idx=idx}
-    d.cust=dd.customers!=null&&dd.customers!==""?+dd.customers:null;
-    d.unit=d.cust?d.sum/d.cust:null;d.rep=dd.reportTotal!=null&&dd.reportTotal!==""?+dd.reportTotal:null;
+    d.cust=kanOn()&&krN(dd,"kr15")!=null?krN(dd,"kr15"):(dd.customers!=null&&dd.customers!==""?+dd.customers:null);
+    d.unit=d.cust?d.sum/d.cust:null;d.rep=kanOn()&&krSum(dd)!=null?krSum(dd):(dd.reportTotal!=null&&dd.reportTotal!==""?+dd.reportTotal:null);
     d.diff=d.rep!=null?d.sum-d.rep:null;
     d.actualNet=d.actual-d.refund-dsc;
     rows.push(d);days[ds]=d;
@@ -547,6 +547,7 @@ function checks(){
     if(!d.inRange){if(d.lines)out.push({lv:"red",tag:"会期外の日付",txt:mdw(d.date)+" に "+d.lines+" 件の入力があります",sub:"日付の入力ミスかもしれません。売上タブの手入力欄で確認してください",go:{tab:"sales",date:d.date}});return}
     var past=d.date<=today,had=d.lines>0;
     if(d.diff!=null&&d.diff!==0)out.push({lv:"red",tag:"レジ報告と不一致",txt:mdw(d.date)+"：入力から計算した合計 "+yen(d.sum)+" ／ レポート "+yen(d.rep)+"（差 "+(d.diff>0?"+":"")+yen(d.diff).replace("¥","¥")+"）",sub:"入力漏れ・数量違い・値引きの入力を確認してください",go:{tab:"sales",date:d.date}});
+    if(kanOn()){var kdd=getDays()[d.date]||{},kc=krChk(kdd),kp=krN(kdd,"kr16");if(kc)out.push({lv:"red",tag:"売上日報の書き写しミス",txt:mdw(d.date)+"：01〜09の合計 − 消費税 と 純売上が "+yen(Math.abs(kc))+" ちがいます",sub:"館の売上日報を見て、数字を入れ直してください",go:{tab:"sales",date:d.date}});if(kp!=null&&had&&kp!==d.pcsNet)out.push({lv:"red",tag:"商品点数が合わない",txt:mdw(d.date)+"：売上日報 "+kp+" 点 ／ 入力 "+d.pcsNet+" 点",sub:"手入力の漏れや数量違いがないか確認してください",go:{tab:"sales",date:d.date}});if(d.date<today&&krSum(kdd)==null)out.push({lv:"red",tag:"館の売上日報が未入力",txt:mdw(d.date),sub:"売上タブの日付を選んで「館のレジの売上日報」を書き写してください",go:{tab:"sales",date:d.date}})}
     var tbd=getTx().filter(function(r){return r.date===d.date&&r.kind==="ret_tbd"}).reduce(function(a,r){return a+(+r.qty||0)},0);
     if(tbd)out.push({lv:"yel",tag:"返品の再販が未確認",txt:mdw(d.date)+"：返品 "+tbd+" 点",sub:"売上タブ下の「手入力」で「再販できる／できない」を選んでください",go:{tab:"sales",date:d.date}});
     if(d.retRep>d.retItem+1)out.push({lv:"yel",tag:"返品の商品が未入力",txt:mdw(d.date)+"：レポートの返品 "+yen(d.retRep)+" ／ 商品で入力済み "+yen(d.retItem),sub:"Squareのレポートには返品の商品名がありません。在庫を合わせるには「手入力」で返品の商品を入れてください（金額は二重になりません）",go:{tab:"sales",date:d.date}});
@@ -681,6 +682,7 @@ function eventForm(px,c,btn,label){
    '<div class="row">'+f("start","開始日",c.start||"","date")+f("end","終了日",c.end||"","date")+'</div>'+
    '<div class="row">'+f("budget","売上予算（税抜・円）",c.budget==null?"":c.budget,"number","例：2100000")+f("tax","消費税率（％）",tax,"number")+'</div>'+
    '<div class="row">'+f("defOff","標準のオフ率（％・任意）",c.defOff==null?"":c.defOff,"number","例：30")+'<label class="f"><span>上代・販売価格の税区分</span><select id="'+px+'retailIncl"><option value="0"'+(c.retailIncl?'':' selected')+'>税抜の金額</option><option value="1"'+(c.retailIncl?' selected':'')+'>税込の金額</option></select></label></div>'+
+   '<label class="f"><span>レジの種類</span><select id="'+px+'pos"><option value=""'+(c.pos==="kan"?'':' selected')+'>Square・エアレジ（CSV・メールから取り込む）</option><option value="kan"'+(c.pos==="kan"?' selected':'')+'>館のレジ（売上日報を手で書き写す）</option></select></label>'+
    '<div class="muted" style="font-size:12px;line-height:1.7">標準のオフ率は、商品マスタ登録の「オフ率」欄に最初から入ります。税込を選ぶと、取り込むときに消費税率で割って税抜に直します（サイト内の金額は税抜で管理します）。</div>'+
    (px==="evN_"?f("code","このイベントの合言葉（社外メンバー用・任意）","","text","4文字以上。あとから設定もできます"):'')+
    '<button class="btn primary" data-act="'+btn+'">'+label+'</button></div>';
@@ -724,8 +726,36 @@ function sqPanel(){
 }
 function adminPanel(){
   if(scoped())return"";
-  return'<details class="card" id="adminbox" style="margin-top:14px"><summary style="cursor:pointer;font-weight:700;min-height:44px;display:flex;align-items:center">商品マスタを更新する <span style="font-weight:500;font-size:13px">（登録先：'+esc(evName())+'）</span></summary><div class="muted" style="font-size:13px;margin:6px 0 12px;line-height:1.7">同じ商品（品番・カラー・サイズ）は上書きされ、新しい商品は追加されます。売上の入力履歴は消えません。<span style="opacity:.6">（読み取り機能 '+SEED_VER+'）</span></div>'+seedForm()+'</details>';
+  return'<details class="card" id="adminbox" style="margin-top:14px"><summary style="cursor:pointer;font-weight:700;min-height:44px;display:flex;align-items:center">商品マスタを更新する <span style="font-weight:500;font-size:13px">（登録先：'+esc(evName())+'）</span></summary><div class="muted" style="font-size:13px;margin:6px 0 12px;line-height:1.7">同じ商品（品番・カラー・サイズ）は上書きされ、新しい商品は追加されます。売上の入力履歴は消えません。<span style="opacity:.6">（読み取り機能 '+SEED_VER+'）</span></div>'+seedForm()+skuDelForm()+'</details>';
 }
+function skuDelForm(){
+  var sk=getSkus();if(!sk.length)return"";
+  var C=calc(),used={};getTx().forEach(function(r){used[r.skuId]=1});
+  var rows=sk.map(function(s){var u=!!used[s.id],st=C.st[s.id]?C.st[s.id].stock:0;
+    return'<label class="skdr" data-q="'+esc((s.hin+" "+s.name+" "+s.color+" "+s.size+" "+s.color+"/"+s.size).toLowerCase())+'" style="display:flex;gap:8px;align-items:center;padding:6px 2px;border-top:1px solid var(--line);font-size:13px'+(u?';opacity:.5':'')+'"><input type="checkbox" data-skudel="'+esc(s.id)+'"'+(u?' disabled':'')+'><span style="flex:1 1 auto;min-width:0"><b>'+esc(s.hin)+'</b> '+esc(s.color)+'／'+esc(s.size)+' <span class="muted">'+esc(s.name)+'</span></span><span class="muted" style="white-space:nowrap">'+(u?'記録あり':'在庫 '+st)+'</span></label>'}).join("");
+  return'<h3 style="margin:22px 0 6px">商品を削除する</h3><div class="muted" style="font-size:12.5px;line-height:1.7;margin-bottom:8px">登録した商品マスタから、まちがって入れた商品や届かない商品を消します（'+esc(evName())+'の商品だけ）。売上・返品・移動などの記録がある商品は消せません（うすい行）。</div>'+
+   '<div class="grid" style="gap:10px"><label class="f"><span>絞り込み</span><input type="search" id="skudel_q" placeholder="品番・カラー・サイズで探す" autocomplete="off"></label>'+
+   '<div id="skudel_list" style="max-height:340px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:0 10px">'+rows+'</div>'+
+   '<div class="muted" id="skudel_n" style="font-size:12.5px">0 件を選択中</div>'+
+   '<label class="f"><span>管理者コード</span><span class="pw"><input type="password" id="skudel_admin" autocomplete="off"><button type="button" class="eye" data-eye="1" aria-label="表示する" aria-pressed="false">表示</button></span></label>'+
+   '<button class="btn danger" data-act="skudel">選んだ商品を削除する</button></div>';
+}
+async function doSkuDel(){
+  var ad=(($("skudel_admin")||{}).value||"").trim(),ids=[].slice.call(document.querySelectorAll("[data-skudel]:checked")).map(function(x){return x.getAttribute("data-skudel")});
+  if(!ids.length){toast("削除する商品を選んでください",true);return}
+  if(!ad){toast("管理者コードを入力してください",true);return}
+  var used={};getTx().forEach(function(r){used[r.skuId]=1});ids=ids.filter(function(id){return!used[id]});
+  if(!ids.length){toast("記録がある商品は削除できません",true);return}
+  var key=ids.join(",");if(S.skuDelArm!==key){S.skuDelArm=key;toast("もう一度押すと "+ids.length+" 商品を削除します（元に戻せません）");return}
+  S.skuDelArm=null;
+  var sm=calc().sm,names=ids.map(function(id){var s=sm[id];return s?s.hin+" "+s.color+"/"+s.size:id});
+  try{await window.T8Data.writeAdmin(ad,ids.map(function(id){return{op:"delete",collection:"skus",id:id}}));
+    toast(ids.length+" 商品を削除しました");logEv("在庫","商品マスタから削除（"+ids.length+" 件）："+names.slice(0,30).join("、")+(names.length>30?" ほか":""));
+    var d=$("adminbox");if(d)d.open=false;render.force=true;render()}
+  catch(e){console.error(e);toast(e&&e.code==="server"&&/admin/.test(String(e.message))?"管理者コードが違います。ADMIN_CODE の値を入力してください（合言葉ではありません）":"削除できませんでした（"+(e&&e.message?e.message:"通信エラー")+"）",true)}
+}
+document.addEventListener("input",function(e){var t=e.target;if(t&&t.id==="skudel_q"){var q=t.value.trim().toLowerCase();[].forEach.call(document.querySelectorAll(".skdr"),function(r){r.style.display=!q||r.getAttribute("data-q").indexOf(q)>=0?"flex":"none"})}});
+document.addEventListener("change",function(e){var t=e.target;if(t&&t.getAttribute&&t.getAttribute("data-skudel")!=null){var b=$("skudel_n");if(b)b.textContent=document.querySelectorAll("[data-skudel]:checked").length+" 件を選択中"}});
 
 /* ---- 入力 ---- */
 function hinGroups(){
@@ -1248,13 +1278,32 @@ async function alMark(){
   S.busy=false;render.force=true;render();
 }
 function td(has,v,neg){return'<td class="num'+(neg?' neg':'')+'">'+(has?v:'<span class="muted">—</span>')+'</td>'}
+var KR=[["kr01","01 現金売上"],["kr02","02 別口売上"],["kr03","03 クレ・IC・ギフト・Pay"],["kr04","04 アリペイ・ウィチャット"],["kr05","05 ポイント利用"],["kr06","06 その他金券"],["kr07","07 商品券"],["kr08","08 商品券釣り不要"],["kr09","09 ポイント（利用-引当）"]],KR_T=[["kr10","10 消費税"],["kr12","12 純売上"],["kr15","15 客数"],["kr16","16 商品点数"]];
+function kanOn(){return!!(S.cfg&&S.cfg.pos==="kan")}
+function krN(dd,f){var v=dd&&dd[f];return v==null||v===""||isNaN(+v)?null:+v}
+function krSum(dd){var s=0,any=false;KR.forEach(function(k){var v=krN(dd,k[0]);if(v!=null){s+=v;any=true}});return any?s:null}
+function krChk(dd){var s=krSum(dd),t=krN(dd,"kr10"),n=krN(dd,"kr12");if(s==null||t==null||n==null)return null;return s-t-n}
+function kanBlock(dd,d,can){
+  function v(f){var x=S.draft[S.date+":"+f];return x===undefined?(dd[f]==null?"":dd[f]):x}
+  function inp(k){return'<label class="f" style="flex:1 1 150px"><span>'+k[1]+'</span><input type="number" inputmode="numeric" id="f_'+k[0]+'" data-day="'+k[0]+'" value="'+esc(v(k[0]))+'"'+(can?'':' readonly')+'></label>'}
+  var s=krSum(dd),c=krChk(dd),p=krN(dd,"kr16");
+  var h='<div class="cpn"><div class="cpt">館のレジの売上日報 <span>（閉店後に出る「売上日報」の数字を、番号のとおりに書き写してください。0の欄は空でOK）</span></div>';
+  h+='<div class="row">'+KR.map(inp).join("")+'</div><div class="row" style="margin-top:6px">'+KR_T.map(inp).join("")+'</div>';
+  h+='<div class="preview" style="margin-top:8px">01〜09の合計（税込） <b>'+(s==null?'—':yen(s))+'</b>　';
+  if(c==null)h+='<span class="muted">10 消費税と12 純売上を入れると、書き写しを確認できます</span>';
+  else if(c===0)h+='<span class="pill ok">書き写しOK</span>';
+  else h+='<span class="pill bad">01〜09の合計 − 消費税 と 純売上が '+numf(Math.abs(c))+' 円ちがいます</span>';
+  if(p!=null)h+='　'+(p===d.pcsNet?'<span class="pill ok">商品点数も一致（'+p+' 点）</span>':'<span class="pill bad">商品点数：売上日報 '+p+' 点 ／ 入力 '+d.pcsNet+' 点</span>');
+  h+='</div></div>';
+  return h;
+}
 function dayPanel(d){
   if(!d)d={date:S.date,total:0,ret:0,dis:0,net:0,tax:0,sum:0,pcsSale:0,pcsRet:0,pcsNet:0,skuCnt:0,retail:0,actual:0,refund:0,actualNet:0,moves:[],sold:{},lines:0,cust:null,rep:null,diff:null,unit:null};
   var C=calc(),dd=getDays()[S.date]||{},ph=dayPhotos(S.date),can=writable();
   var cv=S.draft[S.date+":customers"];if(cv===undefined)cv=dd.customers==null?"":dd.customers;
   var rv=S.draft[S.date+":reportTotal"];if(rv===undefined)rv=dd.reportTotal==null?"":dd.reportTotal;
   var h='<div class="card"><h2>'+mdw(S.date)+' の詳細</h2><div class="grid g2">';
-  h+='<div class="grid" style="gap:12px"><div class="row"><label class="f" style="flex:1 1 130px"><span>客数（会計件数）</span>'+(+dd.custRet>0?'<span class="h">うち返品の会計 '+(+dd.custRet)+' 件（ショッパーは返品を除いて計算）</span>':'')+'<input type="number" inputmode="numeric" id="f_customers" data-day="customers" value="'+esc(cv)+'"'+(can?'':' readonly')+'></label>'+
+  if(kanOn()){h+='<div class="grid" style="gap:12px">'+(supWrapOn()?'<div class="row">'+(supWrapOn()?'<label class="f" style="flex:1 1 130px"><span>ラッピング件数</span><input type="number" inputmode="numeric" id="f_wraps" data-day="wraps" value="'+esc((function(){var v=S.draft[S.date+":wraps"];return v===undefined?(dd.wraps==null?"":dd.wraps):v})())+'"'+(can?'':' readonly')+'></label>':'')+'</div>':'')+kanBlock(dd,d,can);}else h+='<div class="grid" style="gap:12px"><div class="row"><label class="f" style="flex:1 1 130px"><span>客数（会計件数）</span>'+(+dd.custRet>0?'<span class="h">うち返品の会計 '+(+dd.custRet)+' 件（ショッパーは返品を除いて計算）</span>':'')+'<input type="number" inputmode="numeric" id="f_customers" data-day="customers" value="'+esc(cv)+'"'+(can?'':' readonly')+'></label>'+
     (supWrapOn()?'<label class="f" style="flex:1 1 130px"><span>ラッピング件数</span><input type="number" inputmode="numeric" id="f_wraps" data-day="wraps" value="'+esc((function(){var v=S.draft[S.date+":wraps"];return v===undefined?(dd.wraps==null?"":dd.wraps):v})())+'"'+(can?'':' readonly')+'></label>':'')+
     '<label class="f" style="flex:1 1 170px"><span>レポートの合計（税込）</span><span class="h">任意。入力すると計算と照合します</span><input type="number" inputmode="numeric" id="f_reportTotal" data-day="reportTotal" value="'+esc(rv)+'"'+(can?'':' readonly')+'></label></div>';
   (function(){function v(f){var x=S.draft[S.date+":"+f];return x===undefined?(dd[f]==null?"":dd[f]):x}
@@ -1377,7 +1426,7 @@ document.addEventListener("click",function(e){var sm=e.target.closest&&e.target.
 window.addEventListener("pagehide",fltSave);
 
 /* ---- 履歴 ---- */
-var FLAB={customers:"客数",wraps:"ラッピング件数",couponN:"クーポン枚数",couponAmt:"クーポン金額",reportTotal:"レポート合計",reporter:"報告者",event:"館のイベント・混雑状況",hot:"売れ筋",comment:"日報（コメント）",notice:"連絡・依頼・トラブル",weather:"天気"};
+var FLAB={customers:"客数",wraps:"ラッピング件数",couponN:"クーポン枚数",couponAmt:"クーポン金額",reportTotal:"レポート合計",reporter:"報告者",event:"館のイベント・混雑状況",hot:"売れ筋",comment:"日報（コメント）",notice:"連絡・依頼・トラブル",weather:"天気"};KR.concat(KR_T).forEach(function(k){FLAB[k[0]]="館の売上日報 "+k[1]});
 function logEv(act,txt,date){
   var rec={at:Date.now(),by:(S.who||"").trim()||"名前未設定",act:act,txt:txt};if(date)rec.date=date;
   if(S.demo){rec.id="l"+Date.now()+Math.random().toString(36).slice(2,5);S.dLog.unshift(rec);S._ver=(S._ver||0)+1;return}
@@ -1523,7 +1572,7 @@ document.addEventListener("click",function(e){
     case"sqdismiss":doSq("dismiss",v);break;
     case"codeshow":doCode(false);break;
     case"evnew":doEvent(true);break;
-    case"seed":doSeed();break;
+    case"seed":doSeed();break;case"skudel":doSkuDel();break;
     case"reload":location.reload();break;
     case"csv":doCsv(v);break;
     case"zoom":$("lb").innerHTML='<img src="'+esc(photoUrl(v))+'" alt="">';$("lb").hidden=false;break;
@@ -1568,8 +1617,8 @@ document.addEventListener("change",function(e){
   else if(t.dataset&&t.dataset.day){
     holdRender();
     var fld=t.dataset.day,k=S.date+":"+fld,val=t.value;
-    if(fld==="customers"||fld==="reportTotal"||fld==="wraps"||fld==="couponN"||fld==="couponAmt")val=val===""?null:Math.round(+val);
-    var d1=S.date;putDay(d1,(function(o){o[fld]=val;return o})({})).then(function(ok){delete S.draft[k];if(ok){toast("保存しました");logEv(fld==="customers"||fld==="reportTotal"||fld==="wraps"||fld==="couponN"||fld==="couponAmt"?"売上":"日報",FLAB[fld]+"："+(val==null||val===""?"（空）":String(val).replace(/\s+/g," ").slice(0,1000)),d1)}else render()});
+    if(fld==="customers"||fld==="reportTotal"||fld==="wraps"||fld==="couponN"||fld==="couponAmt"||/^kr\d\d$/.test(fld))val=val===""?null:Math.round(+val);
+    var d1=S.date;putDay(d1,(function(o){o[fld]=val;return o})({})).then(function(ok){delete S.draft[k];if(ok){toast("保存しました");logEv(fld==="customers"||fld==="reportTotal"||fld==="wraps"||fld==="couponN"||fld==="couponAmt"||/^kr\d\d$/.test(fld)?"売上":"日報",FLAB[fld]+"："+(val==null||val===""?"（空）":String(val).replace(/\s+/g," ").slice(0,1000)),d1)}else render()});
   }
   else if(t.dataset&&t.dataset.count){
     holdRender();
@@ -1713,7 +1762,7 @@ function gateHtml(){
   return h+'</div></div>';
 }
 /* 新しい版の確認：ブラウザが古いページを覚えていても、新しい版が出たら「最新にする」を出す（5分ごと・画面に戻ったとき） */
-var APP_VER="2026-11-12e";
+var APP_VER="2026-11-12g";
 function checkUpdate(){
   if(location.protocol==="file:")return;
   fetch(location.pathname.replace(/[^\/]*$/,"")+"index.html?v="+Date.now(),{cache:"no-store"}).then(function(r){return r.ok?r.text():""}).then(function(t){var m=/var APP_VER="([^"]+)"/.exec(t);if(m&&m[1]!==APP_VER){var u=$("upd");if(u)u.hidden=false}}).catch(function(){});
@@ -2207,7 +2256,7 @@ async function doEvent(isNew){
   var squareNames=v("squareNames"),brand=v("brand"),kind=v("kind"),dof=v("defOff"),inc=$(px+"retailIncl")&&$(px+"retailIncl").value==="1",code=isNew?v("code"):"";
   if(dof!==""&&(!isFinite(Number(dof))||Number(dof)<0||Number(dof)>100)){say("標準のオフ率は0〜100の数字で入れてください",true);return}
   if(code&&code.length<4){say("合言葉は4文字以上にしてください",true);return}
-  var place=v("place"),tag=v("tag"),cfgData={name:name,place:place,tag:tag,squareNames:squareNames,brand:brand,kind:kind,defOff:dof===""?null:Number(dof),retailIncl:!!inc,start:st,end:en,budget:budget,tax:Math.round(tax*10)/1000};
+  var place=v("place"),tag=v("tag"),cfgData={name:name,place:place,tag:tag,squareNames:squareNames,brand:brand,kind:kind,defOff:dof===""?null:Number(dof),retailIncl:!!inc,pos:($(px+"pos")&&$(px+"pos").value==="kan")?"kan":"",start:st,end:en,budget:budget,tax:Math.round(tax*10)/1000};
   var ev={id:id,name:name,brand:brand,place:place,start:st,end:en};
   try{
     await A.saveEvent(ad,ev,cfgData,evList());
