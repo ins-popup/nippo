@@ -1068,10 +1068,13 @@ function alRowsOut(b){
   b.groups.forEach(function(g){g.lines.forEach(function(l){var s=l.s;rows.push([g.date||(b.from+"〜"+b.to),s.hin,s.name,s.color,s.size,s.jan||"",l.qty,l.unit,l.unit*l.qty,Math.round(+s.retail||0),Math.round((+s.retail||0)*l.qty)])})});
   return rows;
 }
+function alIsOpen(){try{return localStorage.getItem("t8alOpen")==="1"}catch(e){return false}}
+function alHead(open){return'<div class="card" id="albox"><div class="row" style="justify-content:space-between;align-items:center;flex-wrap:nowrap;gap:10px"><h2 style="margin:0;flex:1 1 auto;min-width:0">アラジン入力用リスト <small>売れた商品を集計して、アラジンの受注入力に写します</small></h2><button class="btn small" type="button" data-act="altoggle" aria-expanded="'+(open?"true":"false")+'" aria-controls="albox" style="flex:0 0 auto;min-width:0;min-height:34px;font-size:12.5px;padding:0 14px">'+(open?"▲ 閉じる":"▼ 広げる")+'</button></div>'+(open?'<div style="height:10px"></div>':'')}
 function alCard(){
   if(scoped())return"";
+  if(!alIsOpen())return alHead(false)+'</div>';
   var b=alBuild(),A=alState(),st=b.st,can=writable()&&!S.demo;
-  var h='<div class="card" id="albox"><h2>アラジン入力用リスト <small>売れた商品を集計して、アラジンの受注入力に写します</small></h2>'+
+  var h=alHead(true)+
    '<div class="muted" style="font-size:13px;line-height:1.7;margin-bottom:10px">期間を選ぶと、売れた商品を品番・カラー・サイズごと（定価と違う単価は別の行）に集計します。返品は数量をマイナスにして差し引きます。金額は税抜で、アラジンの受注単価に合わせています。</div>'+
    '<div class="row" style="align-items:flex-end"><label class="f" style="flex:1 1 150px"><span>はじめの日</span><input type="date" id="al_from" value="'+esc(st.from)+'"></label><label class="f" style="flex:1 1 150px"><span>おわりの日</span><input type="date" id="al_to" value="'+esc(st.to)+'"></label></div>'+
    '<label style="display:flex;gap:8px;align-items:center;margin:10px 0;font-size:14px"><input type="checkbox" id="al_split"'+(st.split?' checked':'')+' style="width:20px;height:20px"> 日ごとに分けて出す（日ごとに受注を作る場合）</label>';
@@ -1538,7 +1541,7 @@ document.addEventListener("click",function(e){
       var id=f.id||("i-"+supRid());putSup(id,d).then(function(ok){if(ok){toast(f.id?"品目を変更しました":"品目を追加しました");logEv("備品",(f.id?"品目を変更：":"品目を追加：")+name);S.supForm={};render.force=true;render()}})})();break;
     case"alcsv":alCsv();break;
     case"alxsave":alxOpen();break;case"alusave":alxOpen("uri");break;
-    case"almark":alMark();break;
+    case"almark":alMark();break;case"altoggle":try{localStorage.setItem("t8alOpen",alIsOpen()?"0":"1")}catch(e){}render.force=true;render();break;
     case"arclear":S.ar=null;render.force=true;render();break;
     case"sqassign":doSq("assign",v);break;
     case"sqdismiss":doSq("dismiss",v);break;
@@ -1734,7 +1737,7 @@ function gateHtml(){
   return h+'</div></div>';
 }
 /* 新しい版の確認：ブラウザが古いページを覚えていても、新しい版が出たら「最新にする」を出す（5分ごと・画面に戻ったとき） */
-var APP_VER="2026-11-12n";
+var APP_VER="2026-11-12o";
 function checkUpdate(){
   if(location.protocol==="file:")return;
   fetch(location.pathname.replace(/[^\/]*$/,"")+"index.html?v="+Date.now(),{cache:"no-store"}).then(function(r){return r.ok?r.text():""}).then(function(t){var m=/var APP_VER="([^"]+)"/.exec(t);if(m&&m[1]!==APP_VER){var u=$("upd");if(u)u.hidden=false}}).catch(function(){});
