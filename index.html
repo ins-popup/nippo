@@ -1530,7 +1530,7 @@ document.addEventListener("change",function(e){
   var t=e.target;
   if(t.id==="seedfile"||t.id==="seedoff"){seedPreview()}
   else if(t.id==="arfile"){arLoad(t)}
-  else if(t.id==="al_from"||t.id==="al_to"){alState();S.al[t.id==="al_from"?"from":"to"]=t.value;render.force=true;render()}
+  else if(t.id==="al_from"||t.id==="al_to"){alState();S.al[t.id==="al_from"?"from":"to"]=t.value;clearTimeout(S.alT);if(/^20[2-9]\d-\d\d-\d\d$/.test(t.value))S.alT=setTimeout(function(){render.force=true;render()},900)}
   else if(t.id==="al_split"){alState();S.al.split=t.checked;render.force=true;render()}
   else if(t.id==="ar_date"){if(S.ar){S.ar.date=t.value;render.force=true;render()}}
   else if(t.id==="ar_loc"){if(S.ar){S.ar.loc=t.value;S.ar.map={};render.force=true;render()}}
@@ -1686,7 +1686,7 @@ function gateHtml(){
   return h+'</div></div>';
 }
 /* 新しい版の確認：ブラウザが古いページを覚えていても、新しい版が出たら「最新にする」を出す（5分ごと・画面に戻ったとき） */
-var APP_VER="2026-11-10a";
+var APP_VER="2026-11-12a";
 function checkUpdate(){
   if(location.protocol==="file:")return;
   fetch(location.pathname.replace(/[^\/]*$/,"")+"index.html?v="+Date.now(),{cache:"no-store"}).then(function(r){return r.ok?r.text():""}).then(function(t){var m=/var APP_VER="([^"]+)"/.exec(t);if(m&&m[1]!==APP_VER){var u=$("upd");if(u)u.hidden=false}}).catch(function(){});
