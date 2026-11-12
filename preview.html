@@ -1087,7 +1087,7 @@ function alCard(){
   h+='<dl class="kv" style="margin-top:12px"><dt>数量の合計</dt><dd>'+b.tot.qty+' 点</dd><dt>上代の合計（税抜）</dt><dd>'+yen(b.tot.retail)+'</dd><dt>金額の合計（税抜）</dt><dd class="big">'+yen(b.tot.amt)+'</dd><dt>（参考）税込</dt><dd>'+yen(b.tot.incl)+'</dd></dl>';
   var df=b.tot.amt-b.site;
   h+='<div class="muted" style="font-size:12.5px;line-height:1.7;margin-top:6px">アラジンに入れたあと、画面下の「数量／上代計」「金額」がこの合計と合っているか確認してください。売上タブの純売上高（税抜）との差：'+(df===0?'<span class="pill ok">なし</span>':'<span class="pill warn">'+(df>0?'+':'')+numf(df)+' 円</span>（割引や端数の丸めによる差の場合があります）')+'</div>';
-  h+='<div class="row" style="margin-top:12px"><button class="btn primary" data-act="alxsave">アラジン取込用ファイルを保存（.xlsx）</button><button class="btn primary" data-act="alusave">売上取込用ファイルを保存（.xlsx）</button><button class="btn" data-act="alcopy">表をコピー</button><button class="btn" data-act="alcsv">CSVで保存</button></div>';
+  h+='<div class="row" style="margin-top:12px"><button class="btn primary small" data-act="alxsave">アラジン取込用ファイルを保存（.xlsx）</button><button class="btn primary small" data-act="alusave">売上取込用ファイルを保存（.xlsx）</button><button class="btn small" data-act="alcopy">表をコピー</button><button class="btn small" data-act="alcsv">CSVで保存</button></div>';
   h+=alxPanel(b);
   if(can)h+='<div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line)"><div style="font-size:13px;font-weight:700;margin-bottom:6px">アラジンに入力し終えたら</div><div class="row" style="align-items:flex-end"><label class="f" style="flex:1 1 180px"><span>受注NO（任意・メモ）</span><input type="text" id="al_no" value="'+esc(st.no)+'" placeholder="例：00017015" autocomplete="off"></label><button class="btn" data-act="almark">この期間を「出力済み」にする</button></div><div class="muted" style="font-size:12.5px;margin-top:6px">日付ごとに印が付きます。あとで入力が増えたり減ったりした日は「出力後に変更あり」と出るので、差分だけ入れ直せます。</div></div>';
   return h+'</div>';
@@ -1734,7 +1734,7 @@ function gateHtml(){
   return h+'</div></div>';
 }
 /* 新しい版の確認：ブラウザが古いページを覚えていても、新しい版が出たら「最新にする」を出す（5分ごと・画面に戻ったとき） */
-var APP_VER="2026-11-12l";
+var APP_VER="2026-11-12m";
 function checkUpdate(){
   if(location.protocol==="file:")return;
   fetch(location.pathname.replace(/[^\/]*$/,"")+"index.html?v="+Date.now(),{cache:"no-store"}).then(function(r){return r.ok?r.text():""}).then(function(t){var m=/var APP_VER="([^"]+)"/.exec(t);if(m&&m[1]!==APP_VER){var u=$("upd");if(u)u.hidden=false}}).catch(function(){});
